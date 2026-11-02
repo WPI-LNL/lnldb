@@ -22,6 +22,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from reversion.models import Version
 
 from finance.forms import EncumbranceForm
 from finance.models import (Encumbrance, FRLineItem, FundingRequest, ParsedTransaction,
@@ -30,6 +31,7 @@ from finance.suggestions import (encumbrance_match_label, encumbrance_match_opti
                                  suggest_all, suggest_encumbrance_matches)
 from finance.tests.test_views import CSV_HEADER, CSV_ROW, FinanceViewTestCase
 from finance.tests.util import category, encumbrance, fund, revenue_source
+from finance.views.detail import _audit_trail
 
 
 class ImportReportingTests(FinanceViewTestCase):
@@ -539,6 +541,43 @@ class SettleViewTests(FinanceViewTestCase):
     def test_a_get_settles_nothing(self):
         response = self.client.get(reverse('finance:settle', args=[self.txn.pk]))
         self.assertEqual(response.status_code, 405)
+
+    def test_settling_is_in_each_entrys_history(self):
+        """
+        Settling skipped the history, so an entry's history still said Pending
+        and whoever changed it next was shown settling it.
+        """
+        with reversion.create_revision():
+            entry = ParsedTransaction.objects.create(
+                parent_transaction=self.txn, amount=Decimal('-500.00'),
+                effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+                lnl_spend_category=category('consumables'))
+        self._settle()
+        latest = Version.objects.get_for_object(entry).first()
+        self.assertEqual(latest.field_dict['status'], TransactionStatus.SETTLED)
+        self.assertEqual(latest.revision.user, self.user)
+        self.assertEqual(latest.revision.get_comment(), 'Settled')
+
+    def test_the_queue_records_its_entry_settled(self):
+        """
+        Filed and settled in one click, the entry is Settled in its history
+        from the start, so the next change to it shows only what changed.
+        """
+        self.client.post(reverse('finance:reconcile', args=[self.txn.pk]), {
+            'txn%s-fund_source' % self.txn.pk: fund('sga_budget').pk,
+            'txn%s-lnl_spend_category' % self.txn.pk: category('consumables').pk,
+        })
+        entry = self.txn.slices.get()
+        version, = Version.objects.get_for_object(entry)
+        self.assertEqual(version.field_dict['status'], TransactionStatus.SETTLED)
+        self.assertEqual(version.revision.get_comment(), 'Settled from the ingestion queue')
+
+        with reversion.create_revision():
+            entry.description = 'Gaff tape'
+            entry.save()
+        changed = [change['field'] for change in _audit_trail(entry)[0]['changes']]
+        self.assertIn('Description', changed)
+        self.assertNotIn('Status', changed)
 
 
 class QueueSuggestionEndpointTests(FinanceViewTestCase):

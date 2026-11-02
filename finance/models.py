@@ -2290,6 +2290,16 @@ class WorkdayTransaction(models.Model):
                 "Cannot settle: the entries add up to %s but the line is %s (%s left to settle)."
                 % (self.allocated_amount, self.net_amount, self.unallocated_amount))
         self.slices.update(status=TransactionStatus.SETTLED)
+        # update() skips save(), so django-reversion never saw a line settled:
+        # each entry's history stayed Pending, and whoever edited it next was
+        # shown settling it. Each entry goes into the revision already open --
+        # the request's, which wrote it when the queue has just filed it -- or
+        # into one of its own outside a request.
+        with reversion.create_revision():
+            if not reversion.get_comment():
+                reversion.set_comment("Settled")
+            for entry in self.slices.all():
+                reversion.add_to_revision(entry)
 
 
 # ---------------------------------------------------------------------------
@@ -2892,6 +2902,19 @@ class ParsedTransaction(models.Model):
                         "That is more than is left to refund. The original expense was %s and "
                         "%s has already been credited back, leaving %s."
                         % (dollars(-original.amount), dollars(already), dollars(refundable)))
+        elif self.pk is not None:
+            # And the other way round: a purchase can't fall below what has
+            # come back against it -- re-split smaller, or retyped as money
+            # coming in -- or its fund and FR line get back more than was spent.
+            credited = money(self.refunds.aggregate(t=Sum('amount'))['t'])
+            if credited > ZERO and self.amount > 0:
+                errors['amount'] = (
+                    "%s has been credited back against this purchase, so it has to stay money "
+                    "going out. Remove the refund first." % dollars(credited))
+            elif credited > ZERO and -self.amount < credited:
+                errors['amount'] = (
+                    "%s has been credited back against this purchase, so it can't come to less "
+                    "than that. Reduce or remove the refund first." % dollars(credited))
 
         # -- Funding request lines, and SGA's payments for them -------------
         # A fund flagged requires_funding_request is money awarded for a named

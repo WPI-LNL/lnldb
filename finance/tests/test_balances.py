@@ -18,7 +18,9 @@ Four layers, tested from the bottom up:
 """
 import datetime
 from decimal import Decimal
+from unittest import mock
 
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -1193,6 +1195,30 @@ class CloseYearTests(LedgerFixture, FinanceViewTestCase):
         # What Workday said stays true.
         self.assertTrue(BalanceCheckpoint.objects.filter(as_of=datetime.date(2026, 6, 30))
                         .exists())
+
+    def test_closing_twice_at_once_says_the_year_is_closed(self):
+        """
+        Two submits that both got past the check: the second failed on the
+        year's one close with an error page. It is told the year is closed,
+        and keeps nothing of its own.
+        """
+        # The other submit's close, saved just after this one checked.
+        FiscalYearClose.objects.create(fiscal_year=FY26, notes='The other submit')
+        real_filter = FiscalYearClose.objects.filter
+        calls = []
+
+        def missed_by_the_check(*args, **kwargs):
+            calls.append(kwargs)
+            return FiscalYearClose.objects.none() if len(calls) == 1 else real_filter(*args, **kwargs)
+
+        with mock.patch.object(FiscalYearClose.objects, 'filter', side_effect=missed_by_the_check):
+            response = self._close()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual([str(message) for message in get_messages(response.wsgi_request)],
+                         ['FY26 is already closed.'])
+        close = FiscalYearClose.objects.get()
+        self.assertEqual(close.notes, 'The other submit')
+        self.assertFalse(FundTransfer.objects.exists())
 
     def test_a_write_off_cannot_exceed_what_is_owed(self):
         response = self._close(**{'write_off_%s_%s' % (self.main.pk, fund('sga_fr').pk):

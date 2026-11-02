@@ -353,6 +353,12 @@ category and project (a refund ticked with its purchase moves with it), and a
 refund's entry page shows where it is charged instead of offering the boxes
 (``AllocationForm._apply_direction_rules``).
 
+The purchase, for its part, can't come to less than what has been refunded
+against it, or become money coming in: ``clean()`` refuses the amount, on the
+split page and the entry page alike. Rule 3 is otherwise checked only from the
+refund's side, and splitting the purchase again smaller would have given its
+fund and FR line back more than was spent.
+
 An encumbrance is money set aside for a purchase that has not happened yet, and
 it read as *Expense* in the ledger's Type column until it got a word of its own.
 That is not a synonym: no money has left the account, there is no bank line
@@ -1643,7 +1649,9 @@ ended. It has four parts:
 Closing locks nothing. If the year's figures later differ from the record, the
 balance page lists every change. Reopening deletes the record and takes back its
 year-end transfers. The Workday balances stay, because they are still what
-Workday said.
+Workday said. A year can't be closed twice by two submits at once:
+``FiscalYearClose.fiscal_year`` is unique, and the second is told the year is
+closed, with nothing of its own kept.
 
 .. note::
 
@@ -1801,7 +1809,10 @@ multi-bill with a payment linked to it cannot be deleted
 came in ``0018_revenue_links_to_multibill``.
 
 Splitting by hand is still offered: the row's *Or split across its N events*
-tag opens the split page, which lays out one row per show, each with its share.
+tag opens the split page, which lays out one row per show, each with its share
+of the payment by price (``split_by_price`` of the bank line, as a linked
+payment is shared), so a part payment is laid out by price too and the rows add
+up to the line.
 The rows are unsaved until the Treasurer checks them and saves, and the page
 offers to mark the bill paid with them. Either way each show's figures are the
 same.
@@ -2510,7 +2521,11 @@ Permissions
     split's *Del* box) and the ledger bar's *Set status*, which is not offered
     without it. Without it, saving the split leaves an entry that was settled
     Settled, as editing it on its own page does, and only new entries are left
-    Pending.
+    Pending. Settling is in each entry's history like any other change, with
+    who settled it: ``WorkdayTransaction.settle()`` settles with a bulk
+    ``update()``, which django-reversion never sees, so it adds each entry to
+    the revision itself. Without that the history said Pending, and whoever
+    changed the entry next was shown settling it.
 ``import_workdaytransaction``
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``

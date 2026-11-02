@@ -524,6 +524,27 @@ class RefundTests(TestCase):
         refund.full_clean()  # must not raise despite being positive
         self.assertEqual((refund.fund_source, refund.fr_line_target), (fund('sga_fr'), self.line))
 
+    def test_purchase_cannot_shrink_below_what_was_refunded(self):
+        refund_parent = make_txn(op='F6', net_amount=Decimal('150.00'))
+        ParsedTransaction.objects.create(parent_transaction=refund_parent, amount=Decimal('150.00'),
+                                         refund_of=self.purchase)
+        self.purchase.amount = Decimal('-100.00')
+        with self.assertRaises(ValidationError) as ctx:
+            self.purchase.full_clean()
+        self.assertIn("can't come to less than that", ' '.join(ctx.exception.message_dict['amount']))
+        # Down to exactly what came back is fine.
+        self.purchase.amount = Decimal('-150.00')
+        self.purchase.full_clean()
+
+    def test_refunded_purchase_cannot_become_money_coming_in(self):
+        refund_parent = make_txn(op='F7', net_amount=Decimal('150.00'))
+        ParsedTransaction.objects.create(parent_transaction=refund_parent, amount=Decimal('150.00'),
+                                         refund_of=self.purchase)
+        self.purchase.amount = Decimal('400.00')
+        with self.assertRaises(ValidationError) as ctx:
+            self.purchase.full_clean()
+        self.assertIn('has to stay money going out', ' '.join(ctx.exception.message_dict['amount']))
+
     def test_refund_cannot_reverse_revenue(self):
         rev_parent = make_txn(op='F5', net_amount=Decimal('500.00'))
         revenue = ParsedTransaction.objects.create(

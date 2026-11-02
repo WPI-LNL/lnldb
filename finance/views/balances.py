@@ -10,7 +10,7 @@ needs -- and write them down.
 import reversion
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -357,25 +357,34 @@ def close_year(request, fiscal_year):
     proposals = balances.year_end_proposals(year)
     form = YearCloseForm(request.POST or None, year=year, proposals=proposals)
     if request.method == 'POST' and form.is_valid():
-        with transaction.atomic(), reversion.create_revision():
-            reversion.set_user(request.user)
-            close = FiscalYearClose.objects.create(
-                fiscal_year=fiscal_year, closed_by=request.user,
-                notes=form.cleaned_data.get('notes') or '')
-            for account, balance in form.workday_balances():
-                BalanceCheckpoint.objects.update_or_create(
-                    account=account.account, as_of=last,
-                    defaults={'balance': balance, 'entered_by': request.user,
-                              'note': 'Entered when closing FY%s' % str(fiscal_year)[-2:]})
-            for account, fund, amount, description in form.transfers():
-                FundTransfer.objects.create(
-                    account=account.account, date=last, amount=amount,
-                    from_fund=account.own_fund, to_fund=fund, kind=FundTransfer.YEAR_END,
-                    description=description, fiscal_year_close=close,
-                    created_by=request.user)
-            # Recorded after the transfers, so the snapshot is the year as closed.
-            close.snapshot = balances.snapshot(balances.statement(fiscal_year))
-            close.save()
+        try:
+            with transaction.atomic(), reversion.create_revision():
+                reversion.set_user(request.user)
+                close = FiscalYearClose.objects.create(
+                    fiscal_year=fiscal_year, closed_by=request.user,
+                    notes=form.cleaned_data.get('notes') or '')
+                for account, balance in form.workday_balances():
+                    BalanceCheckpoint.objects.update_or_create(
+                        account=account.account, as_of=last,
+                        defaults={'balance': balance, 'entered_by': request.user,
+                                  'note': 'Entered when closing FY%s' % str(fiscal_year)[-2:]})
+                for account, fund, amount, description in form.transfers():
+                    FundTransfer.objects.create(
+                        account=account.account, date=last, amount=amount,
+                        from_fund=account.own_fund, to_fund=fund, kind=FundTransfer.YEAR_END,
+                        description=description, fiscal_year_close=close,
+                        created_by=request.user)
+                # Recorded after the transfers, so the snapshot is the year as closed.
+                close.snapshot = balances.snapshot(balances.statement(fiscal_year))
+                close.save()
+        except IntegrityError:
+            # Submitted twice at once: both got past the check above, and the
+            # other closed the year first. Its close stands, and nothing of
+            # this one's was kept.
+            if not FiscalYearClose.objects.filter(fiscal_year=fiscal_year).exists():
+                raise
+            messages.info(request, "FY%s is already closed." % str(fiscal_year)[-2:])
+            return HttpResponseRedirect(_balances_url(fiscal_year))
         messages.success(request, "FY%s closed." % str(fiscal_year)[-2:])
         return HttpResponseRedirect(_balances_url(fiscal_year))
 

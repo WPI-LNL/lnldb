@@ -118,8 +118,9 @@ Mark It Paid
 ------------
 
 Usually you don't need to. When its payment arrives, the finance queue recognises the ISD number recorded on the bill
-and offers to split the payment across its events. The split page has a ticked box to mark the bill paid on the day
-the money arrived: save the split, and it is done. See :doc:`billing`.
+and offers to split the payment across its events. Each event's row starts at its share of the payment, by price,
+even when the client paid only part of the bill. The split page has a ticked box to mark the bill paid on the day the
+money arrived: save the split, and it is done. See :doc:`billing`.
 
 Otherwise, click `Mark paid...` on the bill's page or the list.
 
@@ -135,4 +136,4 @@ Otherwise, click `Mark paid...` on the bill's page or the list.
     credited with its share. A multi-bill with a payment linked to it can't be deleted. The multi-bill's page links to
     its payments in the ledger (*See them in the ledger*).
 
-`Last Modified: October 28, 2026`
+`Last Modified: November 1, 2026`

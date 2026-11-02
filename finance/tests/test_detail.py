@@ -12,6 +12,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from reversion.models import Version
 
 from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
 from finance.tests.test_views import FinanceViewTestCase
@@ -236,6 +237,15 @@ class SplitLeavesTheQueueTests(FinanceViewTestCase):
         self.assertFalse(self._in_queue())
         self.assertTrue(WorkdayTransaction.objects.reconciled().filter(pk=self.txn.pk).exists())
         self.assertNotContains(self._queue(), 'OT-D95')
+
+    def test_the_settle_is_in_each_entrys_history(self):
+        """ Settled as it is saved, and the history says so, under the split's comment. """
+        self._split('-4342.40', '-2982.32')
+        for entry in self.txn.slices.all():
+            version, = Version.objects.get_for_object(entry)
+            self.assertEqual(version.field_dict['status'], TransactionStatus.SETTLED)
+            self.assertEqual(version.revision.get_comment(), 'Split purchase across 2 entries')
+            self.assertEqual(version.revision.user, self.user)
 
     def test_a_split_saved_without_the_settle_permission_waits_in_the_queue(self):
         from django.contrib.auth.models import Permission
@@ -697,3 +707,31 @@ class RefundRoutingTests(FinanceViewTestCase):
         self.refund.refresh_from_db()
         self.assertEqual(self.refund.description, 'Tape back')
         self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+
+    def _resplit_purchase(self, purchase_amount, other_amount):
+        """ The purchase's line split again: the purchase at one amount, a new entry at the other. """
+        data = {'slices-TOTAL_FORMS': '2', 'slices-INITIAL_FORMS': '1',
+                'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
+                'slices-0-id': str(self.purchase.pk)}
+        for index, (amount, description) in enumerate(((purchase_amount, 'Gaff tape'),
+                                                       (other_amount, 'Spike tape'))):
+            data.update({'slices-%s-amount' % index: amount,
+                         'slices-%s-description' % index: description,
+                         'slices-%s-fund_source' % index: str(fund('sga_budget').pk),
+                         'slices-%s-lnl_spend_category' % index: str(category('consumables').pk)})
+        return self.client.post(reverse('finance:txn-detail', args=[self.txn.pk]), data, follow=True)
+
+    def test_a_purchase_cannot_be_split_smaller_than_its_refunds(self):
+        """ $40 came back against it, so $10 of it would give the fund back $30 never spent. """
+        response = self._resplit_purchase('10.00', '90.00')
+        self.assertContains(response, '$40.00 has been credited back against this purchase, so it '
+                                      'can&#x27;t come to less than that')
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.amount, Decimal('-100.00'))
+        self.assertEqual(self.txn.slices.count(), 1)
+
+    def test_a_purchase_can_be_split_down_to_its_refunds(self):
+        self._resplit_purchase('40.00', '60.00')
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.amount, Decimal('-40.00'))
+        self.assertEqual(self.txn.slices.count(), 2)

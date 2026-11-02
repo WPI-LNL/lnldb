@@ -261,7 +261,7 @@ class SplitMarkPaidTests(CacheResetMixin, FinanceViewTestCase):
         free = show('Free Film', start=days_ago(40))
         self.bill.events.add(free)
         shares = {self.films[0].pk: Decimal('300.00'), self.films[1].pk: ZERO, free.pk: ZERO}
-        with mock.patch('finance.calculators.multibill_shares', return_value=shares):
+        with mock.patch('finance.calculators.split_by_price', return_value=shares):
             rows = _multibill_rows(self.line, MultiBilling.objects.get(pk=self.bill.pk))
         self.assertEqual([(row['linked_event'], row['amount']) for row in rows],
                          [(self.films[0].pk, Decimal('300.00'))])

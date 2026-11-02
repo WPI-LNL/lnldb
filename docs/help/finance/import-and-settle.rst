@@ -98,7 +98,8 @@ Money coming in is one of three things:
   the purchase it reverses. The list has purchases from this fiscal year and the one before, so a July credit for a
   June purchase can still be settled as its refund. It stays charged wherever the purchase is: change the purchase's
   fund, category or FR line and its refunds follow. A refund's own page shows where it is charged rather than asking,
-  and the `Ledger`'s bar skips refunds.
+  and the `Ledger`'s bar skips refunds. The purchase can't then be made smaller than what has been refunded against
+  it.
 
 Settle the line
 ^^^^^^^^^^^^^^^

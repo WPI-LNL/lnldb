@@ -842,6 +842,24 @@ class QueuePageTests(CacheResetMixin, FinanceViewTestCase):
                          [concert.pk, social.pk])
         self.assertContains(response, 'Laid out across the 2 events')
 
+    def test_a_part_payment_is_laid_out_by_price_too(self):
+        """
+        Each show's row is its part of what was paid. The bill's own shares,
+        with the last show taking what was left, came to $450 and -$50 for $400.
+        """
+        org = OrgFactory(name='Orientation', shortname='NSO')
+        concert = make_event('NSO Concert', when(2025, 8, 20))
+        social = make_event('NSO Social', when(2025, 8, 21))
+        bill = MultiBilling.objects.create(org=org, date_billed=datetime.date(2025, 9, 1),
+                                           amount=Decimal('900.00'))
+        bill.events.set([concert, social])
+        txn = isd_line('NSO A25', '400.00', date=datetime.date(2025, 10, 1))
+        response = self.client.get(reverse('finance:txn-detail', args=[txn.pk]),
+                                   {'multibill': bill.pk})
+        forms = response.context['formset'].forms
+        self.assertEqual([form.initial['amount'] for form in forms],
+                         [Decimal('200.00'), Decimal('200.00')])
+
 
 class DashboardTests(CacheResetMixin, FinanceViewTestCase):
     """ Where the money comes from, and what LNL is owed. """

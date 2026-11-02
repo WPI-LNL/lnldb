@@ -294,25 +294,22 @@ def _multibill_rows(txn, multibill):
     """
     One unsaved split row per event on the bill, each with its share.
 
-    Shares come from :func:`finance.calculators.multibill_shares`, the same
-    split the event P&L uses, so each show is credited with what the P&L says
-    it was billed. When the payment differs from the bill, the last show takes
-    the difference, so the rows still add up to the bank line. A show whose
-    share is $0 -- one SGA pays for, with nothing to charge -- gets no row: a
-    slice cannot be $0, so its row could only be refused.
+    The payment is shared by price (:func:`finance.calculators.split_by_price`),
+    as a payment linked to the bill is (:func:`~finance.calculators.multibill_income`),
+    so the rows add up to the bank line to the cent and each show's figures are
+    the same either way. The whole bill paid gives each show what the P&L says
+    it was billed; part of it gives each show its part, not the first shows
+    their whole share and the last whatever is left, or less than nothing. A
+    show whose share is $0 -- one SGA pays for, with nothing to charge -- gets
+    no row: a slice cannot be $0, so its row could only be refused.
     """
-    from finance.calculators import multibill_shares
+    from finance.calculators import split_by_price
 
-    shares = multibill_shares(multibill)
-    events = sorted(multibill.events.all(), key=lambda e: e.pk)
+    shares = split_by_price(multibill, txn.net_amount)
     fund = own_fund_for_account(txn.partition_code_label)
-    rows, allotted = [], 0
-    for index, event in enumerate(events):
-        amount = shares.get(event.pk, 0)
-        if index == len(events) - 1:
-            amount = txn.net_amount - allotted
-        allotted += amount
-        rows.append({'amount': amount, 'description': event.event_name,
+    rows = []
+    for event in sorted(multibill.events.all(), key=lambda e: e.pk):
+        rows.append({'amount': shares.get(event.pk, 0), 'description': event.event_name,
                      'linked_event': event.pk,
                      'fund_source': fund.pk if fund is not None else None})
     return [row for row in rows if row['amount']]
