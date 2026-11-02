@@ -279,24 +279,34 @@ Treasurer's questions:
 4. **Reports**, and the two reports priced from the events app.
 5. **Older exports**: importing Workday lines from earlier years, every one settled by hand.
 
-The stages were built through twenty-two migrations, all against one
-development database. Since none of them had ever run anywhere else, they were
-collapsed into two before the app was first deployed:
+The stages were built through forty-one migrations, all against one
+development database, and none of them had ever run anywhere else. They were
+collapsed twice before the app was first deployed, and there are now four:
 
 ==========================================  ======================================================
 Migration                                   What it does
 ==========================================  ======================================================
-``0001_initial``                            Every table, as the models describe them today
+``0001_initial``                            The tables of the ledger, the queue, funds and
+                                            funding requests
 ``0002_seed_reference_data``                What a new install starts with: spend categories,
                                             funds and how each behaves at year end, revenue
                                             sources and the fund each goes into, account codes,
                                             suggestion rules and the settings row
+``0003_bills_from_events``                  Takes the bills over from the events app; see *The
+                                            bills moved here from the events app*
+``0004_…_squashed_0021_…`` (see below)      Every schema change since: billing, encumbrances,
+                                            revenue sources, the SGA paperwork, and the forecast's
+                                            removal
 ==========================================  ======================================================
 
 Tables and seed rows are kept in separate files because production runs on
-MySQL, where creating a table cannot be rolled back. The docstring of
-``0001_initial`` explains why there is no ``replaces`` list. Any change from
-here on is a new migration; see *Changing reference data*.
+MySQL, where creating a table cannot be rolled back. The first collapse, into
+``0001`` and ``0002``, kept the old names, so it has no ``replaces`` list; the
+docstring of ``0001_initial`` explains why. The second changed the names, so
+``0004_multibill_names_and_charges_squashed_0021_encumbrance_no_date`` lists
+the eighteen migrations it replaces, and a database that ran them all counts it
+as applied without running anything. Any change from here on
+is a new migration; see *Changing reference data*.
 
 
 The ledger
@@ -382,9 +392,8 @@ until it is matched, so its open lines are dated that day
 (``Encumbrance.logged_on``) and count on every balance from then. It used to
 ask for "roughly when the money will go out", and the Balances tab counts an
 encumbrance only from its date, so one dated next month left the money free
-to spend until then. Migration ``0021_encumbrance_no_date`` dropped the field
-and moved any open line dated after its encumbrance was logged back to that
-day.
+to spend until then. The migration that dropped the field moved any open line
+dated after its encumbrance was logged back to that day.
 
 Enforced accounting rules
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -821,8 +830,8 @@ says plainly it was assumed.
 The project is never filled in. Projects used to carry a short code, and a memo
 that quoted one filled the project in, but typing a code was the one required
 step in making a project that nobody had a reason to care about, and it
-answered seven lines a year. ``0017_remove_project_code`` drops the field, and
-a project is known by its name everywhere: on the pickers, the ledger search
+answered seven lines a year. The field is gone, and a project is known by its
+name everywhere: on the pickers, the ledger search
 and every table.
 
 After an import, any Workday spend category that no rule covers is named in a
@@ -1314,8 +1323,8 @@ The case that forced it is the sub-rental: LNL hires a console for one show and
 the invoice is that show's cost, passed straight through, sometimes with a
 rental fee on top. Until this existed, a database constraint made
 ``linked_event`` revenue-only and there was nowhere to record it. The constraint
-now forbids only ``non_event_revenue_type`` and ``linked_multibill`` (added in
-``0018_revenue_links_to_multibill``) on the expense side.
+now forbids only ``non_event_revenue_type`` and ``linked_multibill`` on the
+expense side.
 
 Such an expense takes its spend category automatically, from whichever
 :class:`finance.models.SpendCategory` carries ``is_event_passthrough`` -- seeded
@@ -1805,8 +1814,7 @@ type; and the Balances tab's payments against each bill. The ledger's
 ``?event=`` includes payments linked to a multi-bill the event is on, and
 ``?multibill=`` lists what is linked to the bill and to its events. A
 multi-bill with a payment linked to it cannot be deleted
-(``on_delete=PROTECT``; the delete page refuses with a message). The field
-came in ``0018_revenue_links_to_multibill``.
+(``on_delete=PROTECT``; the delete page refuses with a message).
 
 Splitting by hand is still offered: the row's *Or split across its N events*
 tag opens the split page, which lays out one row per show, each with its share
@@ -1952,8 +1960,8 @@ stuck at *Not sent*.
 
 **Sent without the email.** Emailing a bill records itself (``sent_at`` on
 its ``BillingEmail``). A bill that reached the client some other way is
-marked sent instead: ``sent_on`` and ``sent_note`` on either kind of bill
-(migration ``0019_bill_sent_by_hand``), set by
+marked sent instead: ``sent_on`` and ``sent_note`` on either kind of bill, set
+by
 :class:`~finance.billing_forms.BillSentForm`, which refuses a day before the
 bill was made or after today. :func:`finance.billing.sent_on` reads the later
 of the last email and ``sent_on``, and that day is what moves a bill to
@@ -1962,7 +1970,7 @@ Billing page, the multi-bill list and the weekly digest. *Mark not sent*
 clears both fields; a paid bill is past either.
 
 **The ISD record.** Both kinds of bill carry the same fields
-(:class:`~finance.models.ISDRecord`, migration ``0006_isd_record_and_no_bill_needed``):
+(:class:`~finance.models.ISDRecord`):
 the worktag, fund and amount charged, the day the Treasurer recorded a
 worktag sent by email, and the ISD's number, the day it was created in Workday
 and who recorded it. The number is stored as Workday writes it, digits then
@@ -2045,9 +2053,8 @@ below zero, and the ISD form refuses a creation date after today.
   either kind of bill, is the only other way. Its date starts as the day the
   last payment arrived when the payments received cover the bill, and as today
   when they don't. Then it also requires how the bill was paid
-  (``paid_note``, which single bills gained in migration
-  ``0007_bill_paid_note``), so a bill marked paid with nothing in the ledger
-  behind it says why. It refuses a day after today. *Mark unpaid* clears both.
+  (``paid_note``), so a bill marked paid with nothing in the ledger behind it
+  says why. It refuses a day after today. *Mark unpaid* clears both.
 
 The form replaced two buttons. The events app's one-click *Mark Paid* stamped
 today's date, whenever the money had actually arrived. It also accepted the
@@ -2109,8 +2116,8 @@ lists: bills waiting on the client at least
 ``FinanceSettings.digest_client_days`` (14) days since they were last emailed,
 ISDs waiting on approval at least ``digest_approval_days`` (21) days since
 they were created, and every event at *Paid* or *No bill needed*, saying which
-the page will not close. The two limits are in *Finance Configuration*
-(migration ``0008_billing_digest_limits``). Every fiscal year counts, test
+the page will not close. The two limits are in *Finance Configuration*.
+Every fiscal year counts, test
 events are left out, and hidden ones are kept: the Treasurer bills them, and
 every bill email is already copied to that address. Nothing is sent when all
 three lists are empty, and ``--dry-run`` prints the email instead of sending
@@ -2550,9 +2557,10 @@ Officer              All nine. The Treasurer is an Officer, and this is the
 Every other group    None. Active members cannot see the finance pages.
 ===================  =========================================================
 
-Active members held ``view_subledger`` and ``view_fundingrequest`` until
-migration ``0020_finance_officers_only``, which takes them back from a database
-that loaded the older fixture.
+Active members held ``view_subledger`` and ``view_fundingrequest`` in
+``fixtures/groups.json`` until commit ``6ea0cbe``. Only the Treasurer's
+development database loaded that version, and a migration took them back from
+it before the migrations were collapsed.
 
 Adding a permission to a model is therefore only half of adding it: until a
 group holds it, the only account that can exercise it is a superuser. That is
@@ -2675,10 +2683,12 @@ install and Django never runs a migration twice:
 **A green test run says nothing about whether such a change reached a real
 install**, because the suite builds a fresh database from the seed every time.
 A catching-up migration should change only what still matches what was seeded,
-so a Treasurer's own edits survive. Three migrations did exactly this before
-the history was collapsed, and are worth copying from git (they are in commit
-``9634c6b``): ``0006_revenue_sources`` and ``0007_sga_budget_source_name`` show
-the pattern, and ``0004_current_spend_categories`` overwrites on purpose,
+so a Treasurer's own edits survive. Four migrations did exactly this before
+the history was collapsed, and are worth copying from git.
+``0006_revenue_sources`` and ``0007_sga_budget_source_name`` (in commit
+``9634c6b``) show the pattern, and so does
+``0016_revenue_sources_and_category_names`` (in commit ``8ae61ca``).
+``0004_current_spend_categories`` (in ``9634c6b``) overwrites on purpose,
 because the Treasurer asked for a new list, and its docstring explains how it
 keeps that safe.
 
