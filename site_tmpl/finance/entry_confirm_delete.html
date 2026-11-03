@@ -18,7 +18,20 @@
                         {% endif %}
                     </dl>
 
-                    {% if txn %}
+                    {% if open_line %}
+                        <div class="alert alert-info">
+                            This is a line of the encumbrance
+                            <a href="{{ entry.encumbrance.get_absolute_url }}">{{ entry.encumbrance }}</a>,
+                            still waiting for its Workday charge. Removing it means
+                            {{ encumbered }} is no longer encumbered.
+                            {% if other_lines %}
+                                The encumbrance's other {{ other_lines }} line{{ other_lines|pluralize }} stay{{ other_lines|pluralize:"s," }};
+                                to cancel the whole purchase, delete it from the encumbrance.
+                            {% else %}
+                                It is the encumbrance's only line, so the encumbrance is deleted too.
+                            {% endif %}
+                        </div>
+                    {% elif txn %}
                         <div class="alert alert-info">
                             The Workday record <code>{{ txn.reference }}</code> is
                             immutable and will not be touched. Removing this entry puts
@@ -42,7 +55,7 @@
                         {% csrf_token %}
                         <a href="{% if txn %}{% url 'finance:txn-detail' txn.pk %}{% else %}{% url 'finance:ledger' %}{% endif %}"
                            class="btn btn-default">{% if blocked %}Back{% else %}Cancel{% endif %}</a>
-                        {% if not blocked %}<button type="submit" class="btn btn-danger">Remove entry</button>{% endif %}
+                        {% if not blocked %}<button type="submit" class="btn btn-danger">{% if open_line and not other_lines %}Delete encumbrance{% else %}Remove entry{% endif %}</button>{% endif %}
                     </form>
                 </div>
             </div>

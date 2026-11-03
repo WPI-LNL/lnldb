@@ -15,6 +15,7 @@ import reversion
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.serializers.base import DeserializationError
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -28,7 +29,7 @@ from finance.calculators import bill_payments
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
 from finance.models import (ZERO, MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
-                            dollars, own_fund_for_account)
+                            dollars, money, own_fund_for_account)
 from finance.suggestions import suggest_all
 from finance.views.ingest import _name_a_few, _put_back_on_encumbrance
 
@@ -379,10 +380,6 @@ def _multibill_shares_of(entry):
 
 def _why_not_removable(request, entry):
     """ Why ``entry`` can't be removed by this person, or ``None`` if it can. """
-    # Taking a line off an encumbrance is changing the encumbrance.
-    if entry.encumbrance_id is not None and entry.parent_transaction_id is None:
-        return ("This is a line of the encumbrance “%s”, still waiting for its Workday charge. "
-                "Change its lines, or delete it, from the encumbrance." % entry.encumbrance)
     # The database won't orphan a refund, so its purchase stays until the
     # refund goes.
     if entry.refunds.exists():
@@ -416,30 +413,50 @@ def entry_delete(request, pk):
        ``Version.objects.get_for_object_reference(ParsedTransaction, pk)``,
        which is how a removed allocation can still be accounted for.
 
-    Two things happen besides. An entry that came from an encumbrance goes
+    Two things happen besides. An entry matched from an encumbrance goes
     back on it, as Undo puts it back, rather than taking the encumbered money
     with it. And a bill marked paid from this payment is marked unpaid again
     when what is left filed no longer covers it.
+
+    A line of an encumbrance still waiting for its Workday charge has no bank
+    line to go back to: removing it cancels that much of the encumbrance, so a
+    purchase that fell through never has to be matched to get rid of it. When
+    it was the encumbrance's last line, the encumbrance goes too, as its own
+    *Delete* would have done.
     """
     entry = get_object_or_404(ParsedTransaction.objects.select_related('encumbrance'), pk=pk)
     parent = entry.parent_transaction
     blocked = _why_not_removable(request, entry)
+    header = entry.encumbrance
+    open_line = header is not None and parent is None
 
     if request.method == 'POST':
         if blocked:
             messages.error(request, blocked)
             return HttpResponseRedirect(reverse('finance:entry-delete', args=[entry.pk]))
         paid = bills_paid_from([entry])
-        header = entry.encumbrance
-        with reversion.create_revision():
+        with transaction.atomic(), reversion.create_revision():
             reversion.set_user(request.user)
-            reversion.set_comment("Entry removed")
-            if header is None:
+            reversion.set_comment("Encumbrance line removed" if open_line else "Entry removed")
+            if open_line:
+                entry.delete()
+                header_gone = not header.lines.exists()
+                if header_gone:
+                    header.delete()
+            elif header is None:
                 entry.delete()
             else:
                 restored = _put_back_on_encumbrance(entry)
             unpaid = unpay_uncovered(paid, request.user)
-        if header is None:
+        if open_line:
+            if header_gone:
+                messages.success(request, "Deleted the encumbrance “%s”: %s is no longer encumbered."
+                                 % (header.description, dollars(abs(money(entry.amount)))))
+            else:
+                messages.success(request, "Removed a line of %s from the encumbrance “%s”: it is no "
+                                          "longer encumbered. The rest of the encumbrance stays."
+                                 % (dollars(abs(money(entry.amount))), header.description))
+        elif header is None:
             messages.success(request, "Entry removed. The Workday line itself is untouched.")
         else:
             messages.warning(request, "Entry removed, and its money put back on the encumbrance "
@@ -455,6 +472,11 @@ def entry_delete(request, pk):
         'entry': entry,
         'txn': parent,
         'blocked': blocked,
+        # An open encumbrance line: the other lines of its encumbrance that
+        # removing this one leaves behind, matched or not.
+        'open_line': open_line,
+        'other_lines': header.lines.exclude(pk=entry.pk).count() if open_line else 0,
+        'encumbered': dollars(abs(money(entry.amount))),
     }
     context.update(filter_context(request))
     return render(request, 'finance/entry_confirm_delete.html', context)

@@ -1781,12 +1781,51 @@ class UndoingAMatchTests(FinanceViewTestCase):
         self.assertEqual(list(txn.slices.values_list('description', flat=True)), ['Batteries'])
         self.assertIn('$200.00 encumbered again on “Gaff tape order”', ' '.join(self.warnings(response)))
 
-    def test_an_open_line_is_changed_on_its_encumbrance_not_removed_on_its_own(self):
-        """ Taking it off here could leave an encumbrance with no lines at all. """
+    # -- an open line, never matched ------------------------------------------
+    # A purchase that fell through is cancelled from its line's own page; it
+    # never has to be matched to a Workday line to be got rid of.
+
+    def test_the_only_open_line_takes_its_encumbrance_with_it(self):
+        """ An encumbrance is never left with no lines at all. """
         entry = self.encumber('-200.00')
+        page = self.client.get(reverse('finance:entry-delete', args=[entry.pk]))
+        self.assertContains(page, 'the encumbrance is deleted too')
+        self.assertContains(page, 'Delete encumbrance')
+
         response = self.client.post(reverse('finance:entry-delete', args=[entry.pk]), follow=True)
-        self.assertContains(response, 'Change its lines, or delete it, from the encumbrance.')
-        self.assertTrue(ParsedTransaction.objects.filter(pk=entry.pk).exists())
+
+        self.assertFalse(ParsedTransaction.objects.filter(pk=entry.pk).exists())
+        self.assertFalse(Encumbrance.objects.filter(pk=self.header.pk).exists())
+        self.assertContains(response, 'Deleted the encumbrance “Gaff tape order”: $200.00 is no longer encumbered.')
+
+    def test_removing_one_open_line_keeps_the_others(self):
+        entry = self.encumber('-200.00')
+        other = self.encumber('-50.00', fund_source=fund('legacy'), fr_line_target=None)
+        self.assertContains(self.client.get(reverse('finance:entry-delete', args=[entry.pk])),
+                            'other 1 line stays')
+
+        response = self.client.post(reverse('finance:entry-delete', args=[entry.pk]), follow=True)
+
+        self.assertEqual(list(self.header.open_lines()), [other])
+        self.assertContains(response, 'Removed a line of $200.00 from the encumbrance “Gaff tape order”')
+
+    def test_an_encumbrance_with_a_matched_line_stays(self):
+        """ The matched entry still says which encumbrance it came from. """
+        matched = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM14', amount='-200.00')
+        self.match(txn, matched.pk)
+        entry = self.encumber('-50.00')
+
+        self.client.post(reverse('finance:entry-delete', args=[entry.pk]))
+
+        self.assertFalse(self.header.open_lines().exists())
+        matched.refresh_from_db()
+        self.assertEqual((matched.parent_transaction, matched.encumbrance), (txn, self.header))
+
+    def test_the_entry_page_offers_remove_on_an_open_line(self):
+        entry = self.encumber('-200.00')
+        self.assertContains(self.client.get(reverse('finance:entry-detail', args=[entry.pk])),
+                            reverse('finance:entry-delete', args=[entry.pk]))
 
 
 class EncumbranceMatchRankingTests(TestCase):

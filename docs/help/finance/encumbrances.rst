@@ -95,10 +95,16 @@ more than was encumbered, the page warns you.
 Change or Cancel an Encumbrance
 -------------------------------
 
-Find it in the `Ledger` -- search for its description, or choose the `Pending` status -- and open it. The entry page
-links to the encumbrance, where you can change its details, add or remove lines, or click `Delete` if the purchase is
-cancelled; the money then stops counting as encumbered. Lines already matched to Workday are kept. A line still
-waiting for its Workday charge is changed or removed there, on the encumbrance, not from its own entry page.
+You never have to match an encumbrance to a Workday line to get rid of it. If the purchase falls through, delete it.
+
+Find it in the `Ledger` -- search for its description, or choose the `Pending` status -- and open it.
+
+- To cancel **that line**, click `Remove` on its page. The money stops counting as encumbered. If it was the
+  encumbrance's only line, the encumbrance is deleted too.
+- To change the encumbrance or cancel **all of it**, click its name at the top of the page. There you can change its
+  details, add or remove lines, or click `Delete` to cancel the whole purchase.
+
+Either way, lines already matched to Workday are kept.
 
 To undo a match, click `Undo` on the row before it disappears, or, later, open the Workday line and click
 `Undo settling`. The line goes back to the queue, and the money goes back on the encumbrance as it was before you matched
@@ -106,4 +112,4 @@ it, at what was encumbered rather than what was charged. A warning says that bot
 still wanted. Removing one matched entry, with `Remove` on its page or the `Del` box on the split page, puts its money
 back the same way.
 
-`Last Modified: November 1, 2026`
+`Last Modified: November 2, 2026`

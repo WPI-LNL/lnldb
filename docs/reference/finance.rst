@@ -1126,8 +1126,11 @@ meant.
 Removing one such entry does the same: *Remove* on its own page
 (:func:`~finance.views.detail.entry_delete`) and the split's *Del* box put it
 back on its encumbrance rather than deleting it, with a warning. A line still
-open on its encumbrance can't be removed from its entry page; it is changed or
-deleted on the encumbrance, whose form will not leave it with no lines.
+open on its encumbrance has nothing to go back to, so *Remove* on its page
+deletes it: that much is no longer encumbered, and nothing has to be matched to
+cancel a purchase that fell through. When it was the encumbrance's last line,
+matched or open, the encumbrance is deleted with it, so none is ever left with
+no lines -- the encumbrance's own form refuses that too.
 
 **A bill paid from what is taken back.** A bill marked paid with no
 ``paid_note`` was paid through Workday: the payments filed against it covered

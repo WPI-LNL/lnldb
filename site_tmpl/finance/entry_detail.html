@@ -11,7 +11,7 @@
                 <div class="alert alert-info">
                     {% if txn %}Encumbered as a line of{% else %}A line of the encumbrance{% endif %}
                     <a href="{{ entry.encumbrance.get_absolute_url }}">{{ entry.encumbrance }}</a>.
-                    {% if not txn %}Change its lines, or delete it, from there.{% endif %}
+                    {% if not txn %}Change its lines, or delete the whole encumbrance, from there. If this part of the purchase isn't happening, click <em>Remove</em> below.{% endif %}
                 </div>
             {% endif %}
             {% if entry.refund_of %}
@@ -154,10 +154,7 @@
                             {% csrf_token %}
                             {% crispy form %}
                             <div class="text-right">
-                                {# An open encumbrance line is removed on its encumbrance. #}
-                                {% if txn or not entry.encumbrance_id %}
-                                    <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
-                                {% endif %}
+                                <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
                                 <button type="submit" class="btn btn-primary">Save</button>
                             </div>
                         </form>
