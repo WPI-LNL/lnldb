@@ -14,7 +14,7 @@
                         <dt>Description</dt><dd>{{ entry.description|default:"(untitled)" }}</dd>
                         <dt>Date</dt><dd>{{ entry.effective_date|date:"F j, Y" }}</dd>
                         {% if entry.fr_line_target %}
-                            <dt>Funding line</dt><dd>{{ entry.fr_line_target.name }}</dd>
+                            <dt>Funding line</dt><dd>{{ entry.fr_line_target.label }}</dd>
                         {% endif %}
                     </dl>
 

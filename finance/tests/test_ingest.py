@@ -313,7 +313,7 @@ class EncumbranceViewTests(FinanceViewTestCase):
     def _post(self, url, lines=None, existing=0, **overrides):
         """ The encumbrance's own fields, then its lines as the formset posts them. """
         if lines is None:
-            lines = [{'amount': '75.00', 'fund_source': str(fund('sga_budget').pk),
+            lines = [{'amount': '75.00', 'fund_source': str(fund('legacy').pk),
                       'lnl_spend_category': str(category('consumables').pk)}]
         data = {
             'description': 'Gaff tape run',
@@ -392,14 +392,14 @@ class EncumbranceViewTests(FinanceViewTestCase):
              'fund_source': str(fund('legacy').pk),
              'lnl_spend_category': str(category('consumables').pk)},
             {'amount': '200.00', 'description': 'Cable',
-             'fund_source': str(fund('sga_budget').pk),
+             'fund_source': str(fund('legacy').pk),
              'lnl_spend_category': str(category('consumables').pk)},
         ], description='Spring gear order')
         header = Encumbrance.objects.get()
         lines = list(header.open_lines())
         self.assertEqual([(line.description, line.amount, line.fund_source) for line in lines], [
             ('Lights', Decimal('-300.00'), fund('legacy')),
-            ('Cable', Decimal('-200.00'), fund('sga_budget')),
+            ('Cable', Decimal('-200.00'), fund('legacy')),
         ])
         self.assertTrue(all(line.is_encumbrance for line in lines))
 
@@ -409,7 +409,7 @@ class EncumbranceViewTests(FinanceViewTestCase):
 
     def test_a_zero_amount_is_refused(self):
         self._post(reverse('finance:encumbrance-new'), lines=[
-            {'amount': '0', 'fund_source': str(fund('sga_budget').pk),
+            {'amount': '0', 'fund_source': str(fund('legacy').pk),
              'lnl_spend_category': str(category('consumables').pk)}])
         self.assertFalse(ParsedTransaction.objects.exists())
         self.assertFalse(Encumbrance.objects.exists())
@@ -478,7 +478,7 @@ class EncumbranceViewTests(FinanceViewTestCase):
         self._post(reverse('finance:encumbrance-new'), lines=[
             {'amount': '30.00', 'fund_source': str(fund('legacy').pk),
              'lnl_spend_category': str(category('consumables').pk)},
-            {'amount': '45.00', 'fund_source': str(fund('sga_budget').pk),
+            {'amount': '45.00', 'fund_source': str(fund('legacy').pk),
              'lnl_spend_category': str(category('consumables').pk)},
         ])
         header = Encumbrance.objects.get()
@@ -507,7 +507,7 @@ class SettleViewTests(FinanceViewTestCase):
     def test_a_balanced_line_settles(self):
         ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-500.00'),
-            effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.txn.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         response = self._settle()
         self.assertContains(response, 'settled')
@@ -521,7 +521,7 @@ class SettleViewTests(FinanceViewTestCase):
         """ The message names both totals, because "it does not balance" is not enough. """
         ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-200.00'),
-            effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.txn.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         response = self._settle()
         self.assertContains(response, 'Cannot settle')
@@ -550,7 +550,7 @@ class SettleViewTests(FinanceViewTestCase):
         with reversion.create_revision():
             entry = ParsedTransaction.objects.create(
                 parent_transaction=self.txn, amount=Decimal('-500.00'),
-                effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+                effective_date=self.txn.accounting_date, fund_source=fund('legacy'),
                 lnl_spend_category=category('consumables'))
         self._settle()
         latest = Version.objects.get_for_object(entry).first()
@@ -564,7 +564,7 @@ class SettleViewTests(FinanceViewTestCase):
         from the start, so the next change to it shows only what changed.
         """
         self.client.post(reverse('finance:reconcile', args=[self.txn.pk]), {
-            'txn%s-fund_source' % self.txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % self.txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % self.txn.pk: category('consumables').pk,
         })
         entry = self.txn.slices.get()
@@ -602,7 +602,7 @@ class QueueSuggestionEndpointTests(FinanceViewTestCase):
         entry = ParsedTransaction.objects.create(
             parent_transaction=expense, amount=Decimal('-40.00'),
             effective_date=expense.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         credit = self.make_txn(op='OT-J3', amount='40.00',
                                date=datetime.date(2025, 9, 20))
         payload = self.client.get(reverse('finance:suggestions', args=[credit.pk])).json()
@@ -1148,7 +1148,7 @@ class WholeEncumbranceMatchingTests(FinanceViewTestCase):
             'status': TransactionStatus.PENDING,
             'effective_date': self.header.logged_on,
             'description': description,
-            'fund_source': fund('sga_budget'),
+            'fund_source': fund('legacy'),
             'lnl_spend_category': category('consumables'),
             'encumbrance': self.header,
         }
@@ -1476,7 +1476,7 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         entry = ParsedTransaction.objects.create(
             parent_transaction=None, amount=Decimal('-1000.00'),
             status=TransactionStatus.PENDING, effective_date=datetime.date(2025, 8, 1),
-            description='Cable order', fund_source=fund('sga_budget'),
+            description='Cable order', fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), is_projection=False)
         first = self.make_txn(op='SINV-A', amount='-600.00', date=datetime.date(2025, 9, 1))
         refused = self.make_txn(op='SINV-B', amount='-400.00', org='315-AG',
@@ -1656,7 +1656,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
         self.assertFalse(ParsedTransaction.objects.filter(parent_transaction__isnull=False).exists())
 
     def test_a_whole_match_puts_every_line_back(self):
-        lights = self.encumber('-300.00', 'Lights', fund_source=fund('sga_budget'),
+        lights = self.encumber('-300.00', 'Lights', fund_source=fund('legacy'),
                                fr_line_target=None)
         cable = self.encumber('-200.00', 'Cable')
         txn = self.make_txn(op='OT-UM6', amount='-503.55')
@@ -1678,7 +1678,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
         typed = ParsedTransaction.objects.create(
             parent_transaction=txn, amount=Decimal('-200.00'),
             effective_date=txn.accounting_date, description='Batteries',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
         self.undo(txn)
 
@@ -1851,7 +1851,7 @@ class EncumbranceMatchRankingTests(TestCase):
             status=TransactionStatus.PENDING,
             effective_date=date or datetime.date(2025, 9, 1),
             description=description, audit_explanation=explanation,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def test_the_closest_amount_comes_first(self):
         txn = self._txn('-203.55')
@@ -1913,7 +1913,7 @@ class EncumbranceMatchRankingTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=other, amount=Decimal('-200.00'),
             status=TransactionStatus.PENDING, effective_date=other.accounting_date,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertEqual(suggest_encumbrance_matches(txn), [])
 
     def test_revenue_is_offered_nothing(self):

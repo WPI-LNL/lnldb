@@ -34,7 +34,7 @@ class LedgerFacetTests(FinanceViewTestCase):
         self.spend = ParsedTransaction.objects.create(
             parent_transaction=spend_txn, amount=Decimal('-120.00'),
             effective_date=spend_txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            fund_source=fund('sga_mandatory'), lnl_spend_category=category('consumables'),
             project_tag=self.tag, status=TransactionStatus.SETTLED)
 
         income_txn = self.make_txn(op='OT-F2', amount='700.00')
@@ -104,7 +104,7 @@ class LedgerFacetTests(FinanceViewTestCase):
         ParsedTransaction.objects.create(
             parent_transaction=credit_txn, amount=Decimal('20.00'),
             effective_date=credit_txn.accounting_date, description='Tape returned',
-            refund_of=self.spend, fund_source=fund('sga_budget'),
+            refund_of=self.spend, fund_source=fund('sga_mandatory'),
             lnl_spend_category=category('consumables'))
         self.assertContains(self._ledger('kind=expense'), 'Tape returned')
         self.assertNotContains(self._ledger('kind=revenue'), 'Tape returned')
@@ -161,7 +161,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
         self.expense = ParsedTransaction.objects.create(
             parent_transaction=expense_txn, amount=Decimal('-120.00'),
             effective_date=expense_txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
         from finance.models import RevenueSource
         income_txn = self.make_txn(op='OT-G2', amount='700.00')
@@ -232,7 +232,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
         """ Nothing has cleared the bank, so there is nothing to settle against. """
         encumbrance = ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
-            description='Deposit on a console', fund_source=fund('sga_budget'),
+            description='Deposit on a console', fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'))
         self.grant('settle_subledger')
         response = self._act('status', TransactionStatus.SETTLED, [encumbrance])
@@ -247,15 +247,17 @@ class BulkActionGuardTests(FinanceViewTestCase):
         self.expense.refresh_from_db()
         self.assertEqual(self.expense.status, TransactionStatus.SETTLED)
 
-    def test_a_fund_needing_a_funding_request_is_never_offered(self):
+    def test_a_fund_needing_a_line_is_never_offered(self):
         """
-        Guarded at the form rather than per row: the FR line cannot be chosen
-        in bulk, so there is no selection for which this fund would be valid.
+        Guarded at the form rather than per row: a funding request line or a
+        budget line cannot be chosen in bulk, so there is no selection for
+        which either fund would be valid.
         """
         from finance.forms import BulkActionForm
         offered = [f.slug for f in BulkActionForm().fields['fund_source'].queryset]
         self.assertNotIn('sga_fr', offered)
-        self.assertIn('sga_budget', offered)
+        self.assertNotIn('sga_budget', offered)
+        self.assertIn('legacy', offered)
 
     def test_a_row_the_change_would_invalidate_is_named_not_written(self):
         """
@@ -337,7 +339,7 @@ class LedgerReceiptTests(FinanceViewTestCase):
         txn = self.make_txn(op='OT-R1', amount='-120.00')
         entry = ParsedTransaction.objects.create(
             parent_transaction=txn, amount=Decimal('-120.00'), effective_date=txn.accounting_date,
-            description='Gaff tape', fund_source=fund('sga_budget'),
+            description='Gaff tape', fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         ParsedTransaction.objects.filter(pk=entry.pk).update(receipt_file='finance/receipts/gaff.pdf')
 

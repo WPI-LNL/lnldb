@@ -503,6 +503,73 @@ class FundBehaviour(models.TextChoices):
     REIMBURSED = 'reimbursed', 'Reimbursed by SGA after spending'
 
 
+class FundingKind(models.TextChoices):
+    """
+    The two ways SGA grants money line by line, both kept as a
+    :class:`FundingRequest`.
+
+    * **A funding request** -- one purpose, numbered like A.27.16, paid back
+      after the spending.
+    * **A budget** -- the whole fiscal year, one per year, deposited at the
+      start of it. Each line has a four-digit number of its own, and each line
+      is Event Production or Projection on its own.
+
+    Everything else -- lines, burndowns, encumbrances, refunds, closing -- is
+    the same for both, which is why a budget is a kind of request rather than
+    a model of its own.
+    """
+    REQUEST = 'request', 'Funding request'
+    BUDGET = 'budget', 'Budget'
+
+
+class DrawsOn(models.TextChoices):
+    """
+    Whose lines spending from a fund has to name: a funding request's, a
+    budget's, or nobody's. See :attr:`FundSource.draws_on`. The values are
+    :class:`FundingKind`'s, so a fund draws on a line when its ``draws_on`` is
+    the line's request's ``kind``.
+    """
+    NOTHING = '', 'Nothing'
+    REQUEST = 'request', 'Funding requests'
+    BUDGET = 'budget', 'Budgets'
+
+
+#: What one line of each kind is called, in errors and labels.
+LINE_WORDS = {DrawsOn.REQUEST: 'funding request line', DrawsOn.BUDGET: 'budget line'}
+
+
+def line_charge_problem(fund, line, paying_back=False):
+    """
+    Why spending from ``fund`` can't be charged to ``line``, or ``None``.
+
+    A fund that draws on funding requests is charged to a funding request's
+    lines and nothing else; one that draws on budgets, to a budget's lines; any
+    other fund to no line at all. ``line`` may be ``None``: then the question
+    is whether the fund needed one. ``paying_back`` is money SGA took back,
+    which names the request or budget instead of a line.
+
+    The same words on every form and in the model, so a refusal reads the same
+    wherever it comes from.
+    """
+    draws = fund.draws_on if fund is not None else DrawsOn.NOTHING
+    if line is None:
+        if draws and not paying_back:
+            if draws == DrawsOn.BUDGET:
+                return ("%s money has to name the budget line it comes out of." % fund)
+            return "%s money has to name the funding request line it comes out of." % fund
+        return None
+    kind = line.funding_request.kind
+    if draws == kind:
+        return None
+    word = LINE_WORDS.get(kind, 'line')
+    if not draws:
+        return ("%s is a %s, and only a fund that draws on %s can be charged to one — %s does "
+                "not. Change the fund, or clear this." % (
+                    line.label, word, DrawsOn(kind).label.lower(), fund or "no fund"))
+    return ("%s is a %s, but %s is charged to %ss. Pick a %s, or change the fund."
+            % (line.label, word, fund, LINE_WORDS[draws], LINE_WORDS[draws]))
+
+
 def event_passthrough_category():
     """
     The :class:`SpendCategory` for costs billed straight to an event, if one is
@@ -731,12 +798,14 @@ class FundSource(Vocabulary):
                   "so only list a code when it genuinely identifies this fund -- 810-FD is "
                   "on all of LNL's spending and says nothing about whose money it was. "
                   "Leave blank and this fund is never chosen for you.")
-    requires_funding_request = models.BooleanField(
-        default=False, verbose_name="Must name a funding request line",
-        help_text="Money from a specific SGA funding request has to burn down one of that "
-                  "request's lines, or the request's balance silently drifts. Turn this on "
-                  "and an expense on this fund cannot be saved without an FR line -- and no "
-                  "other fund is allowed to name one.")
+    draws_on = models.CharField(
+        max_length=16, choices=DrawsOn.choices, blank=True, default=DrawsOn.NOTHING,
+        verbose_name="Charged to lines of",
+        help_text="Money SGA grants line by line has to burn down one of those lines, or the "
+                  "balance silently drifts. Spending from a fund set to funding requests can't "
+                  "be saved without a funding request line, and spending from one set to budgets "
+                  "without a budget line; no other fund may name either. SGA's own payments "
+                  "into and out of the fund name the request or budget they're for.")
     is_default = models.BooleanField(
         default=False, verbose_name="Fill this in when nothing else says",
         help_text="The fund an expense is filled in with when neither the memo nor the "
@@ -766,6 +835,26 @@ class FundSource(Vocabulary):
     class Meta(Vocabulary.Meta):
         abstract = False
         verbose_name = "Fund Source"
+
+    @property
+    def requires_funding_request(self):
+        """ Whether spending from this fund has to name a funding request's line. """
+        return self.draws_on == DrawsOn.REQUEST
+
+    @property
+    def draws_on_budget(self):
+        """ Whether spending from this fund has to name a budget's line. """
+        return self.draws_on == DrawsOn.BUDGET
+
+    @property
+    def draws_on_lines(self):
+        """ Whether spending from this fund has to name a request's or a budget's line. """
+        return bool(self.draws_on)
+
+    @property
+    def line_word(self):
+        """ What one of the lines this fund draws on is called: "budget line", "funding request line". """
+        return LINE_WORDS.get(self.draws_on, '')
 
     @property
     def carries_forward(self):
@@ -1423,6 +1512,14 @@ def _money_subquery(queryset, group_by, column='amount'):
         Value(ZERO), output_field=MONEY_FIELD)
 
 
+def _count_subquery(queryset, group_by):
+    """ A correlated ``COUNT`` as a subquery, for the reason :func:`_money_subquery` gives. """
+    return Coalesce(
+        Subquery(queryset.values(group_by).annotate(n=Count('pk')).values('n')[:1],
+                 output_field=models.IntegerField()),
+        Value(0), output_field=models.IntegerField())
+
+
 class FundingRequestQuerySet(models.QuerySet):
     """ Annotations for the funding request listings and burndown bars. """
 
@@ -1435,10 +1532,18 @@ class FundingRequestQuerySet(models.QuerySet):
         roughly eight queries per request while carrying a prefetch that was
         never read. See :attr:`FundingRequest.total_awarded`.
         """
+        lines = FRLineItem.objects.filter(funding_request=OuterRef('pk'))
         return self.annotate(
-            _awarded_total=_money_subquery(
-                FRLineItem.objects.filter(funding_request=OuterRef('pk')),
-                'funding_request', 'amount_awarded'),
+            _awarded_total=_money_subquery(lines, 'funding_request', 'amount_awarded'),
+            _requested_total=_money_subquery(lines, 'funding_request', 'amount_requested'),
+            _line_count=_count_subquery(lines, 'funding_request'),
+            _waiting_count=_count_subquery(lines.filter(amount_awarded__isnull=True),
+                                           'funding_request'),
+            _requested_missing=_count_subquery(lines.filter(amount_requested__isnull=True),
+                                               'funding_request'),
+            _deposited_total=_money_subquery(
+                ParsedTransaction.objects.filter(funding_request=OuterRef('pk'), amount__gt=0),
+                'funding_request'),
             _spent_total=_money_subquery(
                 ParsedTransaction.objects.filter(
                     fr_line_target__funding_request=OuterRef('pk')),
@@ -1464,7 +1569,16 @@ class FundingRequestQuerySet(models.QuerySet):
         """
         return self.prefetch_related(
             Prefetch('line_items',
-                     queryset=FRLineItem.objects.with_spend().order_by('sort_order', 'pk')))
+                     queryset=FRLineItem.objects.with_spend().select_related('category')
+                                                .order_by('sort_order', 'pk')))
+
+    def requests(self):
+        """ Funding requests only, without the budgets. """
+        return self.filter(kind=FundingKind.REQUEST)
+
+    def budgets(self):
+        """ Budgets only. """
+        return self.filter(kind=FundingKind.BUDGET)
 
 
 #: SGA's number for a funding request: ``A.27.16``. The letter is the body
@@ -1501,11 +1615,40 @@ def normalise_sga_reference(value):
     return re.sub(r'\s+', '', (value or '')).upper()
 
 
-@reversion.register(follow=['line_items'])
+#: A budget line's number as SGA gives it: four digits, e.g. 4521. Budgets
+#: have no request number of their own; each of their lines has one of these.
+BUDGET_LINE_NUMBER = re.compile(r'^\d{4}$')
+
+#: A fiscal year written into a name: FY27, FY 27, fy2027.
+FISCAL_YEAR_IN_TEXT = re.compile(r'\bFY\s*(\d{4}|\d{2})\b', re.IGNORECASE)
+
+
+def budget_name(fiscal_year):
+    """ The name a new budget starts with: ``FY27 SGA Budget``. """
+    return "FY%s SGA Budget" % str(fiscal_year)[-2:]
+
+
+def fiscal_years_named(text):
+    """ Every fiscal year ``text`` names, as four-digit years: "FY27 SGA Budget" -> [2027]. """
+    years = []
+    for written in FISCAL_YEAR_IN_TEXT.findall(text or ''):
+        years.append(int(written) if len(written) == 4 else 2000 + int(written))
+    return years
+
+
+@reversion.register(follow=['line_items', 'budget_categories'])
 class FundingRequest(models.Model):
-    """ An out-of-cycle SGA funding request. The parent of a set of line items. """
+    """
+    SGA money granted line by line: an out-of-cycle funding request, or the
+    year's budget (see :class:`FundingKind`). The parent of a set of line items.
+    """
     glyphicon = 'inbox'
 
+    kind = models.CharField(
+        max_length=16, choices=FundingKind.choices, default=FundingKind.REQUEST,
+        db_index=True, verbose_name="Type",
+        help_text="A funding request is for one purpose and paid back after the spending; a "
+                  "budget covers the whole fiscal year and is deposited at its start.")
     name = models.CharField(max_length=192)
     reference = models.CharField(
         max_length=64, blank=True, verbose_name="SGA reference #",
@@ -1547,16 +1690,45 @@ class FundingRequest(models.Model):
         """ This request's detail page, line items and all. """
         return reverse('finance:fr-detail', args=[self.pk])
 
+    @property
+    def is_budget(self):
+        """ Whether this is the year's SGA budget rather than a funding request. """
+        return self.kind == FundingKind.BUDGET
+
+    @property
+    def has_money(self):
+        """
+        Whether anything is charged to its lines or SGA has paid for it. Its
+        type is fixed from then on: the money was charged to the fund that
+        draws on that type.
+        """
+        if self.pk is None:
+            return False
+        return (ParsedTransaction.objects.filter(fr_line_target__funding_request=self).exists()
+                or self.sga_payments.exists())
+
     def clean(self):
         """
-        Hold the reference to SGA's format, and to the year it says.
+        Hold a request's number to SGA's format, and a budget to its year.
 
-        The number is how a Workday memo names this request, so one written
-        any other way is one the queue can never match a charge to. The year in
-        it is checked against the request's own because the two are the same
-        fact written twice, and a disagreement means one of them is a typo.
+        A request's number is how a Workday memo names it, so one written any
+        other way is one the queue can never match a charge to. The year in it
+        is checked against the request's own because the two are the same fact
+        written twice, and a disagreement means one of them is a typo. A budget
+        has no number -- its lines do -- and there is one a year, whose name
+        says which.
         """
         super(FundingRequest, self).clean()
+        if self.pk is not None:
+            saved = FundingRequest.objects.filter(pk=self.pk).values_list('kind', flat=True).first()
+            if saved is not None and saved != self.kind and self.has_money:
+                raise ValidationError({'kind': (
+                    "Money is already charged to this %s or paid for it by SGA, so it can't "
+                    "become a %s." % (FundingKind(saved).label.lower(),
+                                      FundingKind(self.kind).label.lower()))})
+        if self.is_budget:
+            self._clean_budget()
+            return
         self.reference = normalise_sga_reference(self.reference)
         if not self.reference:
             return
@@ -1571,6 +1743,35 @@ class FundingRequest(models.Model):
                 "%s is an FY%s number, but this request is for FY%s. Fix whichever "
                 "one is wrong." % (self.reference, match.group(2),
                                    str(self.fiscal_year)[-2:]))})
+
+    def _clean_budget(self):
+        """
+        One budget a year, named for its own year. A budget has no number,
+        no side and nothing owed when the books started: its lines carry the
+        number and the side, and SGA deposits it rather than paying it back.
+        """
+        self.reference = ''
+        self.is_projection = False
+        self.owed_at_books_start = ZERO
+        errors = {}
+        year = int(self.fiscal_year) if self.fiscal_year else None
+        if year is not None:
+            others = FundingRequest.objects.budgets().filter(fiscal_year=year).exclude(pk=self.pk)
+            existing = others.first()
+            if existing is not None:
+                errors['fiscal_year'] = (
+                    "There is already a budget for FY%s: %s. A year has one budget; edit that "
+                    "one instead." % (str(year)[-2:], existing.name))
+            named = fiscal_years_named(self.name)
+            if not named:
+                errors['name'] = ("Put the fiscal year in the name, e.g. %s."
+                                  % budget_name(year))
+            elif any(other != year for other in named):
+                errors['name'] = (
+                    "The name says FY%s, but this budget is for FY%s. Fix whichever one is "
+                    "wrong." % (str([y for y in named if y != year][0])[-2:], str(year)[-2:]))
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def approving_body(self):
@@ -1597,6 +1798,55 @@ class FundingRequest(models.Model):
             return money(annotated)
         return money(self.line_items.aggregate(t=Sum('amount_awarded'))['t'])
 
+    # -- requested and approved -------------------------------------------
+    # A line's approved amount is blank while it is pending SGA approval,
+    # which is not the same as SGA approving nothing: $0 is a line SGA
+    # denied. So the totals add up the lines SGA has decided and count the
+    # pending ones, and only a request with every line pending has an
+    # approved total of "not known yet". The requested amount works the same
+    # way: it is blank on lines entered before it was asked for.
+
+    @property
+    def total_requested(self):
+        """ What LNL asked SGA for, across the lines that say. """
+        annotated = getattr(self, '_requested_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.line_items.aggregate(t=Sum('amount_requested'))['t'])
+
+    @property
+    def line_count(self):
+        annotated = getattr(self, '_line_count', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.count()
+
+    @property
+    def waiting_count(self):
+        """ How many lines are pending SGA approval: no approved amount. """
+        annotated = getattr(self, '_waiting_count', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.filter(amount_awarded__isnull=True).count()
+
+    @property
+    def requested_missing_count(self):
+        """ How many lines have no requested amount. """
+        annotated = getattr(self, '_requested_missing', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.filter(amount_requested__isnull=True).count()
+
+    @property
+    def approved_known(self):
+        """ Whether SGA has decided at least one line, so the approved total means something. """
+        return not (self.line_count and self.waiting_count == self.line_count)
+
+    @property
+    def requested_known(self):
+        """ Whether at least one line says what was requested. """
+        return not (self.line_count and self.requested_missing_count == self.line_count)
+
     @property
     def total_spent(self):
         """
@@ -1612,7 +1862,13 @@ class FundingRequest(models.Model):
 
     @property
     def total_remaining(self):
-        """ Award less spend. Negative means the request is overspent. """
+        """
+        Approved less spent. Negative means the request is overspent; ``None``
+        while SGA has decided none of its lines, as nothing is left of nothing
+        yet decided.
+        """
+        if not self.approved_known:
+            return None
         return self.total_awarded - self.total_spent
 
     @property
@@ -1630,8 +1886,9 @@ class FundingRequest(models.Model):
 
     @property
     def is_overspent(self):
-        """ Whether this request has been charged more than it was awarded. """
-        return self.total_remaining < 0
+        """ Whether this request has been charged more than was approved. """
+        remaining = self.total_remaining
+        return remaining is not None and remaining < 0
 
     # -- what SGA owes for it ----------------------------------------------
     # SGA reimburses what was actually spent, never the award, and only once
@@ -1677,6 +1934,65 @@ class FundingRequest(models.Model):
         less what SGA has paid.
         """
         return money(self.owed_at_books_start) + self.total_charged - self.total_received
+
+    # -- a budget's deposit ------------------------------------------------
+    # SGA deposits a budget before the spending, and takes back whatever is
+    # unspent at year end. Both are SGA's payments naming the budget, the
+    # same box a reimbursement uses for a request: money in is the deposit,
+    # money out is money returned.
+
+    @property
+    def total_deposited(self):
+        """ What SGA has deposited for this budget. """
+        annotated = getattr(self, '_deposited_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.sga_payments.filter(amount__gt=0).aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def total_returned(self):
+        """ What has gone back to SGA from this budget. Positive. """
+        return self.total_deposited - self.total_received
+
+    @property
+    def left_in_account(self):
+        """ Deposited, less returned, less what has reached Workday. Negative is overspent. """
+        return self.total_received - self.total_charged
+
+    @property
+    def year_over(self):
+        """ Whether the fiscal year this is for has ended. """
+        return int(self.fiscal_year) < current_fiscal_year()
+
+    @property
+    def deposit_status(self):
+        """ The line under a budget's Deposited figure. """
+        deposited, returned, left = self.total_deposited, self.total_returned, self.left_in_account
+        if not deposited and not returned:
+            return "Not deposited yet"
+        if self.year_over and left > 0:
+            return "%s goes back to SGA" % dollars(left)
+        if returned:
+            return "Returned %s to SGA" % dollars(returned)
+        approved = self.total_awarded
+        if deposited < approved:
+            return "%s of %s deposited" % (dollars(deposited), dollars(approved))
+        return "Deposited"
+
+    @property
+    def budget_status(self):
+        """
+        What is left of a budget's deposit means, in the balance page's words
+        for SGA's budget fund (:attr:`finance.balances.FundRow.status`).
+        """
+        left = self.left_in_account
+        if not any((self.total_deposited, self.total_returned, self.total_charged)):
+            return "Nothing in or out yet"
+        if left > 0:
+            return "Goes back to SGA" if self.year_over else "Left to spend this year"
+        if left < 0:
+            return "Overspent -- cover it from money that carries forward"
+        return "Fully spent"
 
     @property
     def reimbursement_status(self):
@@ -1737,7 +2053,11 @@ class FundingRequest(models.Model):
         line picker (:class:`finance.forms.FRLineChoiceField`), as the whole
         option in the request box beside one, and as the front of
         :attr:`picker_label`.
+
+        A budget is ``FY27 · Budget``: there is one a year, so that says which.
         """
+        if self.is_budget:
+            return "FY%s · Budget" % str(self.fiscal_year)[-2:]
         name = "%s %s" % (self.reference, self.name) if self.reference else self.name
         return "FY%s · %s" % (str(self.fiscal_year)[-2:], name)
 
@@ -1748,9 +2068,41 @@ class FundingRequest(models.Model):
 
         The year and what SGA still owes are on it because a reimbursement
         names the request it repays, and the one still owed money is nearly
-        always the one being repaid.
+        always the one being repaid. A budget says what SGA has deposited for
+        it instead, as SGA deposits a budget rather than paying it back.
         """
+        if self.is_budget:
+            return "%s — %s" % (self.short_label, self.deposit_status.lower())
         return "%s — %s" % (self.short_label, self.reimbursement_status.lower())
+
+
+@reversion.register(follow=['funding_request'])
+class BudgetCategory(models.Model):
+    """
+    A group of a budget's lines, named by the Treasurer.
+
+    A budget can run to a hundred lines, many of them alike, so the
+    Treasurer makes categories for each budget and nests its lines under them,
+    one level deep, the way a project's parts sit under it. They are nothing
+    to do with :class:`SpendCategory`, which says what money was spent on
+    across the whole ledger; a line has one of each.
+    """
+    funding_request = models.ForeignKey(FundingRequest, on_delete=models.CASCADE,
+                                        related_name='budget_categories')
+    name = models.CharField(max_length=96)
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="Order")
+
+    class Meta:
+        ordering = ('sort_order', 'name', 'pk')
+        verbose_name = "Budget Category"
+        verbose_name_plural = "Budget Categories"
+        constraints = [
+            models.UniqueConstraint(fields=('funding_request', 'name'),
+                                    name='finance_budget_category_name_unique'),
+        ]
+
+    def __str__(self):
+        return self.name
 
 
 class FRLineItemQuerySet(models.QuerySet):
@@ -1763,11 +2115,18 @@ class FRLineItemQuerySet(models.QuerySet):
             Value(Decimal('0.00')),
             output_field=models.DecimalField(max_digits=12, decimal_places=2)))
 
+    def chargeable(self):
+        """
+        Lines SGA has approved money for. A line pending SGA approval, or
+        one SGA denied ($0), has nothing to charge to.
+        """
+        return self.filter(amount_awarded__gt=0)
+
 
 @reversion.register(follow=['funding_request'])
 class FRLineItem(models.Model):
     """
-    A single budgeted line inside a funding request. Balances are live.
+    A single line inside a funding request or a budget. Balances are live.
 
     Registered with reversion in its own right: :class:`FundingRequest` follows
     ``line_items``, and reversion refuses to serialise a followed model it does
@@ -1780,14 +2139,40 @@ class FRLineItem(models.Model):
     description = models.TextField(
         blank=True,
         help_text="What this line covers, in the words used on the SGA request")
-    amount_awarded = models.DecimalField(max_digits=10, decimal_places=2,
-                                         validators=[MinValueValidator(Decimal('0.00'))])
+    amount_requested = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Requested",
+        help_text="What LNL asked SGA for on this line.")
+    # Blank is a line pending SGA approval, which is not the same as $0: a
+    # line SGA denied. See FundingRequest.approved_known.
+    amount_awarded = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Approved",
+        help_text="What SGA approved. Leave blank while the line is pending SGA approval; enter 0 "
+                  "if SGA denied it.")
     lnl_spend_category = models.ForeignKey(
         SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
         related_name='fr_line_items', verbose_name="Expected spend category")
-    project_tag = models.ForeignKey(ProjectTag, on_delete=models.SET_NULL, null=True, blank=True,
-                                    related_name='fr_line_items')
     sort_order = models.PositiveIntegerField(default=0)
+
+    # -- budget lines only ---------------------------------------------------
+    # The line's own number from SGA, which SGA calls its Request ID. Kept as
+    # ``number`` here: ``request_id`` would read as a key to a request.
+    number = models.CharField(
+        max_length=4, blank=True, verbose_name="Request ID",
+        validators=[RegexValidator(BUDGET_LINE_NUMBER.pattern,
+                                   "A budget line's Request ID is four digits, like 4521.")],
+        help_text="A budget line's four-digit Request ID, as SGA gives it. Workday memos quote "
+                  "it: Velcro restock, consumables, (4521).")
+    is_projection = models.BooleanField(
+        default=False, verbose_name="Projection",
+        help_text="A budget line's side. A funding request's lines are on its request's side.")
+    category = models.ForeignKey(
+        BudgetCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='lines',
+        help_text="The category a budget line is nested under.")
+    undergraduates = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Undergraduates who benefited",
+        help_text="SGA's Budget Report Form asks for it for each line.")
 
     objects = FRLineItemQuerySet.as_manager()
 
@@ -1814,8 +2199,38 @@ class FRLineItem(models.Model):
         return -money(self.allocations.aggregate(t=Sum('amount'))['t'])
 
     @property
+    def is_budget_line(self):
+        """ Whether this line is a budget's. """
+        return self.funding_request.is_budget
+
+    @property
+    def side_is_projection(self):
+        """
+        The side spending charged to this line is on: a budget line's own, a
+        funding request line's request's.
+        """
+        if self.funding_request.is_budget:
+            return self.is_projection
+        return self.funding_request.is_projection
+
+    @property
+    def is_waiting(self):
+        """ Whether the line is pending SGA approval: no approved amount yet. """
+        return self.amount_awarded is None
+
+    @property
+    def is_turned_down(self):
+        """ Whether SGA denied the line: approved at $0. """
+        return self.amount_awarded is not None and money(self.amount_awarded) == ZERO
+
+    @property
     def remaining(self):
-        """ What is left on this line. Negative means it is overspent. """
+        """
+        What is left on this line. Negative means it is overspent; ``None``
+        while it is pending SGA approval, as there is nothing to be left of yet.
+        """
+        if self.amount_awarded is None:
+            return None
         return self.amount_awarded - self.spent
 
     @property
@@ -1827,21 +2242,29 @@ class FRLineItem(models.Model):
 
     @property
     def is_overspent(self):
-        """ Whether more has been charged here than was awarded. """
-        return self.remaining < 0
+        """ Whether more has been charged here than was approved. """
+        remaining = self.remaining
+        return remaining is not None and remaining < 0
 
     @property
     def overspent_by(self):
-        """ How far over, as a positive figure; zero when within the award. """
+        """ How far over, as a positive figure; zero when within what was approved. """
         return -self.remaining if self.is_overspent else Decimal('0.00')
 
     @property
     def balance_label(self):
         """ ``$120.00 left``, or ``OVER by $29.00`` rather than a negative. """
+        if self.is_waiting:
+            return "pending SGA approval"
         remaining = self.remaining
         if remaining < 0:
             return "OVER by %s" % dollars(-remaining)
         return "%s left" % dollars(remaining)
+
+    @property
+    def label(self):
+        """ A budget line leads with its number: ``4521 Gaff tape``. """
+        return "%s %s" % (self.number, self.name) if self.number else self.name
 
     @property
     def nested_label(self):
@@ -1853,9 +2276,13 @@ class FRLineItem(models.Model):
 
         The request heading carries the year, so the line itself only has to
         say what it is for and what is left -- the remaining balance because
-        pushing a line past its award is easy to do without noticing.
+        pushing a line past its award is easy to do without noticing. A budget
+        line leads with its Request ID, under its category's heading::
+
+            FY27 · Budget · Consumables
+                └ 4521 Gaff tape — $120.00 left
         """
-        return nested_option_label('%s — %s' % (self.name, self.balance_label), 1)
+        return nested_option_label('%s — %s' % (self.label, self.balance_label), 1)
 
     @property
     def picker_label(self):
@@ -1867,8 +2294,37 @@ class FRLineItem(models.Model):
         both are things you can get wrong without noticing: charging FY26 money
         to an FY25 request, or pushing a line past its award.
         """
-        return "%s · %s — %s" % (self.funding_request.short_label, self.name,
+        return "%s · %s — %s" % (self.funding_request.short_label, self.label,
                                  self.balance_label)
+
+
+class LineTotals(object):
+    """
+    The figures of a set of lines -- a budget's, one side of it, one category
+    of it -- under the same names :class:`FundingRequest` gives its own, so a
+    template shows either without knowing which it has.
+
+    ``lines`` should come through :meth:`FRLineItemQuerySet.with_spend`, or
+    each line's spend is a query of its own.
+    """
+
+    def __init__(self, lines):
+        self.lines = list(lines)
+        self.line_count = len(self.lines)
+        self.waiting_count = sum(1 for line in self.lines if line.is_waiting)
+        self.requested_missing_count = sum(1 for line in self.lines
+                                           if line.amount_requested is None)
+        self.total_requested = sum((money(line.amount_requested) for line in self.lines
+                                    if line.amount_requested is not None), ZERO)
+        self.total_awarded = sum((money(line.amount_awarded) for line in self.lines
+                                  if line.amount_awarded is not None), ZERO)
+        self.total_spent = sum((line.spent for line in self.lines), ZERO)
+
+    approved_known = FundingRequest.approved_known
+    total_remaining = FundingRequest.total_remaining
+    requested_known = FundingRequest.requested_known
+    percent_spent = FundingRequest.percent_spent
+    is_overspent = FundingRequest.is_overspent
 
 
 # ---------------------------------------------------------------------------
@@ -2945,33 +3401,39 @@ class ParsedTransaction(models.Model):
                     "Money coming into %s has to name the request SGA is reimbursing. A "
                     "supplier's credit is not a reimbursement: record it as a refund of the "
                     "purchase instead." % fund)
+            elif fund is not None and fund.draws_on_budget and payment_for is None:
+                errors['funding_request'] = (
+                    "Money coming into %s has to name the budget SGA deposited it for. A "
+                    "supplier's credit is not a deposit: record it as a refund of the "
+                    "purchase instead." % fund)
         else:
             line = self.fr_line_target
-            draws = fund is not None and fund.requires_funding_request
-            if draws and line is None and payment_for is None:
+            problem = line_charge_problem(fund, line, paying_back=payment_for is not None)
+            if problem and line is None:
+                what = "budget" if fund.draws_on_budget else "request"
                 errors['fr_line_target'] = (
-                    "%s money has to be charged to a specific funding request line. If SGA "
-                    "is taking money back, name the request under SGA funding request "
-                    "instead." % fund)
-            elif line is not None and not draws:
-                errors['fr_line_target'] = (
-                    "Only a fund that draws on a funding request may name an FR line. "
-                    "Either change the fund, or clear this.")
+                    "%s If SGA is taking money back, name the %s under SGA %s instead."
+                    % (problem, what, "budget" if fund.draws_on_budget else "funding request"))
+            elif problem:
+                errors['fr_line_target'] = problem
 
         if payment_for is not None and 'funding_request' not in errors:
+            word = "budget" if payment_for.is_budget else "funding request"
+            noun = "budget" if payment_for.is_budget else "request"
             if self.fr_line_target_id is not None:
                 errors['funding_request'] = (
-                    "This is charged to a funding request line, which already names its "
-                    "request. Name the request here only for SGA's own payments.")
-            elif fund is None or not fund.requires_funding_request:
+                    "This is charged to a %s line, which already names its %s. Name the %s "
+                    "here only for SGA's own payments." % (word, noun, noun))
+            elif fund is None or fund.draws_on != payment_for.kind:
                 errors['funding_request'] = (
-                    "Only money in a fund that draws on funding requests can be SGA's payment "
-                    "for one%s. Change the fund, or clear this."
-                    % (" -- %s does not" % fund if fund is not None else ""))
+                    "Only money in a fund that draws on %ss can be SGA's payment for one%s. "
+                    "Change the fund, or clear this."
+                    % (word, " -- %s does not" % fund if fund is not None else ""))
             elif self.parent_transaction_id is None:
                 errors['funding_request'] = (
-                    "SGA pays for spending that has happened. An encumbrance cannot be a "
-                    "reimbursement.")
+                    "SGA's money has to have reached Workday. An encumbrance cannot be a "
+                    "%s." % ("deposit or a return" if payment_for.is_budget
+                             else "reimbursement"))
 
         # -- The partition -------------------------------------------------
         # An SGA award was heard as either a Projection request or an Event
@@ -3086,10 +3548,12 @@ class ParsedTransaction(models.Model):
 
         Through the line for spending, and directly for SGA's payment: a
         reimbursement for a Projection request is Projection money coming back.
+        A budget line has a side of its own. A budget does not, so SGA's deposit
+        and money returned to SGA stay on the side of the account they moved in.
         """
         if self.fr_line_target_id is not None:
-            self.is_projection = self.fr_line_target.funding_request.is_projection
-        elif self.funding_request_id is not None:
+            self.is_projection = self.fr_line_target.side_is_projection
+        elif self.funding_request_id is not None and not self.funding_request.is_budget:
             self.is_projection = self.funding_request.is_projection
 
     @property

@@ -19,7 +19,7 @@
                 <div class="alert alert-info">
                     A refund of <a href="{{ entry.refund_of.get_absolute_url }}">{{ entry.refund_of.description|default:"a purchase" }}</a>,
                     so it is charged where the purchase is:
-                    {{ entry.fund_source|default:"no fund" }}{% if entry.lnl_spend_category %}, {{ entry.lnl_spend_category }}{% endif %}{% if entry.fr_line_target %}, FR line {{ entry.fr_line_target.name }}{% endif %}{% if entry.project_tag %}, {{ entry.project_tag }}{% endif %}.
+                    {{ entry.fund_source|default:"no fund" }}{% if entry.lnl_spend_category %}, {{ entry.lnl_spend_category }}{% endif %}{% if entry.fr_line_target %}, {% if entry.fr_line_target.is_budget_line %}budget line{% else %}FR line{% endif %} {{ entry.fr_line_target.label }}{% endif %}{% if entry.project_tag %}, {{ entry.project_tag }}{% endif %}.
                     Change the purchase and this refund follows it.
                 </div>
             {% endif %}

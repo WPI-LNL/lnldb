@@ -1,0 +1,20 @@
+{% comment %}
+    A budget category's heading row on the budget's edit form, with its lines
+    nested under it. Also rendered as the empty row "Add category" clones
+    (categories.empty_form). The key is how the lines name the category before
+    it is saved; js/fr_lines.js sets it for a new one, and the order from
+    where the category sits.
+{% endcomment %}
+<tr class="fin-cat-row fin-budget-only">
+    <td colspan="10">
+        <span class="fin-cat-hidden">{{ cf.id }}{{ cf.key }}{{ cf.sort_order }}<span class="fin-cat-delete">{{ cf.DELETE }}</span></span>
+        <span class="fin-cat-caret" aria-hidden="true">&#9662;</span>
+        {{ cf.name }}
+        <button type="button" class="btn btn-xs btn-default fin-cat-add-line">
+            <span class="glyphicon glyphicon-plus"></span> Line
+        </button>
+        <button type="button" class="btn btn-xs btn-link text-danger fin-cat-remove"
+                title="Remove this category. Its lines move to No category.">Remove category</button>
+        {% for error in cf.name.errors %}<span class="text-danger" style="font-size:12px;margin-left:8px;">{{ error }}</span>{% endfor %}
+    </td>
+</tr>

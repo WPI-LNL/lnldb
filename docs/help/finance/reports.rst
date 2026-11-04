@@ -8,8 +8,9 @@ report prints cleanly from the browser and downloads as a CSV file.
 .. caution::
     **Permission Required:** View subledger
 
-    Anyone who can see the finance pages can open the reports. The *Funding Request Report Form*'s PDF has the
-    receipts in it, so downloading it also needs permission to view receipts, which Officers have.
+    Anyone who can see the finance pages can open the reports. The *Funding Request Report Form*'s and the *Budget
+    Report Form*'s PDFs have the receipts in them, so downloading them also needs permission to view receipts, which
+    Officers have.
 
 -----
 
@@ -41,6 +42,10 @@ Event activity                          terms or years      What LNL is doing mo
 Funding Request Report Form             one funding         What SGA asks for before it pays a funding request back:
                                         request             every purchase charged to it, line by line, with its
                                                             receipt. Downloads as the PDF to submit. See below.
+Budget Report Form                      one budget          SGA's proof of spending for the year's budget: a payment
+                                                            request for each line item, with SGA money and group
+                                                            funds, the date and the undergraduates who benefited.
+                                                            One PDF a line, or all of them in a zip. See below.
 ======================================  ==================  ===========================================================
 
 Below the reports, the tab also links to the **Ledger** download.
@@ -103,6 +108,38 @@ proof of purchase.
 **Receipt files.** The PDF takes PDFs and JPEG, PNG, GIF, BMP, TIFF and WebP images, and turns phone photos the right
 way up. Anything else gets a page in its place saying it is submitted as a separate file, so attach that file to
 SGA's form yourself, or upload it again as a PDF or JPEG.
+
+
+The Budget Report Form
+----------------------
+
+SGA wants proof of spending for **every line item** of the budget: a *payment request* for each one. **A line with no
+payment request is cut from next year's budget.** For each line the form gives what the line was used for, "Expense",
+how much SGA money and how much of LNL's own money (*group funds*) was spent, receipts matching those amounts, the date
+the money was spent -- the last day, if it was spent over several -- and how many undergraduates benefited. SGA's
+form also asks how each was paid (purchase order, invoice, P-Card and so on); the app leaves that to you.
+
+It isn't known yet whether SGA wants one payment request per line or one per purchase, so the form gives both: each
+line's totals, and every purchase under it with its own amounts, date and receipt.
+
+#. Open it from the budget's own page (`Budget Report Form`), or from the `Reports` tab and pick the budget.
+#. Read the warnings at the top. **Lines with nothing spent on them come first, in red**: SGA will cut them next year.
+#. For each line, type how many **Undergraduates** benefited, then click `Save answers`.
+
+#. Click `PDF for SGA` on a line to download that line's payment request: SGA's questions answered, its purchases,
+   then its receipts, each page labelled with its number. `Every line's PDF (zip)` at the top downloads them all.
+#. Submit each line's request to SGA the way SGA asks.
+
+**Group funds** are the rest of the same Workday line charged to money that carries forward, such as Legacy: if a
+$260 purchase was $200 from the budget line and $60 from Legacy, the line shows $200 of SGA money and $60 of group
+funds, and the receipt should show $260.
+
+**Receipts** come from the same places as on the Funding Request Report Form, and are numbered line by line, because
+each line's PDF stands on its own. A receipt that also covers money charged to something else -- another budget line,
+a funding request -- is flagged, since it won't match the amounts on the form.
+
+The form also warns about purchases with no receipt, lines with no Request ID or no count of undergraduates, spending
+past what SGA approved, spending on the budget still in the queue, and money still encumbered.
 
 
 Reading a Report

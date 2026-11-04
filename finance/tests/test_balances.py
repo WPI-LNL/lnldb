@@ -403,7 +403,13 @@ class RevenueFundFormTests(TestCase):
 
     def test_a_refund_takes_its_fund_from_the_purchase(self):
         purchase_line = line(datetime.date(2025, 9, 1), '-90.00', 'Cable')
-        purchase = filed(purchase_line, 'sga_budget', lnl_spend_category=category('consumables'))
+        # SGA Budget spending is on a budget line, and its refund goes back to it.
+        budget = FundingRequest.objects.create(kind='budget', fiscal_year=2026,
+                                               name='FY26 SGA Budget')
+        cables = FRLineItem.objects.create(funding_request=budget, name='Cables', number='4530',
+                                           amount_awarded=Decimal('500.00'))
+        purchase = filed(purchase_line, 'sga_budget', lnl_spend_category=category('consumables'),
+                         fr_line_target=cables)
         credit = line(datetime.date(2025, 9, 5), '90.00', 'Cable return')
         form = ReconcileForm({'t-refund_of': purchase.pk}, parent_transaction=credit, prefix='t')
         self.assertNotIn('fund_source', form.fields)

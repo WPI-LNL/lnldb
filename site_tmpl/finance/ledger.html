@@ -170,7 +170,7 @@
                         <th data-col="services">Services</th>
                         <th data-col="fund_source"><a href="{% sort_url 'fund_source' %}">Fund{% sort_indicator 'fund_source' %}</a></th>
                         <th data-col="spend_category"><a href="{% sort_url 'spend_category' %}">Spend Category{% sort_indicator 'spend_category' %}</a></th>
-                        <th data-col="fr_line">FR Line</th>
+                        <th data-col="fr_line" title="The funding request or budget line spending is charged to, or the request or budget SGA paid for">SGA Line</th>
                         <th data-col="project"><a href="{% sort_url 'project' %}">Project{% sort_indicator 'project' %}</a></th>
                         <th data-col="workday_ref">Workday Ref</th>
                         <th data-col="ledger_account">Ledger Acct</th>
@@ -233,12 +233,12 @@
                             <td data-col="fr_line">
                                 {% if entry.fr_line_target %}
                                     <a href="{% url 'finance:fr-detail' entry.fr_line_target.funding_request.pk %}">
-                                        {{ entry.fr_line_target.name }}</a>
+                                        {{ entry.fr_line_target.label }}</a>
                                 {% elif entry.funding_request %}
-                                    {# SGA's own payment for a request, not a draw on one of its lines. #}
+                                    {# SGA's own payment for a request or budget, not a draw on one of its lines. #}
                                     <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}"
-                                       title="{% if entry.is_sga_return %}Money SGA took back for this request{% else %}SGA reimbursing this request{% endif %}">
-                                        {% if entry.is_sga_return %}taken back:{% else %}repays{% endif %}
+                                       title="{% if entry.funding_request.is_budget %}{% if entry.is_sga_return %}Money returned to SGA from this budget{% else %}SGA depositing this budget{% endif %}{% elif entry.is_sga_return %}Money SGA took back for this request{% else %}SGA reimbursing this request{% endif %}">
+                                        {% if entry.funding_request.is_budget %}{% if entry.is_sga_return %}returned:{% else %}deposit for{% endif %}{% elif entry.is_sga_return %}taken back:{% else %}repays{% endif %}
                                         {{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
                                 {% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>

@@ -42,7 +42,7 @@ class TransactionDetailTests(FinanceViewTestCase):
             data.update({
                 'slices-%s-amount' % index: amount,
                 'slices-%s-description' % index: 'Slice %s' % index,
-                'slices-%s-fund_source' % index: str(fund('sga_budget').pk),
+                'slices-%s-fund_source' % index: str(fund('legacy').pk),
                 'slices-%s-lnl_spend_category' % index: str(category('consumables').pk),
             })
         data.update(kwargs)
@@ -99,12 +99,12 @@ class TransactionDetailTests(FinanceViewTestCase):
             'slices-0-id': str(first.pk),
             'slices-0-amount': '-1000.00',
             'slices-0-description': 'Everything',
-            'slices-0-fund_source': str(fund('sga_budget').pk),
+            'slices-0-fund_source': str(fund('legacy').pk),
             'slices-0-lnl_spend_category': str(category('consumables').pk),
             'slices-1-id': str(second.pk),
             'slices-1-amount': '-400.00',
             'slices-1-description': 'Gone',
-            'slices-1-fund_source': str(fund('sga_budget').pk),
+            'slices-1-fund_source': str(fund('legacy').pk),
             'slices-1-lnl_spend_category': str(category('consumables').pk),
             'slices-1-DELETE': 'on',
         }
@@ -275,7 +275,7 @@ class SplitLeavesTheQueueTests(FinanceViewTestCase):
         """ With nothing left to file, the queue used to file the whole line again. """
         self._split('-4342.40', '-2982.32')
         response = self.client.post(reverse('finance:reconcile', args=[self.txn.pk]), {
-            'txn%s-fund_source' % self.txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % self.txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % self.txn.pk: category('consumables').pk,
         }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, 400)
@@ -364,7 +364,7 @@ class EntryDetailTests(FinanceViewTestCase):
         self.entry = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-120.00'),
             effective_date=self.txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def _url(self):
         return reverse('finance:entry-detail', args=[self.entry.pk])
@@ -374,7 +374,7 @@ class EntryDetailTests(FinanceViewTestCase):
             'amount': '-120.00',
             'effective_date': '2025-09-15',
             'description': 'Gaff tape',
-            'fund_source': str(fund('sga_budget').pk),
+            'fund_source': str(fund('legacy').pk),
             'lnl_spend_category': str(category('consumables').pk),
         }
         data.update(overrides)
@@ -391,7 +391,7 @@ class EntryDetailTests(FinanceViewTestCase):
     def test_an_invalid_edit_is_refused_and_redisplayed(self):
         response = self._post(fund_source='')
         self.entry.refresh_from_db()
-        self.assertEqual(self.entry.fund_source, fund('sga_budget'))
+        self.assertEqual(self.entry.fund_source, fund('legacy'))
         self.assertContains(response, 'required')
 
     def test_an_edit_is_recorded_in_the_audit_trail(self):
@@ -471,7 +471,7 @@ class EntryDeleteTests(FinanceViewTestCase):
         self.entry = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-120.00'),
             effective_date=self.txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def _url(self):
         return reverse('finance:entry-delete', args=[self.entry.pk])
@@ -502,7 +502,7 @@ class EntryDeleteTests(FinanceViewTestCase):
         """ There is no bank line to go back to, so the ledger is the fallback. """
         encumbrance = ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
-            description='Deposit on a console', fund_source=fund('sga_budget'),
+            description='Deposit on a console', fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'))
         response = self.client.post(
             reverse('finance:entry-delete', args=[encumbrance.pk]), follow=True)
@@ -550,7 +550,7 @@ class RemovingGuardTests(FinanceViewTestCase):
         self.purchase = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-100.00'),
             effective_date=self.txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'),
             status=TransactionStatus.SETTLED)
 
     def _refund(self):
@@ -558,7 +558,7 @@ class RemovingGuardTests(FinanceViewTestCase):
         return ParsedTransaction.objects.create(
             parent_transaction=credit, amount=Decimal('40.00'),
             effective_date=credit.accounting_date, description='Gaff tape returned',
-            refund_of=self.purchase, fund_source=fund('sga_budget'),
+            refund_of=self.purchase, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), status=TransactionStatus.SETTLED)
 
     def _delete(self):
@@ -644,7 +644,7 @@ class RefundRoutingTests(FinanceViewTestCase):
         self.purchase = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-100.00'),
             effective_date=self.txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'),
             status=TransactionStatus.SETTLED)
         credit = self.make_txn(op='OT-RR2', amount='40.00')
         self.refund = ParsedTransaction.objects.create(
@@ -660,13 +660,13 @@ class RefundRoutingTests(FinanceViewTestCase):
     def test_a_refund_saved_with_no_routing_takes_its_purchases(self):
         self.refund.refresh_from_db()
         self.assertEqual((self.refund.fund_source, self.refund.lnl_spend_category),
-                         (fund('sga_budget'), category('consumables')))
+                         (fund('legacy'), category('consumables')))
 
     def test_a_refund_cannot_be_moved_off_its_purchase(self):
         self.refund.fund_source = fund('legacy')
         self.refund.save()
         self.refund.refresh_from_db()
-        self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+        self.assertEqual(self.refund.fund_source, fund('legacy'))
 
     def test_changing_the_purchase_moves_its_refunds(self):
         self.purchase.fund_source = fund('legacy')
@@ -680,7 +680,7 @@ class RefundRoutingTests(FinanceViewTestCase):
         response = self._bulk('fund_source', fund('legacy').pk, self.refund)
         self.assertContains(response, '1 refund was skipped')
         self.refund.refresh_from_db()
-        self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+        self.assertEqual(self.refund.fund_source, fund('legacy'))
 
     def test_a_refund_ticked_with_its_purchase_moves_with_it(self):
         response = self._bulk('fund_source', fund('legacy').pk, self.purchase, self.refund)
@@ -706,7 +706,7 @@ class RefundRoutingTests(FinanceViewTestCase):
             'fund_source': str(fund('legacy').pk)})
         self.refund.refresh_from_db()
         self.assertEqual(self.refund.description, 'Tape back')
-        self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+        self.assertEqual(self.refund.fund_source, fund('legacy'))
 
     def _resplit_purchase(self, purchase_amount, other_amount):
         """ The purchase's line split again: the purchase at one amount, a new entry at the other. """
@@ -717,7 +717,7 @@ class RefundRoutingTests(FinanceViewTestCase):
                                                        (other_amount, 'Spike tape'))):
             data.update({'slices-%s-amount' % index: amount,
                          'slices-%s-description' % index: description,
-                         'slices-%s-fund_source' % index: str(fund('sga_budget').pk),
+                         'slices-%s-fund_source' % index: str(fund('legacy').pk),
                          'slices-%s-lnl_spend_category' % index: str(category('consumables').pk)})
         return self.client.post(reverse('finance:txn-detail', args=[self.txn.pk]), data, follow=True)
 

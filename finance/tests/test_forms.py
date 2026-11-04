@@ -8,7 +8,7 @@ from django.test import TestCase
 from events.tests.generators import Event2019Factory
 from finance.forms import (AllocationForm, EncumbranceForm, EncumbranceLineForm, FRLineItemForm,
                            ProjectTagForm, ReconcileForm, SplitLineForm)
-from finance.models import (FRLineItem, FundingRequest, FundSource, ParsedTransaction,
+from finance.models import (DrawsOn, FRLineItem, FundingRequest, FundSource, ParsedTransaction,
                             ProjectTag, SpendCategory, SuggestionRule, WorkdayTransaction,
                             fund_source_for_workday_fund, reset_finance_cache)
 from finance.suggestions import suggest_spend_category, unmapped_spend_categories
@@ -125,7 +125,7 @@ class RequiredFieldTests(TestCase):
         """
         txn = bank(op='OT-R3')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         form = AllocationForm(instance=entry, parent_transaction=txn)
         for name in ('fund_source', 'lnl_spend_category'):
@@ -142,7 +142,7 @@ class RequiredFieldTests(TestCase):
         """
         txn = bank(op='OT-R4')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         form = AllocationForm(instance=entry, parent_transaction=txn)
         self.assertFalse(form.fields['audit_explanation'].required)
@@ -151,11 +151,11 @@ class RequiredFieldTests(TestCase):
     def test_entry_page_saves_an_expense_with_neither(self):
         txn = bank(op='OT-R4b')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         form = AllocationForm(data={
             'amount': '-500.00', 'effective_date': '2025-09-15', 'description': 'Gaff tape',
-            'fund_source': fund('sga_budget').pk,
+            'fund_source': fund('legacy').pk,
             'lnl_spend_category': category('consumables').pk,
         }, instance=entry, parent_transaction=txn)
         self.assertTrue(form.is_valid(), form.errors)
@@ -166,12 +166,12 @@ class RequiredFieldTests(TestCase):
     def test_entry_page_accepts_a_complete_expense(self):
         txn = bank(op='OT-R5')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         form = AllocationForm(
             data={
                 'amount': '-500.00', 'effective_date': '2025-09-15', 'description': 'Gaff tape',
-                'fund_source': fund('sga_budget').pk,
+                'fund_source': fund('legacy').pk,
                 'lnl_spend_category': category('consumables').pk,
                 'audit_explanation': 'Restocking the shop.',
             },
@@ -184,14 +184,14 @@ class RequiredFieldTests(TestCase):
         """ Editing an entry that already has proof must not demand a re-upload. """
         txn = bank(op='OT-R6')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date,
             audit_explanation='Restocking.',
             receipt_file=SimpleUploadedFile('old.pdf', b'%PDF-1.4 old',
                                             content_type='application/pdf'))
         form = AllocationForm(data={
             'amount': '-500.00', 'effective_date': '2025-09-15', 'description': 'Gaff tape',
-            'fund_source': fund('sga_budget').pk,
+            'fund_source': fund('legacy').pk,
             'lnl_spend_category': category('consumables').pk,
             'audit_explanation': 'Restocking.',
         }, instance=entry, parent_transaction=txn)
@@ -220,7 +220,7 @@ class DescriptionSeedTests(TestCase):
 
     def test_reconcile_saves_the_journal_line_memo_as_the_description(self):
         txn = bank(op='OT-D2', line_memo='NEL26 fixture order')
-        form = ReconcileForm(data={'t-fund_source': fund('sga_budget').pk}, prefix='t',
+        form = ReconcileForm(data={'t-fund_source': fund('legacy').pk}, prefix='t',
                              parent_transaction=txn)
         self.assertTrue(form.is_valid(), form.errors)
         entry = form.save()
@@ -229,7 +229,7 @@ class DescriptionSeedTests(TestCase):
     def test_an_existing_slice_is_never_overwritten(self):
         txn = bank(op='OT-D3', line_memo='NEL26 fixture order')
         entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             description='Hand-written label', effective_date=txn.accounting_date)
         form = AllocationForm(instance=entry, parent_transaction=txn)
         self.assertNotEqual(form.initial.get('description'), 'NEL26 fixture order')
@@ -249,7 +249,6 @@ class ProjectDropdownIndentationTests(TestCase):
         forms_to_check = [
             ('ReconcileForm', ReconcileForm(parent_transaction=txn, prefix='t'), 'project_tag'),
             ('EncumbranceLineForm', EncumbranceLineForm(), 'project_tag'),
-            ('FRLineItemForm', FRLineItemForm(), 'project_tag'),
             ('ProjectTagForm.parent', ProjectTagForm(), 'parent'),
         ]
         for name, form, field_name in forms_to_check:
@@ -529,9 +528,9 @@ class FundAndFundingRequestPairingTests(TestCase):
                       str(form.errors['fr_line_target']))
 
     def test_another_fund_may_not_name_a_line(self):
-        form = self._post(fund_source=str(fund('sga_budget').pk))
+        form = self._post(fund_source=str(fund('legacy').pk))
         self.assertFalse(form.is_valid())
-        self.assertIn('Only a fund that draws on a funding request',
+        self.assertIn('only a fund that draws on funding requests can be charged to one',
                       str(form.errors['fr_line_target']))
 
     def test_the_pairing_is_accepted(self):
@@ -541,7 +540,7 @@ class FundAndFundingRequestPairingTests(TestCase):
         """ Bulk actions and shell edits never see the form. """
         entry = ParsedTransaction(
             parent_transaction=self.txn, amount=self.txn.net_amount,
-            effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.txn.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'), fr_line_target=self.line)
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
@@ -567,8 +566,10 @@ class FundAndFundingRequestPairingTests(TestCase):
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
         rendered = str(form['fund_source'])
         self.assertIn('data-requires-fr="1"', rendered)
-        # ...on exactly the one fund that needs it.
-        self.assertEqual(rendered.count('data-requires-fr'), 1)
+        # ...on exactly the two funds that need a line, each saying whose.
+        self.assertEqual(rendered.count('data-requires-fr'), 2)
+        self.assertIn('data-draws-on="request"', rendered)
+        self.assertIn('data-draws-on="budget"', rendered)
 
 
 class CrossFiscalYearTests(TestCase):
@@ -641,14 +642,14 @@ class RefundGuardTests(TestCase):
         self.txn = bank(op='OT-RF1', amount='-100.00')
         self.expense = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-100.00'),
-            effective_date=datetime.date(2025, 9, 15), fund_source=fund('sga_budget'),
+            effective_date=datetime.date(2025, 9, 15), fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
 
     def _credit(self, op, amount, day=1):
         return ParsedTransaction(
             parent_transaction=bank(op=op, amount=amount), amount=Decimal(amount),
             effective_date=datetime.date(2025, 10, day), refund_of=self.expense,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def test_a_refund_cannot_exceed_the_expense(self):
         with self.assertRaises(ValidationError) as ctx:
@@ -666,7 +667,7 @@ class RefundGuardTests(TestCase):
     def _purchase(self, op, day):
         return ParsedTransaction.objects.create(
             parent_transaction=bank(op=op, amount='-80.00'), amount=Decimal('-80.00'),
-            effective_date=day, fund_source=fund('sga_budget'),
+            effective_date=day, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
 
     def test_this_years_and_last_years_expenses_are_offered_as_targets(self):
@@ -702,7 +703,7 @@ class EventLinkedExpenseTests(TestCase):
 
     def _form(self, **overrides):
         data = {
-            't-fund_source': str(fund('sga_budget').pk),
+            't-fund_source': str(fund('legacy').pk),
             't-lnl_spend_category': '',
             't-fr_line_target': '', 't-project_tag': '',
             't-audit_explanation': '', 't-is_projection': '',
@@ -755,7 +756,7 @@ class EventLinkedExpenseTests(TestCase):
         """
         data = {
             'amount': '-2105.00', 'effective_date': '2025-09-15', 'description': 'Sub-rental',
-            'fund_source': str(fund('sga_budget').pk), 'lnl_spend_category': '',
+            'fund_source': str(fund('legacy').pk), 'lnl_spend_category': '',
             'fr_line_target': '', 'project_tag': '', 'refund_of': '',
             'audit_explanation': 'Hired for the show', 'is_projection': '',
             'linked_event': '',
@@ -864,7 +865,7 @@ class FundingRequestFromMemoTests(TestCase):
         account's own money would charge the club for money SGA granted.
         """
         from finance.suggestions import suggest_all
-        FundSource.objects.filter(requires_funding_request=True).update(is_active=False)
+        FundSource.objects.filter(draws_on=DrawsOn.REQUEST).update(is_active=False)
         payload = suggest_all(self._txn('Truman Show Film Rights (F.26.6)'))
         self.assertIsNone(payload['fund_source'])
 
@@ -1309,7 +1310,7 @@ class DescriptionFromMemoTests(TestCase):
         column the ledger already shows.
         """
         txn = bank(op='OT-D4', amount='-42.00', line_memo='')
-        form = ReconcileForm({'t-fund_source': str(fund('sga_budget').pk),
+        form = ReconcileForm({'t-fund_source': str(fund('legacy').pk),
                               't-lnl_spend_category': str(category('consumables').pk)},
                              parent_transaction=txn, prefix='t')
         self.assertTrue(form.is_valid(), form.errors)
@@ -1713,7 +1714,7 @@ class AutofillFundingRequestTests(TestCase):
         from the SGA budget; the request number in the memo can.
         """
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
-        self.assertNotEqual(form.initial['fund_source'], fund('sga_budget').pk)
+        self.assertNotEqual(form.initial['fund_source'], fund('legacy').pk)
 
     def test_an_ambiguous_request_fills_the_fund_and_request_but_not_the_line(self):
         FRLineItem.objects.create(funding_request=self.fr, name='Publicity',
@@ -1815,7 +1816,7 @@ class PartitionDefaultOnFormsTests(TestCase):
             'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
             'slices-0-amount': '-400.00',
             'slices-0-description': 'Lamp',
-            'slices-0-fund_source': str(fund('sga_budget').pk),
+            'slices-0-fund_source': str(fund('legacy').pk),
             'slices-0-lnl_spend_category': str(category('repairs').pk),
         }
         formset = SplitFormSet(data, instance=parent, parent_transaction=parent,
@@ -1828,7 +1829,7 @@ class PartitionDefaultOnFormsTests(TestCase):
 
     def test_a_deliberate_no_survives(self):
         parent = self._projection_line()
-        form = ReconcileForm({'t-fund_source': str(fund('sga_budget').pk),
+        form = ReconcileForm({'t-fund_source': str(fund('legacy').pk),
                               't-lnl_spend_category': str(category('repairs').pk),
                               't-audit_explanation': 'Recharged to Event Production.'},
                              parent_transaction=parent, prefix='t')
@@ -1837,7 +1838,7 @@ class PartitionDefaultOnFormsTests(TestCase):
 
     def test_the_reason_is_demanded_by_name(self):
         parent = self._projection_line()
-        form = ReconcileForm({'t-fund_source': str(fund('sga_budget').pk),
+        form = ReconcileForm({'t-fund_source': str(fund('legacy').pk),
                               't-lnl_spend_category': str(category('repairs').pk)},
                              parent_transaction=parent, prefix='t')
         self.assertFalse(form.is_valid())
@@ -1858,7 +1859,7 @@ class RefundPickerTests(TestCase):
         self.expense = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-129.00'),
             effective_date=datetime.date(2025, 9, 15), description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.credit = bank(op='OT-RF2', amount='129.00')
 
     def _form(self, **kwargs):
@@ -1883,7 +1884,7 @@ class RefundPickerTests(TestCase):
         """ No money has left the account, so there is none to come back. """
         ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
-            description='Deposit on a console', fund_source=fund('sga_budget'),
+            description='Deposit on a console', fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'))
         self.assertEqual(len(self._labels()), 1)
 
@@ -1891,7 +1892,7 @@ class RefundPickerTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=bank(op='OT-RF3', amount='129.00'),
             amount=Decimal('129.00'), effective_date=datetime.date(2025, 9, 20),
-            refund_of=self.expense, fund_source=fund('sga_budget'),
+            refund_of=self.expense, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         self.assertEqual(self._labels(), [])
 
@@ -1899,7 +1900,7 @@ class RefundPickerTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=bank(op='OT-RF4', amount='29.00'),
             amount=Decimal('29.00'), effective_date=datetime.date(2025, 9, 20),
-            refund_of=self.expense, fund_source=fund('sga_budget'),
+            refund_of=self.expense, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         labels = self._labels()
         self.assertEqual(len(labels), 1)
@@ -1932,7 +1933,7 @@ class RefundPickerTests(TestCase):
             ParsedTransaction.objects.create(
                 parent_transaction=other, amount=Decimal('-50.00'),
                 effective_date=datetime.date(2025, 9, 15), description='Thing %s' % index,
-                fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+                fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         form = self._form()
         with self.assertNumQueries(1):
             [label for value, label in form.fields['refund_of'].choices if value]

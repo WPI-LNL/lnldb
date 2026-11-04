@@ -198,7 +198,11 @@ class SourceDecidesFundTests(CacheResetMixin, TestCase):
                                  **kwargs)
 
     def test_a_blank_fund_is_filled_from_the_source(self):
-        entry = self._entry(non_event_revenue_type=revenue_source('sga_baseline'))
+        # SGA Budget money names the budget it is deposited for.
+        budget = FundingRequest.objects.create(kind='budget', fiscal_year=2026,
+                                               name='FY26 SGA Budget')
+        entry = self._entry(non_event_revenue_type=revenue_source('sga_baseline'),
+                            funding_request=budget)
         entry.full_clean()
         self.assertEqual(entry.fund_source, fund('sga_budget'))
 
@@ -519,7 +523,10 @@ class ReconcileFormTests(CacheResetMixin, TestCase):
         self.txn = sga_line('F.26.86 Film Posters and Concessions', '500.00')
 
     def test_the_fund_is_taken_from_the_source_when_left_blank(self):
-        form = ReconcileForm({'t-non_event_revenue_type': str(revenue_source('sga_baseline').pk)},
+        budget = FundingRequest.objects.create(kind='budget', fiscal_year=2026,
+                                               name='FY26 SGA Budget')
+        form = ReconcileForm({'t-non_event_revenue_type': str(revenue_source('sga_baseline').pk),
+                              't-funding_request': str(budget.pk)},
                              parent_transaction=self.txn, prefix='t')
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.save().fund_source, fund('sga_budget'))

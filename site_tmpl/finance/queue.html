@@ -151,9 +151,21 @@
                             {% if row.suggestions.near_miss %}
                                 {{ row.suggestions.memo.reference }} or {{ row.suggestions.near_miss.reference }}?
                             {% else %}
-                                Unknown request
+                                {{ row.suggestions.warning_label|default:"Unknown request" }}
                             {% endif %}
                         </span>
+                        {% comment %}
+                            Money tracked to the budget in a year lnldb has no
+                            budget for: a link to add it, its year filled in.
+                        {% endcomment %}
+                        {% if can_add_request and row.suggestions.unknown_budget %}
+                            {% with year=row.suggestions.unknown_budget.fiscal_year %}
+                                <a class="fin-tag" href="{% url 'finance:fr-new' %}?kind=budget&amp;fiscal_year={{ year }}&amp;next={{ request.get_full_path|urlencode }}%23txn-{{ row.txn.pk }}"
+                                   title="Enter the year's SGA budget in lnldb">
+                                    <span class="glyphicon glyphicon-plus"></span> Add budget
+                                </a>
+                            {% endwith %}
+                        {% endif %}
                         {% comment %}
                             The number names the year and usually the request's
                             own name follows it in the memo, so most of the new

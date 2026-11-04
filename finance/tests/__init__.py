@@ -67,6 +67,16 @@ what they cover rather than alphabetically.
     The Funding Request Report Form: which purchases are on it, which receipt
     backs each and how they are numbered, the report's warnings, the PDF with
     each receipt on its own labelled pages, and the page and its permission.
+``test_budgets``
+    SGA budgets: one a year, named for it, with Request IDs, categories and
+    requested and approved amounts; charging budget lines, the pickers, the
+    queue reading a memo's Request ID and Tracking, deposits and returns, and
+    the dashboard and ledger.
+``test_brf``
+    The Budget Report Form: SGA money and group funds per line, how each
+    purchase was paid, the last day spent, receipts numbered line by line,
+    the lines nothing was spent on, a line's PDF and the zip, and the answers
+    typed on the page.
 ``test_activity``
     What LNL's work was worth, from the events app: WPI terms, pricing every
     show in bulk exactly as the events app does, student organizations against

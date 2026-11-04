@@ -34,7 +34,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from finance import activity, balances, frrf
+from finance import activity, balances, brf, frrf
 from finance.billing import STAGES, stage_of
 from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
                                  event_pnl_totals, multibill_income, sga_receivables)
@@ -1502,7 +1502,9 @@ def fr_report_form(fr):
                 tone='danger' if missing else '', link='description'))
         sections.append(Section(
             line.name, rows,
-            Row({'description': 'Spent, of %s approved' % _dollars(line.amount_awarded),
+            Row({'description': ('Spent, of %s approved' % _dollars(line.amount_awarded)
+                                 if line.amount_awarded is not None
+                                 else 'Spent; this line is pending SGA approval'),
                  'amount': spent}),
             empty='Nothing has been spent on this line.'))
 
@@ -1556,7 +1558,9 @@ def fr_report_form(fr):
         warnings.append("%s is still encumbered on this request and isn't on the form: SGA "
                         "pays back only what has been spent." % _dollars(form.encumbered))
     for line, _, spent in form.lines:
-        if spent > line.amount_awarded:
+        if line.amount_awarded is None:
+            warnings.append("%s is pending SGA approval: it has no approved amount yet." % line.name)
+        elif spent > line.amount_awarded:
             warnings.append("Spending on %s is %s over what SGA approved for it."
                             % (line.name, _dollars(spent - line.amount_awarded)))
 
@@ -1576,6 +1580,170 @@ def fr_report_form(fr):
                   form.file_part, columns, sections, stats, notes, warnings)
 
 
+def budget_report_form(budget, form=None):
+    """
+    SGA's proof of spending for a budget: one payment request for each line
+    item, with what SGA's form asks for -- what it was used for, SGA money
+    and group funds spent, the last day of spending and the
+    undergraduates who benefited -- and every purchase under it with its own
+    amounts, date and receipt, as it is not known whether SGA wants a request
+    per line or per purchase.
+
+    :func:`finance.brf.gather` decides what is on it. Lines nothing was bought
+    on come first, as a warning: SGA cuts a line with no payment request from
+    next year's budget. Like the FR Report Form it warns and leaves nothing
+    out.
+    """
+    form = form or brf.gather(budget)
+    columns = [Column('receipt', 'Receipt', Column.NUMBER),
+               Column('date', 'Date', Column.DATE),
+               Column('payee', 'Paid to'),
+               Column('description', 'Description'),
+               Column('workday', 'Workday'),
+               Column('sga', 'SGA money', Column.MONEY),
+               Column('group', 'Group funds', Column.MONEY,
+                      title="The rest of the same Workday line, charged to money that carries "
+                            "forward (Legacy, the mandatory transfer)")]
+
+    sections = []
+    if form.unspent:
+        unspent_columns = [Column('number', 'Request ID'), Column('line', 'Line'),
+                           Column('approved', 'Approved', Column.MONEY)]
+        sections.append(Section(
+            'Nothing spent yet: SGA cuts these lines from next year\'s budget',
+            [Row({'number': item.line.number or None, 'line': item.line.name,
+                  'approved': item.line.amount_awarded}, tone='danger', link='line')
+             for item in form.unspent],
+            columns=unspent_columns))
+
+    for item in form.lines:
+        if not item.purchases:
+            continue
+        rows = []
+        for purchase in item.purchases:
+            missing = purchase.receipt is None and not purchase.is_refund
+            notes = []
+            if purchase.is_refund:
+                notes.append('Refund')
+            elif missing:
+                notes.append('No receipt')
+            elif purchase.receipt.from_encumbrance:
+                notes.append("Receipt from the encumbrance: check it isn't a quote")
+            if purchase.charged_elsewhere and purchase.receipt is not None:
+                notes.append('The receipt is for %s: %s of it is charged elsewhere'
+                             % (_dollars(purchase.receipt_total), _dollars(purchase.charged_elsewhere)))
+            rows.append(Row({
+                'receipt': purchase.receipt.number if purchase.receipt is not None else None,
+                'date': purchase.date,
+                'payee': purchase.payee,
+                'description': purchase.description or '(no description)',
+                'workday': purchase.workday,
+                'sga': purchase.sga,
+                'group': purchase.group,
+            }, url=purchase.entry.get_absolute_url(), note='; '.join(notes),
+                tone='danger' if missing else '', link='description'))
+        line = item.line
+        title = '%s%s' % ('%s · ' % line.number if line.number else '', line.name)
+        if line.category_id:
+            title += ' (%s)' % line.category.name
+        sections.append(Section(title, rows, Row({
+            'description': 'Last spent %s · %s undergraduates%s' % (
+                _day(item.last_date) if item.last_date else '—',
+                line.undergraduates if line.undergraduates is not None else '?',
+                ' · approved %s' % _dollars(line.amount_awarded)
+                if line.amount_awarded is not None else ''),
+            'sga': item.sga,
+            'group': item.group})))
+
+    purchases = [p for item in form.lines for p in item.purchases if not p.is_refund]
+    missing = [p for item in form.lines for p in item.missing]
+    approved_lines = [item for item in form.lines if item.line.amount_awarded]
+    stats = [
+        Stat('Approved', budget.total_awarded if budget.approved_known else UNKNOWN),
+        Stat('SGA money spent', form.sga, tone='text-danger'),
+        Stat('Group funds spent', form.group),
+        Stat('Line items', len(form.spent_lines), kind=Column.NUMBER,
+             sub='%s of %s approved with spending' % (
+                 len([item for item in approved_lines if item.spent_on]), len(approved_lines)),
+             tone='text-danger' if form.unspent else ''),
+        Stat('Receipts', form.receipt_count, kind=Column.NUMBER,
+             sub='%s of %s with one' % (len(purchases) - len(missing),
+                                        _plural(len(purchases), 'purchase', 'purchases')),
+             tone='text-danger' if missing else ''),
+    ]
+
+    warnings = []
+    if form.unspent:
+        warnings.append(
+            "%s nothing spent on %s, so no payment request can be made for %s, and SGA cuts a "
+            "line with none from next year's budget: %s."
+            % (_plural(len(form.unspent), 'approved line has', 'approved lines have'),
+               'it' if len(form.unspent) == 1 else 'them',
+               'it' if len(form.unspent) == 1 else 'them',
+               ', '.join(item.line.label for item in form.unspent)))
+    if missing:
+        warnings.append(
+            "%s no receipt, %s in all, marked in red below. SGA needs receipts matching the money "
+            "spent: attach one on each entry's page."
+            % (_plural(len(missing), 'purchase has', 'purchases have'),
+               _dollars(sum((p.amount for p in missing), ZERO))))
+    no_count = [item for item in form.spent_lines if item.line.undergraduates is None]
+    if no_count:
+        warnings.append("%s say how many undergraduates benefited, which SGA asks for: %s."
+                        % (_plural(len(no_count), "line doesn't", "lines don't"),
+                           ', '.join(item.line.label for item in no_count)))
+    unnumbered = [item for item in form.spent_lines if not item.line.number]
+    if unnumbered:
+        warnings.append("%s no Request ID, which SGA's form names the line by: %s. Add it on "
+                        "the budget's Edit page."
+                        % (_plural(len(unnumbered), 'line with spending has',
+                                   'lines with spending have'),
+                           ', '.join(item.line.name for item in unnumbered)))
+    elsewhere = [p for item in form.lines for p in item.mismatched]
+    if elsewhere:
+        warnings.append("%s a receipt that also covers money charged to something else, so it "
+                        "won't match the SGA money and group funds on the form. Say so to SGA, "
+                        "or attach a receipt for this part only."
+                        % _plural(len(elsewhere), 'purchase has', 'purchases have'))
+    for item in form.lines:
+        for receipt in item.receipts:
+            if not receipt.kind:
+                warnings.append(
+                    "%s: receipt %s (%s) can't go into the PDF, which takes %s. Attach it again "
+                    "as a PDF or a JPEG, or send it to SGA as a separate file."
+                    % (item.line.label, receipt.number, receipt.name, RECEIPT_TYPES))
+        if item.line.amount_awarded is not None and item.sga > item.line.amount_awarded:
+            warnings.append("Spending on %s is %s over what SGA approved for it."
+                            % (item.line.label, _dollars(item.sga - item.line.amount_awarded)))
+    if form.unsettled:
+        warnings.append(
+            "%s of this budget %s still in the queue, %s in all. Settle %s, or %s won't be on "
+            "the form." % (_plural(len(form.unsettled), 'Workday line', 'Workday lines'),
+                           'is' if len(form.unsettled) == 1 else 'are',
+                           _dollars(-sum((money(txn.net_amount) for txn in form.unsettled), ZERO)),
+                           'it' if len(form.unsettled) == 1 else 'them',
+                           'it' if len(form.unsettled) == 1 else 'they'))
+    if form.encumbered:
+        warnings.append("%s is still encumbered on this budget and isn't on the form: only what "
+                        "has been spent is." % _dollars(form.encumbered))
+
+    notes = [
+        "One payment request a line item, as SGA asks, with every purchase under it: whether "
+        "SGA wants a request per line or per purchase isn't known, so both are here.",
+        "Every purchase charged to one of the budget's lines that has reached Workday, settled "
+        "or not, with refunds taken off. What is only encumbered is left out.",
+        "Group funds are the rest of the same Workday line charged to money that carries "
+        "forward, such as Legacy: the club's own money spent on the same purchase.",
+        "The date spent is the last day of spending on the line, as SGA's form asks.",
+        "Receipts are numbered line by line, as each line's PDF stands on its own. A "
+        "purchase's receipt is the one attached to its entry, or else to another entry on the "
+        "same Workday line, or else to the encumbrance it was logged as. The PDFs take %s."
+        % RECEIPT_TYPES,
+    ]
+    return Report('budget-report-form', 'Budget Report Form', budget.name, '',
+                  form.file_part, columns, sections, stats, notes, warnings)
+
+
 # ---------------------------------------------------------------------------
 # The list the Reports page shows
 # ---------------------------------------------------------------------------
@@ -1584,7 +1752,8 @@ def fr_report_form(fr):
 #: ``'range'`` for a fiscal year or any dates, ``'year'`` for a fiscal year
 #: only, ``'today'`` for a report that is always as of today, ``'trend'``
 #: for the terms or years up to a fiscal year, and ``'request'`` for one
-#: funding request, whenever its spending was.
+#: funding request, whenever its spending was, and ``'budget'`` for one
+#: budget, the same way.
 #: The order here is the order the Reports tab lists them in.
 REPORTS = OrderedDict((
     ('income-and-spending', ("Income and spending",
@@ -1612,4 +1781,10 @@ REPORTS = OrderedDict((
                         "What SGA asks for before it pays a funding request back: every purchase "
                         "charged to the request, line by line, with its receipt. Downloads as "
                         "the PDF to submit, with the receipts in it.", 'request')),
+    ('budget-report-form', ("Budget Report Form",
+                            "SGA's proof of spending for the year's budget: a payment request for "
+                            "each line item, with how it was paid, SGA money and group funds "
+                            "spent, the date and the undergraduates who benefited, and every "
+                            "purchase under it with its receipt. Downloads as one PDF a line, or "
+                            "all of them in a zip.", 'budget')),
 ))

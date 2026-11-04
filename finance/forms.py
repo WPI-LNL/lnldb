@@ -15,7 +15,7 @@ the wrong option obviously wrong -- the year a funding request belongs to,
 how much of a line is left, which purchase a refund is against.
 """
 import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from ajax_select.fields import AutoCompleteSelectField
 from crispy_forms.helper import FormHelper
@@ -28,14 +28,14 @@ from django.utils.formats import date_format
 from mptt.forms import TreeNodeChoiceField
 
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
-from finance.models import (ZERO, BalanceCheckpoint, Encumbrance, FRLineItem, FundingRequest,
-                            FundSource,
+from finance.models import (ZERO, BalanceCheckpoint, BudgetCategory, DrawsOn, Encumbrance,
+                            FRLineItem, FundingKind, FundingRequest, FundSource,
                             FundTransfer, MultiBilling, ParsedTransaction, PartitionCode,
                             ProjectTag, RevenueSource, SpendCategory,
                             TransactionStatus,
                             WorkdayTransaction, current_fiscal_year, dollars,
                             event_passthrough_category, fiscal_year_bounds,
-                            fiscal_year_choices, fiscal_year_for, money,
+                            fiscal_year_choices, fiscal_year_for, line_charge_problem, money,
                             own_fund_for_account, refund_window, summed_money)
 from finance.suggestions import AWARD, lookups_for_form, suggest_all, suggest_description
 
@@ -116,19 +116,19 @@ class FRLineSelect(forms.Select):
 
     def create_option(self, name, value, *args, **kwargs):
         """
-        Attach the line's request, category and project tag as data attributes.
+        Attach the line's request and spend category as data attributes.
 
         The request is how the queue's "Funding request" box narrows this
-        picker to one request's lines (routing.js, rule 6).
+        picker to one request's lines (routing.js, rule 6), and the kind is
+        how the fund narrows it to a budget's lines or a request's (rule 1).
         """
         option = super(FRLineSelect, self).create_option(name, value, *args, **kwargs)
         line = getattr(value, 'instance', None)
         if line is not None:
             option['attrs']['data-request'] = str(line.funding_request_id)
+            option['attrs']['data-kind'] = line.funding_request.kind
             if line.lnl_spend_category_id:
                 option['attrs']['data-spend-category'] = str(line.lnl_spend_category_id)
-            if line.project_tag_id:
-                option['attrs']['data-project-tag'] = str(line.project_tag_id)
         return option
 
 
@@ -144,6 +144,12 @@ class FRLineChoiceIterator(ModelChoiceIterator):
     Requests come in the order their lines first appear, which
     :func:`open_fr_lines` makes the order the request box beside the picker
     lists them in.
+
+    A budget can have a hundred lines, so its lines are grouped one heading
+    a category instead, the way the budget's own page nests them::
+
+        FY27 · Budget · Consumables
+            └ 4521 Gaff tape — $120.00 left
     """
 
     def __iter__(self):
@@ -151,11 +157,17 @@ class FRLineChoiceIterator(ModelChoiceIterator):
             yield ("", self.field.empty_label)
         groups = {}
         for line in self.queryset:
-            request, choices = groups.setdefault(line.funding_request_id,
-                                                 (line.funding_request, []))
+            request = line.funding_request
+            if request.is_budget:
+                key = (request.pk, line.category_id)
+                heading = "%s · %s" % (request.short_label,
+                                       line.category.name if line.category_id else "No category")
+            else:
+                key, heading = (request.pk, None), request.short_label
+            choices = groups.setdefault(key, (heading, []))[1]
             choices.append(self.choice(line))
-        for request, choices in groups.values():
-            yield (request.short_label, choices)
+        for heading, choices in groups.values():
+            yield (heading, choices)
 
 
 class FRLineChoiceField(forms.ModelChoiceField):
@@ -185,10 +197,28 @@ class FRLineChoiceField(forms.ModelChoiceField):
         kwargs.setdefault('required', False)
         kwargs.setdefault('label', "Funding request line")
         super(FRLineChoiceField, self).__init__(*args, **kwargs)
+        # What routing.js calls the box when the fund draws on budgets.
+        self.widget.attrs['data-budget-label'] = "Budget line"
 
     def label_from_instance(self, obj):
         """ Label the line with what it is for and its remaining balance. """
         return obj.nested_label
+
+
+class FundingKindSelect(forms.Select):
+    """
+    Tags each request's ``<option>`` with its kind, so routing.js can offer
+    only budgets when the fund draws on budgets, and only funding requests
+    when it draws on those.
+    """
+
+    def create_option(self, name, value, *args, **kwargs):
+        """ Attach ``data-kind``: request or budget. """
+        option = super(FundingKindSelect, self).create_option(name, value, *args, **kwargs)
+        request = getattr(value, 'instance', None)
+        if request is not None:
+            option['attrs']['data-kind'] = request.kind
+        return option
 
 
 class LineRequestChoiceField(forms.ModelChoiceField):
@@ -204,14 +234,17 @@ class LineRequestChoiceField(forms.ModelChoiceField):
     the picker's.
     """
 
+    widget = FundingKindSelect
+
     def __init__(self, *args, **kwargs):
         """ Start empty; the form narrows this alongside the line picker. """
         kwargs.setdefault('queryset', FundingRequest.objects.none())
         kwargs.setdefault('required', False)
         kwargs.setdefault('label', "Funding request")
-        kwargs.setdefault('empty_label', "Any request")
-        kwargs.setdefault('help_text', "Lists only this request's lines in the line picker.")
+        kwargs.setdefault('empty_label', "Any")
+        kwargs.setdefault('help_text', "Lists only its lines in the line picker.")
         super(LineRequestChoiceField, self).__init__(*args, **kwargs)
+        self.widget.attrs['data-budget-label'] = "Budget"
 
     def label_from_instance(self, obj):
         """ The year and the number, which are what the memo quotes. """
@@ -226,17 +259,24 @@ REQUEST_ORDER = ('fiscal_year', 'reference', 'name', 'pk')
 
 def open_fr_lines():
     """
-    The lines of every open funding request, request by request.
+    The lines of every open funding request and budget, request by request.
+
+    Only lines SGA approved money for: one pending SGA approval, or denied
+    at $0, has nothing to charge to. A budget's lines come category by
+    category, in the budget's own order, with the lines in no category last.
+    Which kind the picker shows is the fund's to say (routing.js, rule 1).
 
     Spend is annotated because every option says what is left on its line,
     which would otherwise be a query per line per form.
     """
     return (FRLineItem.objects
             .filter(funding_request__closed=False)
-            .select_related('funding_request')
+            .chargeable()
+            .select_related('funding_request', 'category')
             .with_spend()
             .order_by(*['funding_request__%s' % key for key in REQUEST_ORDER]
-                      + ['sort_order', 'pk']))
+                      + [F('category__sort_order').asc(nulls_last=True), 'category__name',
+                         'category__pk', 'sort_order', 'pk']))
 
 
 def offer_fr_lines(form, lines):
@@ -267,7 +307,8 @@ def fr_request_mismatch(line, chosen):
     request = line.funding_request.reference or line.funding_request.name
     named = chosen.reference or chosen.name
     return ("The %s line belongs to %s, not to %s chosen beside it. Pick a line of %s, "
-            "or change the request." % (line.name, request, named, named))
+            "or change the %s." % (line.label, request, named, named,
+                                   "budget" if chosen.is_budget else "request"))
 
 
 class RefundTargetChoiceField(forms.ModelChoiceField):
@@ -306,8 +347,11 @@ class FundingRequestChoiceField(forms.ModelChoiceField):
 
     Every request is offered, open or closed, because a reimbursement routinely
     arrives after a request is closed for spending. See
-    :attr:`finance.models.FundingRequest.picker_label`.
+    :attr:`finance.models.FundingRequest.picker_label`. Budgets are offered
+    too, for SGA's deposit and money returned to SGA; routing.js shows
+    whichever kind the fund draws on.
     """
+    widget = FundingKindSelect
 
     def __init__(self, *args, **kwargs):
         """ Start empty; the form fills the queryset in. """
@@ -315,6 +359,7 @@ class FundingRequestChoiceField(forms.ModelChoiceField):
         kwargs.setdefault('required', False)
         kwargs.setdefault('label', "SGA funding request")
         super(FundingRequestChoiceField, self).__init__(*args, **kwargs)
+        self.widget.attrs.setdefault('data-budget-label', "SGA budget")
 
     def label_from_instance(self, obj):
         """ Label the request with its year and what SGA owes on it. """
@@ -368,11 +413,16 @@ class FundSourceSelect(forms.Select):
     """
 
     def create_option(self, name, value, *args, **kwargs):
-        """ Flag the funds that need a funding request line. """
+        """
+        Flag the funds that need a line, and say whose: ``data-draws-on`` is
+        ``request`` or ``budget``, which routing.js matches against each line's
+        ``data-kind``.
+        """
         option = super(FundSourceSelect, self).create_option(name, value, *args, **kwargs)
         fund = getattr(value, 'instance', None)
-        if fund is not None and getattr(fund, 'requires_funding_request', False):
+        if fund is not None and getattr(fund, 'draws_on', ''):
             option['attrs']['data-requires-fr'] = '1'
+            option['attrs']['data-draws-on'] = fund.draws_on
         return option
 
 
@@ -564,9 +614,10 @@ class BaseAllocationForm(forms.ModelForm):
         self._narrow('non_event_revenue_type',
                      RevenueSource.objects.active().select_related('credits_fund'))
         # Every request, closed ones included, newest first: SGA pays for a
-        # request after the spending, often once it is closed.
+        # request after the spending, often once it is closed. Budgets too,
+        # for SGA's deposit and money returned to SGA.
         self._narrow('funding_request', FundingRequest.objects.with_totals()
-                     .order_by('-fiscal_year', 'reference', 'name'))
+                     .order_by('-fiscal_year', 'kind', 'reference', 'name'))
         # Paid ones too: the payment that pays a bill is often settled after
         # the bill was marked paid by hand.
         self._narrow('linked_multibill', MultiBilling.objects.select_related('org')
@@ -943,16 +994,19 @@ class BaseAllocationForm(forms.ModelForm):
                                        "Each event on the bill is credited with its share, by price.")
             if request is not None:
                 request.label = "Reimburses request"
-                request.help_text = ("The funding request SGA is paying back. Needed whenever "
-                                     "the money goes into a fund that draws on requests.")
+                request.help_text = ("The funding request SGA is paying back, or the budget SGA "
+                                     "is depositing. Needed whenever the money goes into a fund "
+                                     "that draws on requests or budgets.")
+                request.widget.attrs['data-budget-label'] = "Deposit for budget"
         elif direction == 'expense':
             for name in ParsedTransaction.REVENUE_FIELDS:
                 self.fields.pop(name, None)
             if request is not None:
                 request.label = "SGA took back money for"
                 request.help_text = ("Only when SGA is reclaiming money it paid -- a "
-                                     "reimbursement made twice. Ordinary spending names a "
-                                     "funding request line instead.")
+                                     "reimbursement made twice, or a budget's unspent money "
+                                     "at year end. Ordinary spending names a line instead.")
+                request.widget.attrs['data-budget-label'] = "Returned to SGA from budget"
             # linked_event stays: a sub-rental hired for one show is that
             # show's cost, passed straight through. It means something
             # different here than on revenue, so it says so.
@@ -1105,20 +1159,13 @@ class BaseAllocationForm(forms.ModelForm):
         fund = cleaned.get('fund_source')
         line = cleaned.get('fr_line_target')
 
-        if line is None:
-            # Money SGA took back names the request instead; the model says so.
-            if (fund is not None and fund.requires_funding_request
-                    and not cleaned.get('funding_request')):
-                self.add_error('fr_line_target',
-                               "%s money has to name the funding request line it comes out "
-                               "of." % fund)
+        # Money SGA took back names the request or budget instead of a line.
+        problem = line_charge_problem(fund, line,
+                                      paying_back=bool(cleaned.get('funding_request')))
+        if problem:
+            self.add_error('fr_line_target', problem)
             return
-
-        if fund is None or not fund.requires_funding_request:
-            self.add_error(
-                'fr_line_target',
-                "Only a fund that draws on a funding request may name an FR line — %s does "
-                "not. Change the fund, or clear this." % (fund or "no fund"))
+        if line is None:
             return
 
         mismatch = fr_request_mismatch(line, cleaned.get('fr_request'))
@@ -1132,9 +1179,10 @@ class BaseAllocationForm(forms.ModelForm):
         if request_year != entry_year and not cleaned.get('allow_cross_year_fr'):
             self.add_error(
                 'fr_line_target',
-                "This is FY%s spending but %s is an FY%s request. If that is genuinely "
+                "This is FY%s spending but %s is an FY%s %s. If that is genuinely "
                 "intended, tick “Charge a different fiscal year”."
-                % (str(entry_year)[-2:], line.funding_request.name, str(request_year)[-2:]))
+                % (str(entry_year)[-2:], line.funding_request.name, str(request_year)[-2:],
+                   "budget" if line.funding_request.is_budget else "request"))
 
     def _update_errors(self, errors):
         """
@@ -1841,13 +1889,13 @@ class BulkActionForm(BulkSelectionForm):
     project_tag = ProjectTagChoiceField()
     lnl_spend_category = forms.ModelChoiceField(
         queryset=SpendCategory.objects.active(), required=False, label="Spend category")
-    # Funds that need an FR line are left out on purpose: the line cannot be
+    # Funds that need a line are left out on purpose: the line cannot be
     # chosen in bulk, so applying one would leave every row it touched invalid.
     fund_source = forms.ModelChoiceField(
-        queryset=FundSource.objects.active().filter(requires_funding_request=False),
+        queryset=FundSource.objects.active().filter(draws_on=DrawsOn.NOTHING),
         required=False, label="Fund source",
-        help_text="Funds that draw on a specific funding request are set one entry at a "
-                  "time, so the request line can be named.")
+        help_text="Funds that draw on a funding request or a budget are set one entry at a "
+                  "time, so the line can be named.")
     status = forms.ChoiceField(choices=[('', '---')] + list(TransactionStatus.choices),
                                required=False)
 
@@ -1946,17 +1994,10 @@ class BulkReconcileForm(BulkSelectionForm):
         fund = cleaned.get('fund_source')
         line = cleaned.get('fr_line_target')
 
-        if line is None:
-            if fund is not None and fund.requires_funding_request:
-                self.add_error('fr_line_target',
-                               "%s money has to name the funding request line it comes out "
-                               "of." % fund)
-        elif fund is None or not fund.requires_funding_request:
-            self.add_error(
-                'fr_line_target',
-                "Only a fund that draws on a funding request may name an FR line — %s does "
-                "not. Change the fund, or clear this." % (fund or "no fund"))
-        else:
+        problem = line_charge_problem(fund, line)
+        if problem:
+            self.add_error('fr_line_target', problem)
+        elif line is not None:
             mismatch = fr_request_mismatch(line, cleaned.get('fr_request'))
             if mismatch:
                 self.add_error('fr_line_target', mismatch)
@@ -2006,14 +2047,43 @@ class BulkEncumbranceForm(BulkSelectionForm):
 # Funding requests
 # ---------------------------------------------------------------------------
 
+def kind_for(data, instance):
+    """
+    The type a funding request form is for, before the form is validated.
+
+    The line formset has to know it to be built at all -- a budget's lines
+    have a number, a side and a category, a request's do not -- so it is read
+    off the submitted data, falling back to what the request already is, and
+    for a new one to a funding request. A request with money charged to it
+    keeps its type whatever was posted: :class:`FundingRequestForm` locks it.
+    """
+    saved = instance is not None and instance.pk is not None
+    if saved and instance.has_money:
+        return instance.kind
+    posted = (data.get('kind') or '') if data else ''
+    if posted in FundingKind.values:
+        return posted
+    return instance.kind if saved else FundingKind.REQUEST
+
+
 class FundingRequestForm(forms.ModelForm):
-    """ The header half of a funding request; the lines are a formset. """
+    """
+    The header half of a funding request or a budget; the lines are a formset.
+
+    One form for both, with the type at the top. A budget has no request
+    number, side or opening figure of its own -- its lines carry the number
+    and the side -- so those boxes are hidden for it (the template marks them
+    ``fin-request-only``) and cleared on save by
+    :meth:`finance.models.FundingRequest._clean_budget`.
+    """
+    REQUEST_ONLY = ('reference', 'is_projection', 'owed_at_books_start')
 
     class Meta:
         model = FundingRequest
-        fields = ('name', 'reference', 'fiscal_year', 'date_submitted', 'date_approved',
+        fields = ('kind', 'name', 'reference', 'fiscal_year', 'date_submitted', 'date_approved',
                   'is_projection', 'closed', 'owed_at_books_start', 'notes')
         widgets = {
+            'kind': forms.RadioSelect,
             'date_submitted': forms.DateInput(attrs={'type': 'date'}),
             'date_approved': forms.DateInput(attrs={'type': 'date'}),
             'notes': forms.Textarea(attrs={'rows': 3}),
@@ -2021,7 +2091,8 @@ class FundingRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """
-        Replace the plain year box with the same list the filter bar uses.
+        Replace the plain year box with the same list the filter bar uses,
+        and lock the type once money depends on it.
 
         Rebuilt per instance because the choices depend on the configured
         fiscal year start month, which is editable from the admin.
@@ -2031,7 +2102,19 @@ class FundingRequestForm(forms.ModelForm):
             choices=fiscal_year_choices(), initial=current_fiscal_year(), label="Fiscal Year")
         # Almost always zero, so a blank box means zero rather than an error.
         self.fields['owed_at_books_start'].required = False
+        kind = self.fields['kind']
+        kind.required = False
+        if self.instance.pk is not None and self.instance.has_money:
+            # The money was charged to the fund that draws on this type, so
+            # changing it would leave every entry on the wrong side of a rule.
+            kind.disabled = True
+            kind.help_text = ("Money is charged to it or SGA has paid for it, so its type can't "
+                              "change.")
         self.helper = finance_form_helper()
+
+    def clean_kind(self):
+        """ Nothing posted keeps the type it had, or makes a funding request. """
+        return self.cleaned_data.get('kind') or self.instance.kind or FundingKind.REQUEST
 
     def clean_owed_at_books_start(self):
         """ A blank is zero: nothing was owed before the books started. """
@@ -2040,25 +2123,46 @@ class FundingRequestForm(forms.ModelForm):
 
 class FRLineItemForm(forms.ModelForm):
     """
-    One awarded line inside a funding request.
+    One line inside a funding request or a budget.
 
-    Rendered as a row in a formset, so both overrides below are about the
-    row being *blank*: ``sort_order`` carries a model default, and a default
-    is enough to make Django think an untouched row was filled in.
+    Rendered as a row in a formset, so the overrides below are about the row
+    being *blank*: ``sort_order`` carries a model default, and a default is
+    enough to make Django think an untouched row was filled in.
+
+    A budget line has two more things: a four-digit Request ID and a side.
+    It is nested under one of the budget's categories, which the form takes
+    as ``category_key`` -- a saved category's pk, or the key the page gave a
+    category added on it and not saved yet -- because the category may not
+    exist until the form is saved (see :meth:`BaseFRLineItemFormSet.assign_categories`).
+    The page fills it in from the category the row sits under. A request's
+    lines have none of the three, so they are cleared for one.
     """
-    project_tag = ProjectTagChoiceField()
+    BUDGET_ONLY = ('category_key', 'number', 'is_projection')
+
+    category_key = forms.CharField(required=False, widget=forms.HiddenInput)
 
     class Meta:
         model = FRLineItem
-        fields = ('name', 'description', 'amount_awarded', 'lnl_spend_category',
-                  'project_tag', 'sort_order')
+        fields = ('number', 'name', 'description', 'amount_requested', 'amount_awarded',
+                  'is_projection', 'lnl_spend_category', 'sort_order')
         widgets = {
             'description': forms.Textarea(attrs={
                 'rows': 2, 'placeholder': 'What this line covers'}),
+            # No placeholder: a grey 4521 in an empty box reads as the line's own.
+            'number': forms.TextInput(attrs={'inputmode': 'numeric', 'maxlength': '4',
+                                             'size': '5'}),
+            # No placeholder either: grey words in an empty box read as a
+            # dropdown's prompt. Blank is pending SGA approval, which the tag
+            # under the box says (approval_state), so it is never read as $0.
+            'amount_requested': forms.NumberInput(attrs={'title': 'Amount asked of SGA, in dollars'}),
+            'amount_awarded': forms.NumberInput(attrs={
+                'title': 'Amount SGA approved, in dollars. Leave blank while pending SGA approval; '
+                         'enter 0 if SGA denied it.'}),
         }
 
     def __init__(self, *args, **kwargs):
         """ Stop Django demanding a hand-typed sort order on every row. """
+        self.kind = kwargs.pop('kind', None) or FundingKind.REQUEST
         super(FRLineItemForm, self).__init__(*args, **kwargs)
         # sort_order carries a model default, but Django still renders it as
         # mandatory, which meant no line could be saved without hand-typing a
@@ -2066,38 +2170,102 @@ class FRLineItemForm(forms.ModelForm):
         self.fields['sort_order'].required = False
         self.fields['sort_order'].label = "Order"
         self.fields['sort_order'].help_text = ""
+        self.fields['lnl_spend_category'].label = "Spend category"
+        if self.instance.pk is not None:
+            self.initial.setdefault('category_key', str(self.instance.category_id or ''))
+
+    @property
+    def approval_state(self):
+        """
+        What the Approved box says as it stands: 'pending' when blank, 'denied'
+        at 0, '' for an amount (or anything not a number, which clean() will
+        reject). Read by the row's tag; js/fr_lines.js keeps it current.
+        """
+        value = self['amount_awarded'].value()
+        if value is None or str(value).strip() == '':
+            return 'pending'
+        try:
+            return 'denied' if Decimal(str(value).strip()) == 0 else ''
+        except (InvalidOperation, ValueError):
+            return ''
 
     def has_changed(self):
         """
         Decide "is this row blank?" on what the user actually typed.
 
-        ``sort_order`` carries a model default of 0, so it counts as changed the
-        moment a row is rendered or cloned with an empty box — which made an
-        untouched row look filled in and demand a name and an amount.
+        ``sort_order`` carries a model default of 0, and the page writes the
+        order and the category into every row it sends, so on a new row they
+        count as changed the moment it is rendered -- which made an untouched
+        row look filled in and demand a name. On a saved line they are real
+        changes: the line was moved.
         """
-        return bool(set(self.changed_data) - {'sort_order'})
+        if self.instance.pk is not None:
+            return super(FRLineItemForm, self).has_changed()
+        return bool(set(self.changed_data) - {'sort_order', 'category_key'})
 
     def clean(self):
-        """ Refuse an award cut below what has already been spent against it. """
+        """
+        Refuse an approved amount cut below what has already been spent
+        against it, or taken back to pending once anything is charged.
+        """
         cleaned = super(FRLineItemForm, self).clean()
-        # Guard the burndown: you cannot cut an award below what is already spent.
-        if self.instance.pk and not cleaned.get('DELETE'):
+        if self.kind != FundingKind.BUDGET:
+            cleaned['category_key'] = ''
+            cleaned['number'] = ''
+            cleaned['is_projection'] = False
+        # Guard the burndown: what is approved cannot be cut below what is spent.
+        if self.instance.pk and not cleaned.get('DELETE') and 'amount_awarded' not in self.errors:
             awarded = cleaned.get('amount_awarded')
-            spent = self.instance.spent
-            if awarded is not None and awarded < spent:
-                self.add_error('amount_awarded',
-                               "%s is already spent against this line; the award cannot be "
-                               "lowered below that." % dollars(spent))
+            if awarded is None:
+                if self.instance.allocations.exists():
+                    self.add_error('amount_awarded',
+                                   "Money is charged to this line, so it can't go back to pending "
+                                   "SGA approval. Enter what SGA approved.")
+            else:
+                spent = self.instance.spent
+                if awarded < spent:
+                    self.add_error('amount_awarded',
+                                   "%s is already spent against this line; the approved amount "
+                                   "cannot be lowered below that." % dollars(spent))
         return cleaned
 
 
 class BaseFRLineItemFormSet(BaseInlineFormSet):
-    """ Numbers the lines by where they sit in the table, unless told otherwise. """
+    """
+    A request's or a budget's lines. Numbers them by where they sit in the
+    table, unless told otherwise, and nests a budget's lines under their
+    categories.
+
+    ``kind`` is the type the lines are for; see :func:`kind_for`. Left out, it
+    is the saved request's own.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.kind = kwargs.pop('kind', None)
+        super(BaseFRLineItemFormSet, self).__init__(*args, **kwargs)
+        if self.kind is None:
+            saved = self.instance is not None and self.instance.pk is not None
+            self.kind = self.instance.kind if saved else FundingKind.REQUEST
+
+    def get_form_kwargs(self, index):
+        kwargs = super(BaseFRLineItemFormSet, self).get_form_kwargs(index)
+        kwargs['kind'] = self.kind
+        return kwargs
+
+    @property
+    def is_budget(self):
+        return self.kind == FundingKind.BUDGET
+
+    def _live_forms(self):
+        """ The rows that will be saved: filled in and not being removed. """
+        return [form for form in self.forms
+                if form.cleaned_data and not form.cleaned_data.get('DELETE')]
 
     def clean(self):
         """
-        Refuse to delete a line anything is charged to, and number any line
-        that was left without an explicit order.
+        Refuse to delete a line anything is charged to, refuse two budget
+        lines with one Request ID, and number any line that was left without
+        an explicit order.
         """
         super(BaseFRLineItemFormSet, self).clean()
         if any(self.errors):
@@ -2108,6 +2276,19 @@ class BaseFRLineItemFormSet(BaseInlineFormSet):
                 raise ValidationError(
                     "“%s” can't be deleted: entries or encumbrances are charged to it. Move them "
                     "to another line first." % form.instance.name)
+        if self.is_budget:
+            # The Request ID is how a memo names the line, so two lines sharing
+            # one would leave the queue unable to tell them apart.
+            seen = {}
+            for form in self._live_forms():
+                number = form.cleaned_data.get('number')
+                if not number:
+                    continue
+                if number in seen:
+                    raise ValidationError(
+                        "“%s” and “%s” both have the Request ID %s. Each line of a budget needs "
+                        "its own." % (seen[number], form.cleaned_data.get('name'), number))
+                seen[number] = form.cleaned_data.get('name')
         position = 0
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get('DELETE'):
@@ -2116,13 +2297,119 @@ class BaseFRLineItemFormSet(BaseInlineFormSet):
                 form.instance.sort_order = position
             position += 1
 
+    def assign_categories(self, categories):
+        """
+        Nest each line under the category its row sat under, before the lines
+        are saved. ``categories`` is ``{key: BudgetCategory or None}`` from
+        :meth:`BaseBudgetCategoryFormSet.by_key`; a key it does not know -- a
+        category removed on the page -- leaves the line with no category. A
+        request's lines have none.
+        """
+        for form in self._live_forms():
+            key = form.cleaned_data.get('category_key') or ''
+            form.instance.category = categories.get(key) if self.is_budget else None
+
 
 # `extra` only sets how many blank rows are rendered up front. The form's
-# "Add another line" button raises TOTAL_FORMS at runtime, so a request can
-# carry as many lines as it needs.
+# "Add" buttons raise TOTAL_FORMS at runtime, so a request can carry as many
+# lines as it needs.
 FRLineItemFormSet = inlineformset_factory(
     FundingRequest, FRLineItem, form=FRLineItemForm, formset=BaseFRLineItemFormSet,
     extra=3, can_delete=True)
+
+
+class BudgetCategoryForm(forms.ModelForm):
+    """
+    One of a budget's categories: its name, and where it sits among the rest.
+
+    ``key`` is how the lines nested under it name it before it is saved: a
+    saved category's pk, or ``new-3`` for one added on the page. The page
+    keeps it and ``sort_order`` up to date, so neither is typed.
+    """
+    key = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    class Meta:
+        model = BudgetCategory
+        fields = ('name', 'sort_order')
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Category name',
+                                           'class': 'fin-category-name'}),
+            'sort_order': forms.HiddenInput,
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(BudgetCategoryForm, self).__init__(*args, **kwargs)
+        self.fields['sort_order'].required = False
+        # Checked in clean_name, to say what to do about it.
+        self.fields['name'].required = False
+        if self.instance.pk is not None:
+            self.initial.setdefault('key', str(self.instance.pk))
+
+    def has_changed(self):
+        """
+        A category the page added has a key, and is there to be saved; the
+        empty one the page clones new categories from has none.
+        """
+        if self.instance.pk is not None:
+            return super(BudgetCategoryForm, self).has_changed()
+        return bool(set(self.changed_data) - {'sort_order'})
+
+    def clean_name(self):
+        name = ' '.join((self.cleaned_data.get('name') or '').split())
+        if not name:
+            raise ValidationError("Every category needs a name. Name it, or remove it.")
+        return name
+
+    def clean_sort_order(self):
+        value = self.cleaned_data.get('sort_order')
+        return self.instance.sort_order if value is None else value
+
+
+class BaseBudgetCategoryFormSet(BaseInlineFormSet):
+    """
+    A budget's categories, one level deep: each holds lines, never another
+    category. Added, renamed, reordered and removed on the budget's form;
+    removing one leaves its lines with no category.
+    """
+
+    def clean(self):
+        """ Refuse two categories with one name, whatever the case. """
+        super(BaseBudgetCategoryFormSet, self).clean()
+        if any(self.errors):
+            return
+        seen = set()
+        for form in self.forms:
+            data = form.cleaned_data or {}
+            if data.get('DELETE') or not data.get('name'):
+                continue
+            name = data['name']
+            if name.lower() in seen:
+                raise ValidationError(
+                    "Two categories are both called “%s”. Rename one, or move the lines of one "
+                    "into the other and remove it." % name)
+            seen.add(name.lower())
+
+    def by_key(self):
+        """
+        ``{key: BudgetCategory or None}`` once the formset is saved: what each
+        key the lines may carry now means. A removed category means ``None``,
+        so its lines are left with no category.
+        """
+        found = {'': None}
+        for form in self.forms:
+            data = form.cleaned_data or {}
+            kept = form.instance.pk is not None and not data.get('DELETE')
+            category = form.instance if kept else None
+            if data.get('key'):
+                found[data['key']] = category
+            if category is not None:
+                found[str(category.pk)] = category
+        return found
+
+
+BudgetCategoryFormSet = inlineformset_factory(
+    FundingRequest, BudgetCategory, form=BudgetCategoryForm, formset=BaseBudgetCategoryFormSet,
+    extra=0, can_delete=True)
 
 
 # ---------------------------------------------------------------------------

@@ -78,6 +78,8 @@ urlpatterns = [
     # Reports to print and download
     re_path(r'^reports/$', views.report_list, name="reports"),
     re_path(r'^reports/(?P<slug>[a-z-]+)/$', views.report, name="report"),
+    re_path(r'^reports/budget-report-form/(?P<pk>\d+)/save/$', views.budget_report_save,
+            name="budget-report-save"),
 
     # Billing an event: the Billing page, bills, multi-bills, the worktag and
     # ISD each is charged to, and events that need no bill. The client's own

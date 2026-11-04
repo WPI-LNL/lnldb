@@ -243,6 +243,63 @@ def percent_of(part, whole):
     return max(0, min(100, int(round(part / whole * 100))))
 
 
+def _count(number, one, many):
+    return '%s %s' % (number, one if number == 1 else many)
+
+
+@register.simple_tag
+def approved(item):
+    """
+    What SGA approved, for one line or for a whole request, budget or group
+    of lines -- saying plainly which of two different things a missing figure
+    is. A line with no approved amount is still with SGA: ``?`` and *Pending
+    SGA Approval*. A line approved at $0 is one SGA denied: ``$0`` and
+    *Denied*. A total adds up the lines SGA has decided and says how many are
+    still pending; it is ``?`` only when every line is.
+    """
+    pending = format_html('<span class="fin-approval is-waiting">Pending SGA Approval</span>')
+    if hasattr(item, 'line_count'):
+        if not item.approved_known:
+            return format_html('<span class="fin-unknown" title="{}">?</span> {}',
+                               "Every line is pending SGA approval", pending)
+        if item.waiting_count:
+            return format_html('{}<div class="fin-approval-note">{} pending SGA approval</div>',
+                               money(item.total_awarded),
+                               _count(item.waiting_count, 'line', 'lines'))
+        return money(item.total_awarded)
+    value = getattr(item, 'amount_awarded', None)
+    if value is None:
+        return format_html('<span class="fin-unknown" title="{}">?</span> {}',
+                           "SGA hasn't approved an amount for this line yet", pending)
+    if not Decimal(value):
+        return format_html('$0 <span class="fin-approval is-turned-down" title="{}">Denied</span>',
+                           "SGA denied this line")
+    return money(value)
+
+
+@register.simple_tag
+def requested(item):
+    """
+    What LNL asked SGA for, for one line or a total, as :func:`approved` says
+    what SGA gave. A line with nothing entered is ``?``; a total counts the
+    lines that have no requested amount, and is ``?`` only when none has one.
+    """
+    if hasattr(item, 'line_count'):
+        if not item.requested_known:
+            return format_html('<span class="fin-unknown" title="{}">?</span>',
+                               "No line says what was requested")
+        if item.requested_missing_count:
+            return format_html('{}<div class="fin-approval-note">{} without one</div>',
+                               money(item.total_requested),
+                               _count(item.requested_missing_count, 'line', 'lines'))
+        return money(item.total_requested)
+    value = getattr(item, 'amount_requested', None)
+    if value is None:
+        return format_html('<span class="fin-unknown" title="{}">?</span>',
+                           "What was requested isn't entered")
+    return money(value)
+
+
 @register.simple_tag
 def burndown_bar(spent, awarded):
     """

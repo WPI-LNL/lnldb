@@ -1,9 +1,33 @@
-{# Funding requests for the selected year, each with its burndown bar, and what SGA still owes. #}
+{# The SGA Funding tab: what SGA still owes, the year's funding requests and its budget, each with its burndown. #}
 {% extends 'finance/base_finance.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 
 {% block fin_content %}
+    {% comment %}
+        The page's own header, with the one button for both kinds of SGA
+        funding: it belongs to this page alone, so it is here rather than in
+        the finance bar every page shares.
+    {% endcomment %}
+    <div class="fin-page-head">
+        <div>
+            <h3 class="fin-page-title">SGA Funding</h3>
+            <div class="fin-muted">Funding requests and budgets: what SGA approved, what has been spent, and what SGA owes or has deposited.</div>
+        </div>
+        {% permission request.user has 'finance.manage_fundingrequest' %}
+            <div class="btn-group fin-page-actions">
+                <button type="button" class="btn btn-primary btn-sm dropdown-toggle"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="glyphicon glyphicon-plus"></span> New <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                    <li><a href="{% url 'finance:fr-new' %}?kind=request">Funding request</a></li>
+                    <li><a href="{% url 'finance:fr-new' %}?kind=budget">Budget</a></li>
+                </ul>
+            </div>
+        {% endpermission %}
+    </div>
+
     {% comment %}
         What SGA owes LNL across every year, not only the one selected: a
         request is reimbursed after its spending, often in the next fiscal
@@ -90,19 +114,15 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Funding Requests</span>
-            {% permission request.user has 'finance.manage_fundingrequest' %}
-                <a href="{% url 'finance:fr-new' %}" class="btn btn-xs btn-primary">
-                    <span class="glyphicon glyphicon-plus"></span> New request
-                </a>
-            {% endpermission %}
         </div>
         <div class="fin-table-wrap">
             <table class="table fin-table">
                 <thead>
                     <tr>
                         <th>Name</th><th>Reference</th><th>FY</th>
-                        <th class="fin-num">Awarded</th><th class="fin-num">Spent</th>
-                        <th class="fin-num">Remaining</th><th style="width:180px;">Burndown</th>
+                        <th class="fin-num">Requested</th><th class="fin-num">Approved</th>
+                        <th class="fin-num">Spent</th><th class="fin-num">Remaining</th>
+                        <th style="width:180px;">Burndown</th>
                         <th class="fin-num" title="What SGA has paid back, and what it still owes, for spending that has reached Workday">Reimbursed</th>
                         <th></th>
                     </tr>
@@ -117,12 +137,13 @@
                             </td>
                             <td>{{ fr.reference|default:"—" }}</td>
                             <td>FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
-                            <td class="fin-num">{{ fr.total_awarded|money }}</td>
+                            <td class="fin-num">{% requested fr %}</td>
+                            <td class="fin-num">{% approved fr %}</td>
                             <td class="fin-num text-danger">{{ fr.total_spent|negate|money }}</td>
                             <td class="fin-num {% if fr.is_overspent %}text-danger{% else %}text-success{% endif %}">
                                 {{ fr.total_remaining|money }}
                             </td>
-                            <td>{% burndown_bar fr.total_spent fr.total_awarded %}</td>
+                            <td>{% if fr.approved_known %}{% burndown_bar fr.total_spent fr.total_awarded %}{% endif %}</td>
                             <td class="fin-num">
                                 {{ fr.total_received|money }}
                                 <div class="fin-muted">{{ fr.reimbursement_status }}</div>
@@ -130,10 +151,71 @@
                             <td><a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-xs btn-default">&rsaquo;</a></td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="9">
+                        <tr><td colspan="10">
                             <div class="fin-empty">
                                 <span class="glyphicon glyphicon-inbox"></span>
                                 No funding requests in this filter.
+                            </div>
+                        </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% comment %}
+        The year's SGA budget: deposited at the start of the year rather than
+        paid back after, so its last column is what SGA has deposited, where a
+        request's is what SGA has reimbursed. Under the filter bar's side the
+        line figures count that side's lines only; the deposit is the whole
+        budget's. See finance.views.projects.budget_rows.
+    {% endcomment %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Budget</span>
+            {% if filter_state.projection_flag is not None and budgets %}
+                <span class="fin-locked-note">line figures for this side only; deposits are the whole budget's</span>
+            {% endif %}
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                <thead>
+                    <tr>
+                        <th>Name</th><th>FY</th>
+                        <th class="fin-num">Requested</th><th class="fin-num">Approved</th>
+                        <th class="fin-num">Spent</th><th class="fin-num">Remaining</th>
+                        <th style="width:180px;">Burndown</th>
+                        <th class="fin-num" title="What SGA has deposited for the budget, and what has gone back">Deposited</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in budgets %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'finance:fr-detail' row.budget.pk %}">{{ row.budget.name }}</a>
+                                {% if row.budget.closed %}<span class="label label-default">Closed</span>{% endif %}
+                                <div class="fin-muted">{{ row.totals.line_count }} line{{ row.totals.line_count|pluralize }}</div>
+                            </td>
+                            <td>FY{{ row.budget.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
+                            <td class="fin-num">{% requested row.totals %}</td>
+                            <td class="fin-num">{% approved row.totals %}</td>
+                            <td class="fin-num {% if row.totals.total_spent %}text-danger{% endif %}">{{ row.totals.total_spent|negate|money }}</td>
+                            <td class="fin-num {% if row.totals.is_overspent %}text-danger{% else %}text-success{% endif %}">
+                                {{ row.totals.total_remaining|money }}
+                            </td>
+                            <td>{% if row.totals.approved_known %}{% burndown_bar row.totals.total_spent row.totals.total_awarded %}{% endif %}</td>
+                            <td class="fin-num">
+                                {{ row.budget.total_deposited|money }}
+                                <div class="fin-muted">{{ row.budget.deposit_status }}</div>
+                            </td>
+                            <td><a href="{% url 'finance:fr-detail' row.budget.pk %}" class="btn btn-xs btn-default">&rsaquo;</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="9">
+                            <div class="fin-empty">
+                                <span class="glyphicon glyphicon-briefcase"></span>
+                                No budget in this filter.
                             </div>
                         </td></tr>
                     {% endfor %}

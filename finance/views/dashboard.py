@@ -19,8 +19,8 @@ from finance.calculators import (billing_receivables, cash_flow_by_month, client
                                  project_composition, revenue_by_client, revenue_by_source,
                                  revenue_rows, service_mix, sga_receivables, spend_by_category)
 from finance.filters import filter_context, get_filter_state
-from finance.models import (FundingRequest, ParsedTransaction, TransactionStatus,
-                            WorkdayTransaction, current_fiscal_year, money)
+from finance.models import (FundingKind, FundingRequest, LineTotals, ParsedTransaction,
+                            TransactionStatus, WorkdayTransaction, current_fiscal_year, money)
 
 
 def _doughnut(rows, label_key='label'):
@@ -89,23 +89,34 @@ def dashboard(request):
     # with_totals() puts the request's own figures in SQL; with_lines() does
     # the same for each line's spend. Both are aggregating properties, so a
     # plain prefetch of the allocations would not have been read by either.
-    fr_qs = FundingRequest.objects.filter(closed=False).with_totals().with_lines()
+    # Budgets are in it too, after the requests. A budget's lines are each on
+    # a side of their own, so the side filter narrows a budget to that side's
+    # lines rather than keeping or dropping it whole.
+    fr_qs = (FundingRequest.objects.filter(closed=False).with_totals().with_lines()
+             .order_by('kind', '-fiscal_year', 'name'))
     if projection_flag is not None:
-        fr_qs = fr_qs.filter(is_projection=projection_flag)
+        fr_qs = fr_qs.exclude(kind=FundingKind.REQUEST, is_projection=not projection_flag)
     if state.fiscal_year:
         fr_qs = fr_qs.filter(fiscal_year=state.fiscal_year)
 
     funding_requests = []
     for fr in fr_qs:
         lines = list(fr.line_items.all())
+        figures = fr
+        if fr.is_budget and projection_flag is not None:
+            side = [line for line in lines if line.is_projection == projection_flag]
+            if lines and not side:
+                continue
+            lines, figures = side, LineTotals(side)
         funding_requests.append({
             'obj': fr,
             'lines': lines,
-            'awarded': fr.total_awarded,
-            'spent': fr.total_spent,
-            'remaining': fr.total_remaining,
-            'percent': fr.percent_spent,
-            'overspent': fr.is_overspent,
+            'awarded': figures.total_awarded,
+            'spent': figures.total_spent,
+            'remaining': figures.total_remaining,
+            'percent': figures.percent_spent,
+            'overspent': figures.is_overspent,
+            'approved_known': figures.approved_known,
         })
 
     context = {

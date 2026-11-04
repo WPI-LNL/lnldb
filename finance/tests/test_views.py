@@ -143,7 +143,7 @@ class DashboardTests(FinanceViewTestCase):
     def test_action_banner_absent_when_clear(self):
         txn = self.make_txn(op='OT-B')
         ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'),
             effective_date=txn.accounting_date, status=TransactionStatus.SETTLED)
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
@@ -152,7 +152,7 @@ class DashboardTests(FinanceViewTestCase):
     def test_pie_chart_renders_with_data(self):
         txn = self.make_txn(op='OT-C')
         ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
         self.assertContains(response, "fin-chart-categories")
@@ -168,7 +168,7 @@ class DashboardTests(FinanceViewTestCase):
         expense = self.make_txn(op='OT-CH2')
         tag = ProjectTag.objects.create(name='NEL26')
         ParsedTransaction.objects.create(
-            parent_transaction=expense, amount=expense.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=expense, amount=expense.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'), project_tag=tag,
             effective_date=expense.accounting_date)
 
@@ -190,7 +190,7 @@ class DashboardTests(FinanceViewTestCase):
         import json
         txn = self.make_txn(op='OT-CH3')
         ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), effective_date=txn.accounting_date)
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
         payload = response.context['chart_data']
@@ -262,12 +262,12 @@ class FilterBarTests(FinanceViewTestCase):
     def test_partition_filters_the_ledger(self):
         proj = self.make_txn(op='OT-P', org='315-AG')
         ParsedTransaction.objects.create(
-            parent_transaction=proj, amount=proj.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=proj, amount=proj.net_amount, fund_source=fund('legacy'),
             description='Projector lamp', effective_date=proj.accounting_date)
 
         event = self.make_txn(op='OT-E', org='226-AG Lens & Light Club')
         ParsedTransaction.objects.create(
-            parent_transaction=event, amount=event.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=event, amount=event.net_amount, fund_source=fund('legacy'),
             description='Gaff tape', effective_date=event.accounting_date)
 
         response = self.client.get(reverse('finance:ledger') + '?fy=2026&partition=projection')
@@ -281,11 +281,11 @@ class FilterBarTests(FinanceViewTestCase):
     def test_fiscal_year_filters_the_ledger(self):
         old = self.make_txn(op='OT-OLD', date=datetime.date(2024, 9, 1))
         ParsedTransaction.objects.create(
-            parent_transaction=old, amount=old.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=old, amount=old.net_amount, fund_source=fund('legacy'),
             description='Last year cable', effective_date=old.accounting_date)
         new = self.make_txn(op='OT-NEW', date=datetime.date(2025, 9, 1))
         ParsedTransaction.objects.create(
-            parent_transaction=new, amount=new.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=new, amount=new.net_amount, fund_source=fund('legacy'),
             description='This year cable', effective_date=new.accounting_date)
 
         response = self.client.get(reverse('finance:ledger') + '?fy=2026')
@@ -333,11 +333,11 @@ class FilterBarTests(FinanceViewTestCase):
     def test_all_years_shows_every_fiscal_year(self):
         old = self.make_txn(op='OT-Y1', date=datetime.date(2024, 9, 1))
         ParsedTransaction.objects.create(
-            parent_transaction=old, amount=old.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=old, amount=old.net_amount, fund_source=fund('legacy'),
             description='FY25 cable', effective_date=old.accounting_date)
         new = self.make_txn(op='OT-Y2', date=datetime.date(2025, 9, 1))
         ParsedTransaction.objects.create(
-            parent_transaction=new, amount=new.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=new, amount=new.net_amount, fund_source=fund('legacy'),
             description='FY26 cable', effective_date=new.accounting_date)
 
         self.client.get(reverse('finance:ledger') + '?fy=2026')       # make it sticky
@@ -348,11 +348,11 @@ class FilterBarTests(FinanceViewTestCase):
     def test_all_partition_shows_both_sides(self):
         proj = self.make_txn(op='OT-PA', org='315-AG')
         ParsedTransaction.objects.create(
-            parent_transaction=proj, amount=proj.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=proj, amount=proj.net_amount, fund_source=fund('legacy'),
             description='Projector lamp', effective_date=proj.accounting_date)
         event = self.make_txn(op='OT-EA', org='226-AG Lens & Light Club')
         ParsedTransaction.objects.create(
-            parent_transaction=event, amount=event.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=event, amount=event.net_amount, fund_source=fund('legacy'),
             description='Gaff tape', effective_date=event.accounting_date)
 
         self.client.get(reverse('finance:ledger') + '?fy=2026&partition=projection')
@@ -367,7 +367,7 @@ class LedgerTests(FinanceViewTestCase):
         self.grant('view_subledger', 'edit_subledger')
         txn = self.make_txn(op='OT-L1')
         self.entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), description='Gaff tape',
             effective_date=txn.accounting_date)
 
@@ -411,7 +411,7 @@ class LedgerTests(FinanceViewTestCase):
         """ A half-allocated bank line must not be settleable in bulk. """
         parent = self.make_txn(op='OT-L2', amount='-1000.00')
         partial = ParsedTransaction.objects.create(
-            parent_transaction=parent, amount=Decimal('-400.00'), fund_source=fund('sga_budget'),
+            parent_transaction=parent, amount=Decimal('-400.00'), fund_source=fund('legacy'),
             effective_date=parent.accounting_date)
         self.client.post(reverse('finance:bulk-action'), {
             'action': 'status',
@@ -548,7 +548,7 @@ class IngestionTests(FinanceViewTestCase):
     def test_reconcile_creates_and_settles(self):
         txn = self.make_txn(op='OT-Q5', amount='-500.00')
         response = self.client.post(reverse('finance:reconcile', args=[txn.pk]), {
-            'txn%s-fund_source' % txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % txn.pk: category('consumables').pk,
         })
         self.assertEqual(response.status_code, 302)
@@ -560,7 +560,7 @@ class IngestionTests(FinanceViewTestCase):
         """ Unticking the box is now possible, so the box is what is checked. """
         txn = self.make_txn(op='OT-Q6', org='315-AG')
         self.client.post(reverse('finance:reconcile', args=[txn.pk]), {
-            'txn%s-fund_source' % txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % txn.pk: category('repairs').pk,
             'txn%s-is_projection' % txn.pk: 'on',
         })
@@ -569,7 +569,7 @@ class IngestionTests(FinanceViewTestCase):
     def test_leaving_the_projection_account_needs_a_reason(self):
         txn = self.make_txn(op='OT-Q6B', org='315-AG')
         payload = {
-            'txn%s-fund_source' % txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % txn.pk: category('repairs').pk,
             # is_projection deliberately unticked
         }
@@ -586,7 +586,7 @@ class IngestionTests(FinanceViewTestCase):
         """ A Projection purchase bought out of 226-AG, reimbursed by SGA. """
         txn = self.make_txn(op='OT-Q6C', org='226-AG Lens & Light Club')
         self.client.post(reverse('finance:reconcile', args=[txn.pk]), {
-            'txn%s-fund_source' % txn.pk: fund('sga_budget').pk,
+            'txn%s-fund_source' % txn.pk: fund('legacy').pk,
             'txn%s-lnl_spend_category' % txn.pk: category('repairs').pk,
             'txn%s-is_projection' % txn.pk: 'on',
         })
@@ -712,7 +712,7 @@ class IngestionTests(FinanceViewTestCase):
             'description': 'Gaff tape run',
             'lines-TOTAL_FORMS': '1', 'lines-INITIAL_FORMS': '0',
             'lines-0-amount': '75.00',
-            'lines-0-fund_source': fund('sga_budget').pk,
+            'lines-0-fund_source': fund('legacy').pk,
             'lines-0-lnl_spend_category': category('consumables').pk,
         })
         self.assertEqual(response.status_code, 302)
@@ -749,9 +749,9 @@ class SplitViewTests(FinanceViewTestCase):
     def test_balanced_split_saves(self):
         response = self._post([
             {'amount': '-200.00', 'description': 'Consumables',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('consumables').pk},
+             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('consumables').pk},
             {'amount': '-1000.00', 'description': 'Capital',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('equipment_noncapital').pk},
+             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('equipment_noncapital').pk},
         ])
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.txn.slices.count(), 2)
@@ -760,7 +760,7 @@ class SplitViewTests(FinanceViewTestCase):
     def test_unbalanced_split_is_rejected(self):
         response = self._post([
             {'amount': '-200.00', 'description': 'Partial',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('consumables').pk},
+             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('consumables').pk},
         ])
         self.assertEqual(response.status_code, 200)  # re-rendered with errors
         self.assertEqual(self.txn.slices.count(), 0)
@@ -769,9 +769,9 @@ class SplitViewTests(FinanceViewTestCase):
     def test_split_cannot_flip_direction(self):
         response = self._post([
             {'amount': '-1400.00', 'description': 'Expense',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('consumables').pk},
+             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('consumables').pk},
             {'amount': '200.00', 'description': 'Sneaky revenue',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('consumables').pk},
+             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('consumables').pk},
         ])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.txn.slices.count(), 0)
@@ -788,7 +788,7 @@ class EntryDetailTests(FinanceViewTestCase):
         self.grant('view_subledger', 'edit_subledger', 'view_subledger_receipts')
         txn = self.make_txn(op='OT-D1')
         self.entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), description='Gaff tape',
             effective_date=txn.accounting_date)
 
@@ -845,7 +845,7 @@ class ProjectExplorerTests(FinanceViewTestCase):
                                                parent=self.parent)
         txn = self.make_txn(op='OT-T1', amount='-8000.00')
         ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'), project_tag=self.child,
             description='Lustr fixtures', effective_date=txn.accounting_date)
 
@@ -913,11 +913,11 @@ class FundingRequestViewTests(FinanceViewTestCase):
             'line_items-MIN_NUM_FORMS': '0', 'line_items-MAX_NUM_FORMS': '1000',
             'line_items-0-id': str(self.line.pk), 'line_items-0-name': 'Fixtures',
             'line_items-0-description': 'Moving heads', 'line_items-0-amount_awarded': '1000.00',
-            'line_items-0-lnl_spend_category': '', 'line_items-0-project_tag': '',
+            'line_items-0-lnl_spend_category': '',
             'line_items-0-sort_order': '',
             'line_items-1-id': '', 'line_items-1-name': 'Cable',
             'line_items-1-description': 'Soco and edison', 'line_items-1-amount_awarded': '250.00',
-            'line_items-1-lnl_spend_category': '', 'line_items-1-project_tag': '',
+            'line_items-1-lnl_spend_category': '',
             'line_items-1-sort_order': '',
         }
         data.update(overrides)
@@ -951,8 +951,9 @@ class FundingRequestViewTests(FinanceViewTestCase):
     def test_edit_form_offers_the_same_remove_control_on_every_row(self):
         response = self.client.get(reverse('finance:fr-edit', args=[self.fr.pk]))
         content = response.content.decode()
-        # One X per row: the saved line plus the three blank ones.
-        self.assertEqual(content.count('fin-fr-drop'), 4)
+        # One X per row: the saved line plus the three blank ones, and the
+        # empty row the Add buttons clone.
+        self.assertEqual(content.count('fin-fr-drop'), 5)
         # ...and the saved row still carries the DELETE flag the X drives.
         self.assertIn('fin-fr-delete-flag', content)
         self.assertIn('line_items-0-DELETE', content)
@@ -970,7 +971,7 @@ class FundingRequestViewTests(FinanceViewTestCase):
     def test_overspend_flagged(self):
         txn = self.make_txn(op='OT-F1', amount='-1500.00')
         ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
+            parent_transaction=txn, amount=txn.net_amount, fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'), fr_line_target=self.line,
             effective_date=txn.accounting_date)
         response = self.client.get(reverse('finance:fr-detail', args=[self.fr.pk]))
@@ -990,7 +991,7 @@ class ReconcileJsonTests(FinanceViewTestCase):
 
     def _post(self, ajax=True, **overrides):
         data = {
-            'txn%s-fund_source' % self.txn.pk: str(fund('sga_budget').pk),
+            'txn%s-fund_source' % self.txn.pk: str(fund('legacy').pk),
             'txn%s-lnl_spend_category' % self.txn.pk: str(category('consumables').pk),
             'txn%s-fr_line_target' % self.txn.pk: '',
             'txn%s-project_tag' % self.txn.pk: '',
@@ -1043,7 +1044,7 @@ class ReconcileJsonTests(FinanceViewTestCase):
         """
         ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-100.00'),
-            effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.txn.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         response = self._post()
         self.assertEqual(response.status_code, 200)
@@ -1055,7 +1056,7 @@ class ReconcileJsonTests(FinanceViewTestCase):
 
 class FundingRequestInheritanceTests(FinanceViewTestCase):
     """
-    A funding request line already records what it was awarded for. Choosing
+    A funding request line already records what it was approved for. Choosing
     the line on the queue should carry that across rather than asking again.
     """
 
@@ -1063,11 +1064,10 @@ class FundingRequestInheritanceTests(FinanceViewTestCase):
         super(FundingRequestInheritanceTests, self).setUp()
         self.grant('view_subledger', 'edit_subledger')
         self.txn = self.make_txn(op='OT-FRI', amount='-250.00')
-        self.project = ProjectTag.objects.create(name='New Equipment List')
         fr = FundingRequest.objects.create(name='NEL26 Grant', fiscal_year=self.txn.fiscal_year)
         self.line = FRLineItem.objects.create(
             funding_request=fr, name='Consumables', amount_awarded=Decimal('1000.00'),
-            lnl_spend_category=category('consumables'), project_tag=self.project)
+            lnl_spend_category=category('consumables'))
         self.bare_line = FRLineItem.objects.create(
             funding_request=fr, name='Unclassified', amount_awarded=Decimal('500.00'))
 
@@ -1078,8 +1078,9 @@ class FundingRequestInheritanceTests(FinanceViewTestCase):
     def test_the_line_carries_its_spend_category_to_the_browser(self):
         self.assertIn('data-spend-category="%s"' % category('consumables').pk, self._options())
 
-    def test_the_line_carries_its_project_to_the_browser(self):
-        self.assertIn('data-project-tag="%s"' % self.project.pk, self._options())
+    def test_a_line_has_no_project_to_carry(self):
+        """ Requests and budgets don't need a project, so a line has none to pass on. """
+        self.assertNotIn('data-project-tag', self._options())
 
     def test_a_line_with_no_expected_routing_carries_none(self):
         rendered = self._options()
@@ -1087,7 +1088,6 @@ class FundingRequestInheritanceTests(FinanceViewTestCase):
         option = [chunk for chunk in rendered.split('<option')
                   if 'value="%s"' % self.bare_line.pk in chunk][0]
         self.assertNotIn('data-spend-category', option)
-        self.assertNotIn('data-project-tag', option)
 
     def test_the_inherited_values_are_what_the_server_accepts(self):
         """ End to end: post what the browser would fill in and it validates. """
@@ -1095,7 +1095,7 @@ class FundingRequestInheritanceTests(FinanceViewTestCase):
             't-fund_source': str(fund('sga_fr').pk),
             't-fr_line_target': str(self.line.pk),
             't-lnl_spend_category': str(self.line.lnl_spend_category_id),
-            't-project_tag': str(self.line.project_tag_id),
+            't-project_tag': '',
             't-audit_explanation': '', 't-is_projection': '',
         }
         form = ReconcileForm(data, parent_transaction=self.txn, prefix='t')
@@ -1178,7 +1178,7 @@ class UnreconcileTests(FinanceViewTestCase):
         self.entry = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-500.00'),
             effective_date=self.txn.accounting_date, description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'),
             status=TransactionStatus.SETTLED)
 
     def _undo(self, **extra):
@@ -1211,7 +1211,7 @@ class UnreconcileTests(FinanceViewTestCase):
         ParsedTransaction.objects.create(
             parent_transaction=self.make_txn(op='OT-U2', amount='120.00'),
             amount=Decimal('120.00'), effective_date=self.txn.accounting_date,
-            refund_of=self.entry, fund_source=fund('sga_budget'),
+            refund_of=self.entry, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         response = self._undo()
         self.assertContains(response, "Remove the refund first")
@@ -1288,7 +1288,7 @@ class BulkReconcileTests(FinanceViewTestCase):
     def _post(self, ids=None, **extra):
         data = {
             'selected': ','.join(str(t.pk) for t in (ids if ids is not None else [self.a, self.b])),
-            'fund_source': fund('sga_budget').pk,
+            'fund_source': fund('legacy').pk,
             'lnl_spend_category': category('consumables').pk,
         }
         data.update(extra)
@@ -1298,7 +1298,7 @@ class BulkReconcileTests(FinanceViewTestCase):
         self._post()
         for txn in (self.a, self.b):
             entry = txn.slices.get()
-            self.assertEqual(entry.fund_source, fund('sga_budget'))
+            self.assertEqual(entry.fund_source, fund('legacy'))
             self.assertEqual(entry.lnl_spend_category, category('consumables'))
 
     def test_each_slice_takes_its_own_line_amount(self):
@@ -1321,7 +1321,7 @@ class BulkReconcileTests(FinanceViewTestCase):
         """ The slice takes what is left, exactly as the single-row form does. """
         ParsedTransaction.objects.create(
             parent_transaction=self.a, amount=Decimal('-15.00'),
-            effective_date=self.a.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.a.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         self._post(ids=[self.a])
         self.assertEqual(self.a.slices.count(), 2)
@@ -1338,7 +1338,7 @@ class BulkReconcileTests(FinanceViewTestCase):
     def test_an_already_reconciled_line_is_not_touched_twice(self):
         ParsedTransaction.objects.create(
             parent_transaction=self.a, amount=self.a.net_amount,
-            effective_date=self.a.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=self.a.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         response = self._post(ids=[self.a])
         self.assertContains(response, "nothing was left to settle")
@@ -1435,7 +1435,7 @@ class BulkReconcileTests(FinanceViewTestCase):
             username='onlooker', email='onlooker@wpi.edu', password='x')
         self.client.force_login(stranger)
         response = self.client.post(reverse('finance:bulk-reconcile'), {
-            'selected': str(self.a.pk), 'fund_source': fund('sga_budget').pk})
+            'selected': str(self.a.pk), 'fund_source': fund('legacy').pk})
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.a.slices.count(), 0)
 

@@ -5,15 +5,19 @@ The reports are pure functions in :mod:`finance.reports`. This module only
 works out what a request asks for -- the period, the side of the partition, a
 fund, a funding request -- and answers with the page, or with the same figures
 as CSV. The Funding Request Report Form also answers as the PDF SGA asks for,
-made by :mod:`finance.frrf`.
+made by :mod:`finance.frrf`; the Budget Report Form as one PDF a line item,
+or all of them in a zip, made by :mod:`finance.brf`.
 """
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from finance import frrf, reports
+from finance import brf, frrf, reports
 from finance.filters import filter_context, get_filter_state
 from finance.models import FundingRequest, FundSource, current_fiscal_year
 
@@ -44,7 +48,8 @@ def report_form_request(request, fiscal_year):
     SGA can still owe on last year's. With none asked for, it is the first SGA
     still owes on, as that is the one waiting for its form, or else the first.
     """
-    requests = FundingRequest.objects.with_totals()
+    # A budget has a report form of its own; SGA's FR one is for requests.
+    requests = FundingRequest.objects.requests().with_totals()
     offered = list(requests.filter(fiscal_year=fiscal_year) if fiscal_year else requests)
     raw = (request.GET.get('request') or '').strip()
     if raw:
@@ -56,6 +61,32 @@ def report_form_request(request, fiscal_year):
         return offered, chosen
     owed = [fr for fr in offered if fr.awaiting_sga > 0]
     return offered, (owed or offered or [None])[0]
+
+
+def report_form_budget(request, fiscal_year):
+    """
+    ``(budgets to offer, the one chosen)`` for the Budget Report Form: the
+    one asked for by ``?budget=``, else the filter bar's year's, else the
+    latest. Every budget is offered: there is one a year.
+    """
+    budgets = list(FundingRequest.objects.budgets().with_totals().order_by('-fiscal_year'))
+    raw = (request.GET.get('budget') or '').strip()
+    if raw:
+        if not raw.isdigit():
+            raise Http404
+        return budgets, get_object_or_404(FundingRequest.objects.budgets().with_totals(),
+                                          pk=raw)
+    for budget in budgets:
+        if budget.fiscal_year == fiscal_year:
+            return budgets, budget
+    return budgets, (budgets or [None])[0]
+
+
+def file_response(data, content_type, filename, disposition='inline'):
+    """ Bytes as a download called ``filename``. """
+    response = HttpResponse(data, content_type=content_type)
+    response['Content-Disposition'] = '%s; filename="%s"' % (disposition, filename)
+    return response
 
 
 def csv_response(text, filename):
@@ -87,6 +118,7 @@ def report(request, slug):
     period_error = ''
     fund = None
     fr_choices, fr = None, None
+    budget_choices, budget, budget_form = None, None, None
     by = request.GET.get('by') if request.GET.get('by') in reports.TREND_GROUPINGS else 'term'
     measure = (request.GET.get('measure') if request.GET.get('measure') in reports.TREND_MEASURES
                else 'events')
@@ -132,6 +164,29 @@ def report(request, slug):
             return response
         else:
             built = reports.fr_report_form(fr)
+    elif slug == 'budget-report-form':
+        projection = None
+        budget_choices, budget = report_form_budget(request, state.fiscal_year)
+        if budget is None:
+            built = reports.Report(slug, title, 'No budget', '', 'none', [], [],
+                                   warnings=["There is no budget yet. Enter one on the SGA "
+                                             "Funding tab."])
+        else:
+            budget_form = brf.gather(budget)
+            wanted = request.GET.get('format')
+            if wanted in ('pdf', 'zip'):
+                if not request.user.has_perm('finance.view_subledger_receipts'):
+                    raise PermissionDenied
+                if wanted == 'zip':
+                    return file_response(brf.all_pdfs(budget_form, request), 'application/zip',
+                                         budget_form.zip_filename, 'attachment')
+                raw = (request.GET.get('line') or '').strip()
+                item = budget_form.line(int(raw)) if raw.isdigit() else None
+                if item is None:
+                    raise Http404
+                return file_response(brf.line_pdf(budget_form, item, request),
+                                     'application/pdf', item.filename)
+            built = reports.budget_report_form(budget, budget_form)
     else:
         built = reports.owed_to_lnl(projection, today)
 
@@ -146,6 +201,13 @@ def report(request, slug):
         pdf_params['request'] = fr.pk
         pdf_params['format'] = 'pdf'
         pdf_url = '?' + pdf_params.urlencode()
+    budget_query = ''
+    if budget is not None:
+        budget_params = request.GET.copy()
+        budget_params['budget'] = budget.pk
+        budget_params.pop('format', None)
+        budget_params.pop('line', None)
+        budget_query = budget_params.urlencode()
     context = {
         'h2': title,
         'fin_page': 'reports',
@@ -167,8 +229,38 @@ def report(request, slug):
         'fr': fr,
         'fr_choices': fr_choices,
         'pdf_url': pdf_url,
+        'budget': budget,
+        'budget_choices': budget_choices,
+        'budget_form': budget_form,
+        'budget_query': budget_query,
+        'can_edit_lines': request.user.has_perm('finance.manage_fundingrequest'),
         'can_view_receipts': request.user.has_perm('finance.view_subledger_receipts'),
         'printed_on': timezone.localtime(),
     }
     context.update(filter_context(request))
     return render(request, 'finance/report.html', context)
+
+
+@login_required
+@permission_required('finance.manage_fundingrequest', raise_exception=True)
+@require_POST
+def budget_report_save(request, pk):
+    """
+    Save the undergraduates typed on the Budget Report Form for each line,
+    recorded in each line's history.
+    """
+    import reversion
+
+    budget = get_object_or_404(FundingRequest.objects.budgets(), pk=pk)
+    with reversion.create_revision():
+        reversion.set_user(request.user)
+        reversion.set_comment("Undergraduates entered on the Budget Report Form")
+        saved, problems = brf.save_answers(brf.gather(budget), request.POST)
+    for problem in problems:
+        messages.error(request, problem)
+    if saved:
+        messages.success(request, "Saved %s answer%s." % (saved, '' if saved == 1 else 's'))
+    elif not problems:
+        messages.info(request, "Nothing had changed.")
+    return HttpResponseRedirect('%s?budget=%s' % (
+        reverse('finance:report', args=['budget-report-form']), budget.pk))

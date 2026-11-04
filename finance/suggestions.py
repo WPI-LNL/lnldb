@@ -48,7 +48,7 @@ from decimal import Decimal
 from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
-from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling,
+from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, DrawsOn, FundSource, MultiBilling,
                             SuggestionRule, default_fund_source, dollars, fiscal_year_for,
                             fund_source_for_tracking, fund_source_for_workday_fund, money,
                             normalise_isd_number, normalise_sga_reference, normalise_term,
@@ -173,18 +173,30 @@ class MemoFields(object):
         the category name, often the line's own name, and matched against both.
     ``reference``
         The SGA request number, e.g. ``A.27.16``.
+    ``budget_line``
+        A budget line's four-digit Request ID, e.g. ``4521``, which a memo
+        quotes in place of a request number: ``Velcro restock, consumables,
+        (4521)``. Never both: a memo with a request number has no Request ID.
     """
 
-    __slots__ = ('description', 'line_hint', 'reference')
+    __slots__ = ('description', 'line_hint', 'reference', 'budget_line')
 
-    def __init__(self, description='', line_hint='', reference=''):
+    def __init__(self, description='', line_hint='', reference='', budget_line=''):
         self.description = description
         self.line_hint = line_hint
         self.reference = reference
+        self.budget_line = budget_line
 
     def __repr__(self):
-        return "<MemoFields %r / %r / %r>" % (self.description, self.line_hint,
-                                              self.reference)
+        return "<MemoFields %r / %r / %r / %r>" % (self.description, self.line_hint,
+                                                   self.reference, self.budget_line)
+
+
+#: A budget line's Request ID at the end of a memo, where the house format puts
+#: it: in brackets -- ``Gaff tape (4521)`` -- or as the last comma-separated
+#: field -- ``Velcro restock, consumables, 4521``. Only there, and only four
+#: digits, so "Spring Fest 2026" is a name with a year in it, not a line.
+BUDGET_LINE_IN_MEMO = re.compile(r'(?:,\s*\(?\s*(\d{4})\s*\)?|\(\s*(\d{4})\s*\))\s*$')
 
 
 def parse_memo(text):
@@ -213,6 +225,10 @@ def parse_memo(text):
     Where several segments survive, the **last** is the line hint and the rest
     rejoin as the description, so a description that itself contains a comma --
     "Gaff tape, spike tape, consumables" -- keeps both halves.
+
+    Spending on a budget line quotes the line's Request ID where a request
+    number would go -- ``Velcro restock, consumables, (4521)`` -- and it is
+    read off the end the same way (:data:`BUDGET_LINE_IN_MEMO`).
     """
     text = _collapse(text)
     if not text:
@@ -221,15 +237,22 @@ def parse_memo(text):
     references = funding_request_references(text)
     reference = references[0] if references else ''
 
+    budget_line = ''
+    if not reference:
+        match = BUDGET_LINE_IN_MEMO.search(text)
+        if match is not None:
+            budget_line = match.group(1) or match.group(2)
+            text = text[:match.start()].rstrip(' ,')
+
     segments = [s for s in (_without_reference(part) for part in text.split(',')) if s]
     if not segments:
         # A memo that was nothing but a request number. Odd, but it happens,
         # and the number is the useful half anyway.
-        return MemoFields(reference=reference)
+        return MemoFields(reference=reference, budget_line=budget_line)
     if len(segments) == 1:
-        return MemoFields(description=segments[0], reference=reference)
+        return MemoFields(description=segments[0], reference=reference, budget_line=budget_line)
     return MemoFields(description=', '.join(segments[:-1]), line_hint=segments[-1],
-                      reference=reference)
+                      reference=reference, budget_line=budget_line)
 
 
 def memo_fields(txn):
@@ -330,6 +353,18 @@ def _line_by_wording(lines, fields):
     return scored[0][1]
 
 
+def chargeable_lines(funding_request):
+    """
+    The request's lines SGA approved money for: the only ones a charge can
+    name, and so the only ones worth suggesting. A line waiting for SGA's
+    decision, or turned down at $0, is left out, as the line pickers leave it
+    out (:meth:`finance.models.FRLineItemQuerySet.chargeable`).
+
+    Read through ``.all()``, so a caller that prefetched the lines uses them.
+    """
+    return [line for line in funding_request.line_items.all() if line.amount_awarded]
+
+
 def match_fr_line(funding_request, hint, fields=None):
     """
     The line of ``funding_request`` a memo names, or ``None``.
@@ -356,7 +391,7 @@ def match_fr_line(funding_request, hint, fields=None):
     # ``.all()`` rather than a fresh ``select_related``, so a caller that
     # prefetched the lines -- :func:`suggest_funding_request` does, once per
     # row of a queue page -- gets to use what it fetched.
-    lines = list(funding_request.line_items.all())
+    lines = chargeable_lines(funding_request)
     if not lines:
         return None
     if len(lines) == 1:
@@ -506,7 +541,7 @@ def suggest_fr_line(funding_request, line, fields):
     reference = funding_request.reference
     if normalise_term(fields.line_hint) == normalise_term(line.name):
         reason = 'Memo quotes %s and names its %s line' % (reference, line.name)
-    elif len(funding_request.line_items.all()) == 1:
+    elif len(chargeable_lines(funding_request)) == 1:
         # Say so -- otherwise the caption claims the memo named a line it
         # never did.
         reason = '%s has only the one line' % reference
@@ -535,9 +570,11 @@ def suggest_fr_request(funding_request, line, fields):
     if funding_request is None:
         return None
     reference = funding_request.reference
-    count = len(funding_request.line_items.all())
+    count = len(chargeable_lines(funding_request))
     if line is not None:
         reason = 'Memo quotes %s' % reference
+    elif not count and funding_request.line_items.all():
+        reason = 'Memo quotes %s, but SGA has approved none of its lines yet' % reference
     elif not count:
         reason = 'Memo quotes %s, which has no lines yet' % reference
     elif fields.line_hint:
@@ -547,6 +584,237 @@ def suggest_fr_request(funding_request, line, fields):
         reason = 'Memo quotes %s but not which of its %s lines' % (reference, count)
     return Suggestion(funding_request.pk, HIGH, reason,
                       '%s %s' % (reference, funding_request.name), source=MEMO)
+
+
+# ---------------------------------------------------------------------------
+# The year's budget
+#
+# Spending on a budget line quotes the line's four-digit Request ID where a
+# request number would go -- "Velcro restock, consumables, (4521)" -- and from
+# FY27 on Workday's Tracking worktag says "SGA Budget" as well. A budget has
+# no number of its own: there is one a year, so the line's fiscal year says
+# which budget, and the Request ID says which line of it.
+# ---------------------------------------------------------------------------
+
+def budget_fund():
+    """ The active fund that draws on budgets, or ``None``. """
+    return FundSource.objects.filter(draws_on=DrawsOn.BUDGET, is_active=True).first()
+
+
+def budget_for_year(fiscal_year):
+    """ The budget for ``fiscal_year``, open or closed, lines attached; or ``None``. """
+    from django.db.models import Prefetch
+
+    from finance.models import FRLineItem, FundingRequest
+
+    return (FundingRequest.objects.budgets().filter(fiscal_year=fiscal_year).with_totals()
+            .prefetch_related(Prefetch('line_items', queryset=FRLineItem.objects
+                                       .select_related('lnl_spend_category', 'category')))
+            .first())
+
+
+def _tracked_to_budget(txn):
+    """ The Tracking worktag's fund, when it is one that draws on budgets; else ``None``. """
+    tracking = txn.worktag('tracking')
+    fund = fund_source_for_tracking(tracking)
+    return fund if fund is not None and fund.draws_on_budget else None
+
+
+def _is_sga_journal_entry(txn):
+    """ A journal entry naming nobody: how SGA moves money in and out of the account. """
+    return ((txn.document_type or '').strip().lower() == JOURNAL_ENTRY_DOCUMENT_TYPE
+            and not (txn.supplier or txn.employee))
+
+
+def _names_of(line):
+    """ What a budget line can be called in a memo: its name, its spend category, its category. """
+    names = [line.name]
+    if line.lnl_spend_category_id:
+        names.append(line.lnl_spend_category.name)
+    if line.category_id:
+        names.append(line.category.name)
+    return [normalise_term(name) for name in names if normalise_term(name)]
+
+
+def hint_fits_line(line, hint):
+    """
+    Whether a memo's middle field could be talking about ``line``.
+
+    The house format puts the line's category there as often as its name --
+    ``consumables`` against a line called Gaff tape awarded for Consumables --
+    so any of the line's names counts, whole or one inside the other, and so
+    does a word in common.
+    """
+    wanted = normalise_term(hint)
+    if not wanted:
+        return True
+    for name in _names_of(line):
+        if name == wanted or wanted in name or name in wanted:
+            return True
+    hint_words = _line_words(hint)
+    return any(_same_word(word, other)
+               for name in [line.name] + ([line.category.name] if line.category_id else [])
+               for word in _line_words(name) for other in hint_words)
+
+
+def match_budget_line(budget, fields):
+    """
+    The one line of ``budget`` the memo's words point to, or ``None``.
+
+    For a line tracked to the budget whose memo has no Request ID. A budget
+    has many alike lines, so each test must pick out exactly one: the hint as
+    a line's name, then as the name of one line's spend category or category,
+    then the memo's wording (:func:`_line_by_wording`).
+    """
+    lines = chargeable_lines(budget)
+    if not lines:
+        return None
+    wanted = normalise_term(fields.line_hint)
+    if wanted:
+        named = [line for line in lines if normalise_term(line.name) == wanted]
+        if len(named) == 1:
+            return named[0]
+        grouped = [line for line in lines if wanted in _names_of(line)[1:]]
+        if len(grouped) == 1:
+            return grouped[0]
+    return _line_by_wording(lines, fields)
+
+
+def _budget_spending(txn, fields, rules):
+    """
+    :func:`suggest_all` for spending charged to a budget line, or ``None``
+    when nothing says the line is a budget's.
+
+    The memo's Request ID names the line; the Tracking worktag only says the
+    money is the budget's. Either is enough to fill the fund and the budget
+    in. The line is filled from the Request ID, and without one only when the
+    memo's words point to a single line. Saying so out loud: a Request ID the
+    year's budget doesn't have, a line SGA hasn't approved, or a year with no
+    budget in lnldb.
+    """
+    tracked = _tracked_to_budget(txn)
+    number = fields.budget_line
+    if not number and tracked is None:
+        return None
+
+    year = fiscal_year_for(txn.accounting_date)
+    short = 'FY%s' % str(year)[-2:]
+    budget = budget_for_year(year)
+    line = None
+    if budget is not None and number:
+        line = next((item for item in budget.line_items.all() if item.number == number), None)
+    if line is None and tracked is None:
+        # A four-digit number nothing else ties to the budget is just a number.
+        return None
+
+    fund = budget_fund()
+    warning = label = ''
+    fr_line = fr_request = fund_suggestion = None
+    if fund is not None:
+        if line is not None:
+            fund_suggestion = Suggestion(fund.pk, HIGH, 'Memo quotes Request ID %s, a budget line'
+                                         % number, str(fund), source=MEMO)
+        else:
+            fund_suggestion = Suggestion(fund.pk, HIGH, 'Workday Tracking "%s"'
+                                         % txn.worktag('tracking'), str(fund), source=EXPORT)
+
+    if budget is None:
+        warning = ('Tracked to %s, but lnldb has no %s budget. Add the budget and its lines, '
+                   'or, if LNL has no budget that year, change the fund.' % (tracked or fund, short))
+        if number:
+            warning = 'The memo quotes Request ID %s. %s' % (number, warning)
+        label = 'No %s budget' % short
+    elif line is not None:
+        fr_request = Suggestion(budget.pk, HIGH, 'Memo quotes Request ID %s' % number,
+                                budget.short_label, source=MEMO)
+        if not line.amount_awarded:
+            state = 'pending SGA approval' if line.is_waiting else 'denied'
+            warning = ('The memo quotes Request ID %s, %s, which is %s: nothing can be charged '
+                       'to it.' % (number, line.label, state))
+            label = '%s %s' % (number, state)
+        elif hint_fits_line(line, fields.line_hint):
+            fr_line = Suggestion(line.pk, HIGH, 'Memo quotes Request ID %s: %s' % (number, line.name),
+                                 line.picker_label, source=MEMO)
+        else:
+            fr_line = Suggestion(
+                line.pk, MEDIUM, 'Memo quotes Request ID %s (%s), but says "%s" -- check it'
+                % (number, line.name, fields.line_hint), line.picker_label, source=MEMO)
+    else:
+        if number:
+            reason = 'Workday Tracking "%s"; Request ID %s is none of its lines' % (
+                txn.worktag('tracking'), number)
+            warning = ('The memo quotes Request ID %s, which is not a line of %s. Add the line '
+                       'to the budget, or route this line by hand.' % (number, budget.name))
+            label = 'Unknown Request ID %s' % number
+        else:
+            reason = 'Workday Tracking "%s"' % txn.worktag('tracking')
+        fr_request = Suggestion(budget.pk, HIGH, reason, budget.short_label, source=EXPORT)
+        if not number:
+            guess = match_budget_line(budget, fields)
+            if guess is not None:
+                fr_line = Suggestion(
+                    guess.pk, MEDIUM, 'Tracked to the budget; the memo\'s words point to its %s '
+                    'line -- check it' % guess.label, guess.picker_label, source=MEMO)
+
+    spend_category = suggest_spend_category(
+        txn, rules=rules, fr_line=line if fr_line is not None and line is not None else None,
+        fields=fields, funding_request=budget if line is None else None)
+    linked_event = suggest_expense_event(txn, spend_category=spend_category)
+    return {
+        'kind': 'expense',
+        'memo': fields,
+        'description': suggest_description(txn),
+        'spend_category': spend_category,
+        'fund_source': fund_suggestion,
+        'fr_request': fr_request,
+        'fr_line_target': fr_line,
+        'matched_request': budget,
+        'near_miss': None,
+        'unknown_request': None,
+        'unknown_budget': {'fiscal_year': year} if budget is None else None,
+        'linked_event': linked_event,
+        'needs_event': _needs_event(spend_category, linked_event),
+        'warning': warning,
+        'warning_label': label,
+    }
+
+
+def _budget_payment(txn, fields):
+    """
+    SGA's deposit of a budget, or money going back to SGA from one, as
+    ``(suggestion, budget, warning, unknown_budget)`` -- or ``None`` when the
+    line isn't one.
+
+    Both are SGA's journal entries naming nobody, tracked to the budget's
+    fund, with no Request ID: a line quoting one is spending on that line.
+    The deposit is for the budget of the year it lands in. Unspent money goes
+    back around June 30, so a return can land in the next year: it is for
+    last year's budget while that one still has money left, else this year's.
+    """
+    tracked = _tracked_to_budget(txn)
+    if tracked is None or fields.budget_line or not _is_sga_journal_entry(txn):
+        return None
+    year = fiscal_year_for(txn.accounting_date)
+    tracking = txn.worktag('tracking')
+    if txn.net_amount > 0:
+        budget = budget_for_year(year)
+        reason = 'Workday Tracking "%s": SGA depositing the FY%s budget' % (
+            tracking, str(year)[-2:])
+    else:
+        last = budget_for_year(year - 1)
+        if last is not None and last.left_in_account > 0:
+            budget, year = last, year - 1
+        else:
+            budget = budget_for_year(year)
+        reason = 'Workday Tracking "%s": money going back to SGA from the FY%s budget' % (
+            tracking, str(year)[-2:])
+    if budget is None:
+        return (None, None,
+                'Tracked to %s, but lnldb has no FY%s budget for SGA\'s money to be for. Add the '
+                'budget, then settle this line.' % (tracked, str(year)[-2:]),
+                {'fiscal_year': year})
+    return (Suggestion(budget.pk, HIGH, reason, budget.picker_label, source=EXPORT),
+            budget, '', None)
 
 
 # ---------------------------------------------------------------------------
@@ -808,7 +1076,7 @@ def suggest_spend_category(txn, rules=None, fr_line=None, fields=None, funding_r
         return Suggestion(
             fr_line.lnl_spend_category_id, HIGH,
             'The %s line of %s is awarded for it'
-            % (fr_line.name, fr_line.funding_request.reference
+            % (fr_line.label, fr_line.funding_request.reference
                or fr_line.funding_request.name),
             str(fr_line.lnl_spend_category), source=AWARD)
 
@@ -912,8 +1180,7 @@ def suggest_fund_source(txn, funding_request=None, reference=''):
     """
     reference = reference or (funding_request.reference if funding_request else '')
     if reference:
-        source = FundSource.objects.filter(requires_funding_request=True,
-                                           is_active=True).first()
+        source = FundSource.objects.filter(draws_on=DrawsOn.REQUEST, is_active=True).first()
         if source is None:
             # No fund is configured to draw on a request, so there is nothing
             # right to offer -- and falling through would be actively wrong:
@@ -1548,6 +1815,17 @@ def suggest_all(txn, rules=None):
     if sga_transfer:
         return _suggest_sga_return(txn, fields)
 
+    budget_return = _budget_payment(txn, fields)
+    if budget_return is not None:
+        return _suggest_budget_return(txn, fields, budget_return)
+
+    # A memo quoting a budget line's Request ID, or a line tracked to the
+    # budget: the line, the budget and the fund follow from the year's budget.
+    if not fields.reference:
+        budget_spending = _budget_spending(txn, fields, rules)
+        if budget_spending is not None:
+            return budget_spending
+
     # Looked up once: the request drives the fund, the request box, the FR line
     # and, through the line or the request's awards, the spend category.
     funding_request, fr_line = suggest_funding_request(txn, fields=fields)
@@ -1616,8 +1894,14 @@ def _suggest_revenue(txn, fields, sga_transfer):
     fund = suggest_fund_source(txn, reference=fields.reference if sga_transfer else '')
 
     payment = request = near_miss = None
+    budget_warning, unknown_budget = '', None
     if sga_transfer:
         payment, request, near_miss = suggest_sga_payment(txn, fields)
+    elif refund is None:
+        # SGA depositing the year's budget: tracked to the budget's fund.
+        deposit = _budget_payment(txn, fields)
+        if deposit is not None:
+            payment, request, budget_warning, unknown_budget = deposit
     unmatched = fields.reference if (sga_transfer and request is None) else ''
 
     if refund is not None or (paid_bill is not None and linked_event is not None):
@@ -1656,7 +1940,11 @@ def _suggest_revenue(txn, fields, sga_transfer):
         # that is not linked to its show.
         'needs_event': bool(is_isd and refund is None and multibill is None
                             and not event_named),
-        'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),
+        'warning': (_unmatched_reference_warning(unmatched, near_miss, revenue=True)
+                    or budget_warning),
+        'warning_label': 'No FY%s budget' % str(unknown_budget['fiscal_year'])[-2:]
+                         if unknown_budget else '',
+        'unknown_budget': unknown_budget,
     }
 
 
@@ -1701,6 +1989,37 @@ def _suggest_sga_return(txn, fields):
         'linked_event': None,
         'needs_event': False,
         'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),
+    }
+
+
+def _suggest_budget_return(txn, fields, found):
+    """
+    The expense half of :func:`suggest_all`, for money going back to SGA from
+    a budget -- its unspent money at year end. Like money SGA takes back from
+    a request: no spend category, event or line, only the budget.
+    """
+    payment, budget, warning, unknown_budget = found
+    tracking = txn.worktag('tracking')
+    fund = _tracked_to_budget(txn)
+    return {
+        'kind': 'expense',
+        'memo': fields,
+        'description': suggest_description(txn),
+        'spend_category': None,
+        'fund_source': Suggestion(fund.pk, HIGH, 'Workday Tracking "%s"' % tracking, str(fund),
+                                  source=EXPORT),
+        'fr_line_target': None,
+        'funding_request': payment,
+        'matched_request': budget,
+        'near_miss': None,
+        'unknown_request': None,
+        'unknown_budget': unknown_budget,
+        'sga_return': True,
+        'linked_event': None,
+        'needs_event': False,
+        'warning': warning,
+        'warning_label': ('No FY%s budget' % str(unknown_budget['fiscal_year'])[-2:]
+                          if unknown_budget else ''),
     }
 
 

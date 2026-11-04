@@ -99,6 +99,12 @@ Words You'll See
     Money back for a purchase. It undoes the spending rather than counting as income.
 **Funding request** (FR)
     An SGA award for a specific purpose, numbered like ``F.26.86``, with one or more lines to spend against.
+**Budget**
+    SGA's money for a whole fiscal year, deposited at its start; one a year. Each line has a four-digit Request ID,
+    like ``4521``, and is Event Production or Projection. Lines are nested under categories you make.
+**Requested / Approved**
+    What LNL asked SGA for on a line, and what SGA approved. A blank approved amount (**?**, `Pending SGA Approval`)
+    means SGA hasn't decided; **$0** (`Denied`) means SGA said no.
 **Spend category**
     LNL's own label for what money was spent on: Consumables, Maintenance and Repair, Event - Sub-Rental, and so on. 
     These spend categories are for internal LNL use only. Note that this can, and oftentime does, differ from the 
@@ -125,7 +131,7 @@ Reading the Figures
 Every finance page writes figures the same way:
 
 - **A balance below zero, or money going out, is in parentheses**, like ($1,500.00). A figure above zero has none. Where
-  figures add up to a total -- Revenue, Expenses and Net, or Awarded, Spent and Remaining -- the money going out is in
+  figures add up to a total -- Revenue, Expenses and Net, or Approved, Spent and Remaining -- the money going out is in
   parentheses, so the figures add up as they read.
 - **$0** -- nothing. The figure is known, and it is zero.
 - **?** -- not known yet. For example, an account's cash before you have recorded a Workday balance for it.

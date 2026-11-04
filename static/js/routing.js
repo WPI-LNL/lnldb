@@ -6,16 +6,19 @@
    where only one can be answered:
 
      1. The funding request pickers only appear when the chosen fund draws on
-        funding requests: the line on spending, and the request itself on
-        SGA's own payments -- a reimbursement in, money SGA took back out.
-        Which funds those are is a flag on the FundSource row, rendered onto
-        the <option> as data-requires-fr, so adding a fund in the admin needs
-        no change here.
+        funding requests or budgets: the line on spending, and the request or
+        budget itself on SGA's own payments -- a reimbursement or a deposit
+        in, money SGA took back out. Which funds those are is a setting on the
+        FundSource row, rendered onto the <option> as data-draws-on (request
+        or budget), so adding a fund in the admin needs no change here. The
+        pickers then offer only that kind -- each line and request carries
+        data-kind -- and are labelled for it: "Budget line" rather than
+        "Funding request line" (the box's data-budget-label).
 
-     2. Choosing a funding request line fills in the spend category and project
-        that line was awarded for. Those were recorded when the award was
-        entered; asking for them again on every transaction charged to the line
-        is exactly the double data entry this module exists to remove.
+     2. Choosing a funding request line fills in the spend category that line
+        was approved for. It was recorded when the request was entered; asking
+        for it again on every transaction charged to the line is exactly the
+        double data entry this module exists to remove.
 
         The queue usually gets there first: LNL's Workday memos name the
         request line outright -- "Velcro restock, consumables, (A.27.16)" -- so
@@ -103,21 +106,62 @@
     }
 
     /* ---- 1. Show the FR pickers only when the fund needs one ------------- */
+
+    /* Whose lines the chosen fund draws on: 'request', 'budget' or ''. A form
+       with no fund box says nothing, and nothing is narrowed by it. */
+    function drawsOn(f) {
+        if (!f.fund.length) { return null; }
+        return f.fund.find('option:selected').attr('data-draws-on') || '';
+    }
+
+    /* "Budget line" when the fund draws on budgets, the box's own label
+       otherwise. The label is whatever the page wrote -- the queue words its
+       labels itself -- so the first one seen is kept and put back. */
+    function relabel($field, kind) {
+        if (!$field.length || !$field.attr('data-budget-label')) { return; }
+        var $label = $('label[for="' + $field.attr('id') + '"]');
+        if (!$label.length) { return; }
+        if ($label.data('fin-own-label') === undefined) {
+            $label.data('fin-own-label', $label.text());
+        }
+        $label.text(kind === 'budget' ? $field.attr('data-budget-label')
+                                      : $label.data('fin-own-label'));
+    }
+
+    /* Offer only the requests (or budgets) of one kind in a request box. The
+       whole list is kept the first time, as for the line picker (rule 6). */
+    function narrowKind($select, kind) {
+        if (!$select.length) { return; }
+        var $all = $select.data('fin-all-options');
+        if (!$all) {
+            $all = $select.children().clone();
+            $select.data('fin-all-options', $all);
+        }
+        var current = String($select.val() || '');
+        $select.empty().append($all.filter(function () {
+            return !kind || !this.value || $(this).attr('data-kind') === kind;
+        }).clone());
+        var kept = current && $select.find('option[value="' + current + '"]').length;
+        $select.val(kept ? current : '');
+    }
+
     function gate($fund) {
         var f = fields($fund);
         if (!f.line.length && !f.request.length) { return; }
 
-        var required = f.fund.find('option:selected').attr('data-requires-fr') === '1';
+        var kind = drawsOn(f) || '';
+        var required = !!kind;
+        relabel(f.line, kind);
+        relabel(f.lineRequest, kind);
+        relabel(f.request, kind);
         if (f.line.length) {
             container(f.line).toggle(required);
             if (f.cross.length) { container(f.cross).toggle(required); }
             if (f.lineRequest.length) {
                 container(f.lineRequest).toggle(required);
-                if (!required && f.lineRequest.val()) {
-                    f.lineRequest.val('');
-                    narrowLines(f.lineRequest);
-                }
+                narrowKind(f.lineRequest, kind);
             }
+            narrowLines(f.line);
 
             if (!required && f.line.val()) {
                 // A stale line would be rejected on save, with the error landing
@@ -128,7 +172,7 @@
         }
         if (f.request.length) {
             container(f.request).toggle(required);
-            if (!required && f.request.val()) { f.request.val(''); }
+            narrowKind(f.request, kind);
         }
     }
 
@@ -165,7 +209,6 @@
         var f = fields($line);
         var $option = $line.find('option:selected');
         adopt(f.category, $option.attr('data-spend-category') || '');
-        adopt(f.project, $option.attr('data-project-tag') || '');
     }
 
     /* ---- 5. The kind of income decides its fund ---------------------------- */
@@ -195,17 +238,24 @@
         return $all;
     }
 
-    function narrowLines($lineRequest) {
-        var f = fields($lineRequest);
+    /* The line picker shows the lines of the chosen request, if one is
+       chosen, of the kind the fund draws on (rule 1). Either can be called
+       with any field of the form. */
+    function narrowLines($any) {
+        var f = fields($any);
         if (!f.line.length) { return; }
         var $all = allLines(f.line);
-        var request = String($lineRequest.val() || '');
+        var request = String(f.lineRequest.val() || '');
+        var kind = drawsOn(f) || '';
         var current = String(f.line.val() || '');
+        function wanted($option) {
+            return (!request || $option.attr('data-request') === request) &&
+                   (!kind || $option.attr('data-kind') === kind);
+        }
         f.line.empty().append($all.filter(function () {
             var $item = $(this);
-            if (!request) { return true; }
-            if (!$item.is('optgroup')) { return !this.value || $item.attr('data-request') === request; }
-            return $item.children('option').first().attr('data-request') === request;
+            if (!$item.is('optgroup')) { return !this.value || wanted($item); }
+            return wanted($item.children('option').first());
         }).clone());
 
         var kept = current && f.line.find('option[value="' + current + '"]').length;
@@ -232,7 +282,7 @@
        'change.fin-inherit' above is excluded so adopt() does not undo itself. */
     function watchManualEdits($any) {
         var f = fields($any);
-        $.each([f.category, f.project], function (_, $target) {
+        $.each([f.category], function (_, $target) {
             if (!$target.length || $target.data('fin-watched')) { return; }
             $target.data('fin-watched', true);
             $target.on('change', function (event) {

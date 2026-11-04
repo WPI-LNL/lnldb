@@ -77,7 +77,10 @@ Money going out
   quotes a request number that is in the app, the request is always filled in, even when the memo doesn't say which
   line. The line list then shows only that request's lines. The line is filled in too when the memo names it, or when
   the memo's words match one line's name (for example "10 foot" against `10ft Truss`). That caption ends in "check
-  it". Choosing `Any request` lists every line again. See :doc:`funding-requests`.
+  it". Choosing `Any` lists every line again. See :doc:`funding-requests`.
+- **Budget** and **Budget line** -- the same two boxes when the fund is `SGA Budget`, offering the budget's lines. A
+  memo ending in a line's Request ID, like ``Velcro restock, consumables, (4521)``, fills in the fund, the budget and
+  the line; so does Workday's Tracking ``SGA Budget``, for the fund and the budget. See :doc:`funding-requests`.
 - **Incurred for event** (under `More`) -- for gear hired in for one show, or any other cost that belongs to a single
   event. See :doc:`events`.
 - **Project** (under `More`) -- if the spending belongs to a project.

@@ -1115,3 +1115,114 @@
     color: #9aa5b1;
 }
 .fin-empty .glyphicon { font-size: 34px; display: block; margin-bottom: 10px; opacity: 0.5; }
+
+/* ---- SGA Funding: requests and budgets ------------------------------------ */
+/* A page's own header: its title on the left, its actions on the right. */
+.fin-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 14px;
+    padding: 0 2px 12px;
+    border-bottom: 1px solid #dfe3e8;
+}
+.fin-page-title { margin: 0 0 2px; font-size: 20px; font-weight: 600; color: #323f4b; }
+.fin-page-head .fin-muted { font-size: 13px; }
+.fin-page-actions { flex: 0 0 auto; }
+.fin-page-actions .dropdown-menu { min-width: 170px; }
+
+/* Approved: a blank is SGA not having decided, $0 is SGA saying no. The two
+   labels are told apart by colour as well as by word. */
+.fin-approval {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 0 5px;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    vertical-align: 1px;
+}
+.fin-approval.is-waiting { background: #fcf3d9; color: #8a6d3b; border-color: #f0e0b8; }
+.fin-approval.is-turned-down { background: #eef1f4; color: #52606d; border-color: #dfe3e8; cursor: help; }
+.fin-approval-note { font-size: 11px; color: #9aa5b1; font-weight: 400; }
+
+/* One form for both types: whichever does not apply is put away. */
+#fin-fr-form.is-request .fin-budget-only,
+#fin-fr-form.is-budget .fin-request-only,
+#fin-fr-form.is-budget #div_id_reference,
+#fin-fr-form.is-budget #div_id_is_projection,
+#fin-fr-form.is-budget #div_id_owed_at_books_start { display: none; }
+#fin-fr-lines input[name$="-number"] { width: 64px; }
+/* Requested and Approved are dollar boxes: a $ in front, so an empty one reads
+   as somewhere to type an amount. Approved's meaning sits under it. */
+#fin-fr-lines .fin-money { position: relative; }
+#fin-fr-lines .fin-money-sign {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7b8794;
+    font-size: 12px;
+    pointer-events: none;
+}
+#fin-fr-lines .fin-money input { padding-left: 18px; }
+/* The tag hangs just under the box, out of the flow, so the box sits on the
+   same line as Requested whether or not a tag shows. */
+#fin-fr-lines .fin-approval-state {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 2px;
+    line-height: 1;
+}
+#fin-fr-lines .fin-approval-state [hidden] { display: none; }
+#fin-fr-lines td.fin-fr-check { text-align: center; vertical-align: middle; }
+
+/* A budget's form: each category a heading row, its lines nested under it. */
+#fin-fr-lines tr.fin-cat-row > td {
+    background: #f5f7fa;
+    border-top: 2px solid #dfe3e8;
+    padding: 6px 8px;
+}
+#fin-fr-lines tr.fin-cat-row input.fin-category-name { font-weight: 600; min-width: 260px; margin-right: 6px; }
+#fin-fr-lines .fin-cat-caret { color: #9aa5b1; margin-right: 4px; }
+#fin-fr-lines .fin-cat-delete { display: none; }
+#fin-fr-lines select.fin-line-move { max-width: 170px; }
+#fin-fr-form.is-budget #fin-fr-lines td.fin-line-indent { position: relative; padding-left: 28px; white-space: nowrap; }
+#fin-fr-form.is-budget #fin-fr-lines td.fin-line-indent::before,
+.fin-budget-line td.fin-line-indent::before {
+    content: '\2514';
+    color: #b0b9c3;
+    position: absolute;
+    left: 12px;
+    top: 9px;
+}
+
+/* A budget's lines, grouped under their categories. */
+.fin-budget-group > td {
+    background: #f5f7fa;
+    font-weight: 600;
+    border-top: 2px solid #dfe3e8 !important;
+}
+.fin-budget-line { cursor: pointer; }
+.fin-budget-line td.fin-line-indent { position: relative; padding-left: 30px !important; white-space: nowrap; }
+.fin-budget-line:hover > td { background: #fafbfc; }
+.fin-budget-line .fin-line-caret { display: inline-block; font-size: 11px; color: #9aa5b1; margin-right: 5px; transition: transform .15s; }
+.fin-budget-line.is-open .fin-line-caret { transform: rotate(90deg); }
+.fin-budget-entries.is-folded { display: none; }
+.fin-budget-entries > td { background: #fbfcfd; padding: 4px 12px 10px 36px !important; }
+.fin-budget-entries .fin-table { margin: 0; background: #fff; }
+.fin-budget-line .fin-burndown { margin: 3px 0 0; min-width: 90px; }
+
+/* The Budget Report Form: SGA's questions for each line, in a row of facts
+   above its purchases, and the answers that can be typed in on the page. */
+.fin-brf-facts { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0; }
+.fin-brf-facts > div { min-width: 140px; }
+.fin-brf-facts dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: #7b8794; font-weight: 600; }
+.fin-brf-facts dd { margin: 2px 0 0; }
+.fin-brf-facts input.fin-brf-count { width: 90px; }
+.fin-brf-save { margin: 0 0 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media print { .fin-brf-facts input.fin-brf-count { border: 0; box-shadow: none; padding: 0; -webkit-appearance: none; appearance: none; } }

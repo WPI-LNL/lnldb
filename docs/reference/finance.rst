@@ -123,6 +123,13 @@ Own money                 The fund an account carries forward:          ``accoun
 Funding request (FR)      An SGA award for a purpose, numbered like     ``FundingRequest``,
                           F.26.86, with lines LNL spends against. SGA   ``FRLineItem``
                           pays the spending back afterwards
+Budget                    SGA's money for a fiscal year, one a year,    ``FundingRequest``
+                          deposited at its start. Each line has a       (``kind='budget'``),
+                          four-digit Request ID and its own side,       ``BudgetCategory``
+                          nested under categories the Treasurer makes
+Requested / Approved      What LNL asked for on a line, and what SGA    ``FRLineItem.amount_requested``,
+                          approved. A blank approved amount is SGA      ``.amount_awarded``
+                          not having decided; $0 is a line denied
 Revenue source            What income that is not event billing was:    ``RevenueSource``
                           an SGA payment, a gift, a sale
 Spend category            LNL's own category for spending               ``SpendCategory``
@@ -163,7 +170,7 @@ The pages
 ~~~~~~~~~
 
 Every page is under ``/db/finance/``. Looking needs ``view_subledger`` (the
-*Funding* tab needs ``view_fundingrequest``, which is granted with it); the last
+*SGA Funding* tab needs ``view_fundingrequest``, which is granted with it); the last
 column is what changing anything there needs. The site's *Finance* menu links
 to the dashboard, the ledger, projects, funding requests, the queue and *Log a
 purchase*, and to *Billing* for whoever can bill; every page is a tab across
@@ -187,8 +194,9 @@ Billing      ``billing/``    Every bill by the stage it is at; see *Billing   ``
 Balances     ``balances/``   What each fund holds; Workday balances,          ``edit_subledger``; closing
                              transfers, opening balances, closing a year      needs ``close_fiscalyear``
 Projects     ``projects/``   Spending by project tag                          ``manage_projecttag``
-Funding      ``funding/``    Funding requests: what SGA owes, and each        ``manage_fundingrequest``
-                             request's lines and burndown
+SGA Funding  ``funding/``    Funding requests and budgets: what SGA owes,     ``manage_fundingrequest``
+                             each one's lines and burndown, and *New* at
+                             the top of the page for either
 Reports      ``reports/``    Seven reports to print or download
 ===========  ==============  ===============================================  ==========================
 
@@ -247,6 +255,8 @@ Where                                        What it holds
                                              writes as CSV
 :mod:`finance.frrf`                          The Funding Request Report Form: a request's purchases, the
                                              receipt behind each, and the PDF for SGA
+:mod:`finance.brf`                           The Budget Report Form: each budget line's payment request,
+                                             one PDF a line and a zip of them all
 :mod:`finance.activity`                      What LNL's work was worth, priced from the events app
 :mod:`finance.filters`                       The filter bar: fiscal year and partition
 ``finance/views/``                           One module per tab, plus ``detail`` for the line and entry
@@ -281,7 +291,8 @@ Treasurer's questions:
 
 The stages were built through forty-one migrations, all against one
 development database, and none of them had ever run anywhere else. They were
-collapsed twice before the app was first deployed, and there are now four:
+collapsed twice before the app was first deployed, into four, and one has been
+added since:
 
 ==========================================  ======================================================
 Migration                                   What it does
@@ -297,6 +308,11 @@ Migration                                   What it does
 ``0004_…_squashed_0021_…`` (see below)      Every schema change since: billing, encumbrances,
                                             revenue sources, the SGA paperwork, and the forecast's
                                             removal
+``0005_sga_budgets``                        SGA budgets: a request's kind, budget categories,
+                                            requested and approved on every line, a budget line's
+                                            Request ID, side and undergraduates,
+                                            ``FundSource.draws_on`` in place of the yes/no
+                                            ``requires_funding_request``, and no project on a line
 ==========================================  ======================================================
 
 Tables and seed rows are kept in separate files because production runs on
@@ -1004,7 +1020,7 @@ an arbitrary pick would be worse than no pick.
    match types remain available in the admin for a rule someone genuinely wants.
 
 **Never ask twice for something already recorded.** Choosing a funding request
-line fills in the spend category and project that line was awarded for — the
+line fills in the spend category that line was approved for — the
 award already said what the money was for, so re-typing it per transaction is
 the double data entry this module exists to remove. Only a box the page filled
 in itself is ever overwritten: a value chosen by hand survives switching
@@ -1021,9 +1037,14 @@ Rules live at the layer that cannot be bypassed, and are then *repeated* higher
 up for the error message. The fund/funding-request pairing is enforced in
 ``ParsedTransaction.clean()`` — so bulk actions, the admin and the shell all
 obey it — and again in ``BaseAllocationForm`` so the message lands on the field
-you have to change. Which fund needs a funding request line is
-``FundSource.requires_funding_request``, a flag on the row, so it survives SGA
-renaming things.
+you have to change. Which fund needs a funding request line, and which a
+budget line, is ``FundSource.draws_on``, a setting on the row (*Charged to
+lines of*: nothing, funding requests or budgets), so it survives SGA renaming
+things. Its values are ``FundingKind``'s, so a fund may be charged to a line
+when its ``draws_on`` is the line's request's ``kind``;
+``models.line_charge_problem`` words every refusal, for the model and every
+form alike. ``FundSource.requires_funding_request`` and ``draws_on_budget``
+read it.
 
 Bulk actions get particular attention, being the one place a single click can
 be wrong hundreds of times. The ledger's bar refuses to offer a fund that would
@@ -1481,8 +1502,10 @@ Nearly every request is heard by one of those three. Exec hears a few, numbered
 their letters are not known, so lnldb does not accept them; add the letter to
 ``SGA_REFERENCE`` and ``SGA_BODIES`` once one is seen. The year is the last two digits of the fiscal year, so every
 FY2027 request has 27 in the middle. The number counts up within each body's
-year, so A.27.16 and F.27.16 are two different requests. Budgets and mandatory
-transfers have no number: any SGA number in a memo means funding-request money.
+year, so A.27.16 and F.27.16 are two different requests. Mandatory transfers
+have no number, and a budget has none of its own; any number in that format in a
+memo means funding-request money. A budget's *lines* have a four-digit Request
+ID instead (``BUDGET_LINE_NUMBER``); see *SGA budgets*.
 
 SGA's numbering sometimes goes wrong and issues a number with **?** for the
 letter, such as ?.27.16. That is still the request's number, because SGA's own
@@ -1503,6 +1526,101 @@ funding-request money whichever request it is. Only the Treasurer can say
 which side has the typo. A ? number takes part the same way: a memo quoting
 ?.27.16 while lnldb holds F.27.16, or the other way round, is tagged
 *?.27.16 or F.27.16?*, because SGA may since have given it a letter.
+
+SGA budgets
+~~~~~~~~~~~
+
+A budget is a :class:`~finance.models.FundingRequest` with ``kind='budget'``
+(:class:`~finance.models.FundingKind`), not a model of its own: it has lines,
+burndowns, encumbrances, refunds and *Closed* exactly as a request does. What
+differs is where SGA's money comes from -- deposited at the start of the year,
+unspent money returned at its end -- and a few shapes, all held in
+``FundingRequest.clean()`` so the admin and the shell obey them too:
+
+* **One a fiscal year**, named for that year: the name must give the budget's
+  own year (FY27, FY 27 or FY2027), and a second budget for a year is refused.
+* **No number, side or opening figure of its own.** Each line carries a
+  four-digit Request ID (``FRLineItem.number``; ``request_id`` would read as a
+  key to a request), unique within the budget, and its own ``is_projection``.
+  ``reference``, ``is_projection`` and ``owed_at_books_start`` are cleared on a
+  budget.
+* **Categories** (:class:`~finance.models.BudgetCategory`) nest a budget's
+  lines one level deep; they are the Treasurer's own, per budget, and
+  unrelated to spend categories. The edit form has a ``BudgetCategoryFormSet``
+  beside the lines. A line names its category by key -- a saved category's pk,
+  or ``new-<n>`` for one added on the page -- because a new category has no pk
+  until it is saved; ``js/fr_lines.js`` writes each line's key and place from
+  where its row sits, the view saves the categories first, and
+  ``BaseBudgetCategoryFormSet.by_key`` resolves the keys
+  (``views.projects.category_blocks`` lays the form out). Removing a category
+  leaves its lines with none; a category may be empty.
+* **The type is fixed once money depends on it**: anything charged to its
+  lines, or SGA's payment naming it (``has_money``).
+
+Every line, of a request or a budget, has ``amount_requested`` and
+``amount_awarded`` (labelled *Approved*). Both may be blank. A blank approved
+amount is SGA not having decided, shown as ``?`` *Pending SGA Approval*; ``0``
+is a line SGA denied, shown as ``$0`` *Denied* (the ``approved`` and
+``requested`` template tags). Neither is offered when charging
+(``FRLineItemQuerySet.chargeable``), and once anything is charged to a line its
+approved amount can't be blanked or cut below what is spent. Totals
+(``FundingRequest.total_awarded``, :class:`~finance.models.LineTotals`) add up
+the decided lines and count the pending ones; ``approved_known`` is false only
+when none is decided. Lines have no project: requests and budgets don't need
+one, and migration ``0005`` dropped ``FRLineItem.project_tag``.
+
+A budget's deposit and the money it returns are SGA's payments naming it, in
+the same ``ParsedTransaction.funding_request`` box a reimbursement uses: money
+in is ``total_deposited``, money out ``total_returned``, and
+``left_in_account`` is what is deposited, less returned, less spending that has
+reached Workday. ``sga_receivables`` and the FR Report Form leave budgets out:
+SGA never owes on one.
+
+**Charging.** Spending from a fund whose ``draws_on`` is ``budget`` (SGA
+Budget, set by migration ``0005_sga_budgets``) must name a budget line, and no
+other fund may name one (``line_charge_problem``). Money coming into that fund
+must name the budget (SGA's deposit), and money out of it with no line is
+money returned to SGA, naming the budget too. An entry on a budget line takes
+the line's own side (``FRLineItem.side_is_projection``); a deposit or a
+return stays on its account's side, as a budget has none
+(``_adopt_partition_from_funding_request``).
+
+**Pickers.** ``open_fr_lines`` offers both kinds; ``FRLineChoiceIterator``
+heads a budget's lines one ``<optgroup>`` per category (``FY27 · Budget ·
+Consumables``, then *No category*), and ``nested_label`` leads with the
+Request ID. Each line ``<option>`` and each request ``<option>``
+(``FundingKindSelect``) carries ``data-kind``; each fund ``<option>`` carries
+``data-draws-on``. ``routing.js`` rule 1 shows only the kind the fund draws
+on, and relabels the boxes from their ``data-budget-label`` (*Budget*,
+*Budget line*, *Deposit for budget*, *Returned to SGA from budget*). The
+ledger's bulk fund bar leaves out every fund that draws on lines.
+
+**The queue.** ``parse_memo`` reads a Request ID off the end of a memo
+(``BUDGET_LINE_IN_MEMO``: ``(4521)`` or a last field ``4521``) into
+``MemoFields.budget_line``, never alongside a request number.
+``suggestions._budget_spending`` takes the budget of the line's fiscal year:
+
+* a Request ID that is one of its approved lines fills the fund, the budget,
+  the line and the line's spend category (``MEMO``), at ``MEDIUM`` with
+  "check it" when the memo's middle field fits none of the line's names
+  (``hint_fits_line``);
+* a line pending approval or denied, a Request ID the budget lacks on a line
+  tracked "SGA Budget", or a year with no budget is a warning, with its own
+  tag (``warning_label``) and, for a missing budget, an *Add budget* link
+  (``unknown_budget``);
+* Tracking "SGA Budget" without a Request ID fills the fund and the budget
+  (``EXPORT``), and a line only when ``match_budget_line`` finds exactly one;
+* a four-digit number nothing else ties to the budget is ignored.
+
+SGA's own journal entries tracked to the budget (``_budget_payment``) are the
+deposit, for that year's budget, and money going back, for last year's budget
+while it has money left (unspent money goes back around June 30), else this
+year's. The dashboard's *SGA Funding Burndown* lists budgets after requests;
+the side filter narrows a budget to that side's lines (``LineTotals``). The
+ledger's *SGA Line* column shows a budget line as ``4521 Gaff tape`` and SGA's
+payments as *deposit for* or *returned:*.
+
+The Budget Report Form is described under *The Budget Report Form* below.
 
 Money coming in names a fund
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2374,6 +2492,50 @@ HEIC photo -- becomes a page saying so, so the numbering stays whole. The PDF
 does not use WeasyPrint, which the invoices do, so it can be made on a machine
 without cairo installed.
 
+The Budget Report Form
+~~~~~~~~~~~~~~~~~~~~~~
+
+SGA's proof of spending for a budget is a *payment request* for every line
+item, asking for what the line was used for, "Expense", SGA money and group
+funds spent, matching receipts, the date spent (the last day, if several) and
+the undergraduates who benefited (``FRLineItem.undergraduates``). A line with
+none is cut from next year's budget. SGA's form also asks how each was paid;
+the Treasurer doesn't need that from the app, so it isn't recorded. Whether SGA wants one request a line or one a purchase is not known,
+so :mod:`finance.brf` gives both: ``BudgetLineReport`` totals for each line and
+a ``BudgetPurchase`` for each entry under it.
+
+**What is on it.** Every entry charged to a budget line that has reached
+Workday, settled or not, line by line in the budget's order (category by
+category, the lines in no category last). *Group funds* are the other slices
+of the same Workday line with no line of their own, charged to a fund that
+carries forward (``FundBehaviour.CARRIES``: Legacy, the mandatory transfer),
+counted beside the first of the Workday line's budget entries only, so a line
+split across two budget lines does not count them twice. A purchase's
+``charged_elsewhere`` is what its Workday line, and so its receipt, covers
+beyond its SGA money and group funds. Approved lines nothing was bought on are
+``unspent`` and listed first.
+
+**Receipts** follow the FR Report Form's rules (``frrf.Receipt``,
+``frrf.receipt_pages``), numbered per line, as each line's PDF stands alone; a
+receipt shared by two lines goes into both.
+
+**The page** is the report ``budget-report-form`` (``takes='budget'``):
+``?budget=<pk>``, else the filter bar's year's budget, else the latest.
+``finance/partials/_budget_report.html`` draws it in place of the plain
+tables, with an *Undergraduates* box per line, saved by
+``views.reports.budget_report_save`` through ``brf.save_answers``; it needs
+``manage_fundingrequest``, and only this budget's lines are touched. The CSV comes from ``reports.budget_report_form`` as usual. It warns
+about unspent lines, purchases with no receipt, lines with no Request ID or
+count of undergraduates,
+receipts covering money charged elsewhere or that the PDF can't take,
+overspending, queue lines quoting a Request ID or tracked to the budget, and
+encumbrances.
+
+**The PDFs** need ``view_subledger_receipts``: ``?format=pdf&line=<pk>`` is
+one line (``brf.line_pdf``, drawn from ``finance/brf_pdf.html`` with its
+receipts after it, named ``lnl-budget-fy27-4521.pdf``), and ``?format=zip``
+every line with spending (``brf.all_pdfs``).
+
 What the work was worth
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2745,13 +2907,16 @@ development and repair.
 Known limits and open questions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **LNL has no SGA budget yet**, so nothing compares a budget with what was
-  spent. When it has one, model it as a funding request whose money arrives
-  first rather than as new tables; see *Reports to print and hand over*.
+* **LNL has no SGA budget yet.** Budgets can be entered, charged to and
+  reported to SGA (see *SGA budgets* and *The Budget Report Form*).
+* **SGA's payment requests.** It is not known whether SGA wants one payment
+  request a budget line or one a purchase, so the Budget Report Form gives
+  both. Once that is known, the other can go.
 * **Workday's Tracking worktag is not always right.** It names the fund from
   FY27 on and the queue reads it as a lookup, but at least one FY27 line is
-  tracked "SGA Budget" although LNL has no budget. A person still checks every
-  row.
+  tracked "SGA Budget" although LNL has no budget. Such a row is tagged *No
+  FY27 budget*: SGA Budget money must name a budget line, so the fund has to be
+  changed by hand. A person still checks every row.
 * **The events app holds no bills from before FY25**, so pricing can only be
   compared with billing from then on.
 
@@ -2876,6 +3041,14 @@ Reports
 Funding Request Report Form
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. automodule:: finance.frrf
+    :members:
+    :undoc-members:
+
+-----
+
+Budget Report Form
+~~~~~~~~~~~~~~~~~~
+.. automodule:: finance.brf
     :members:
     :undoc-members:
 

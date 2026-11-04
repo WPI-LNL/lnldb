@@ -56,6 +56,7 @@
             .fin-import-panel.is-folded { display: block; }
             .fin-fields-more.is-folded { display: flex; }
             .fin-more-toggle, #fin-import-toggle { display: none; }
+            .fin-budget-entries.is-folded { display: table-row; }
         </style>
     </noscript>
 {% endblock %}
@@ -137,7 +138,7 @@
                     <li {% if fin_page == 'projects' %}class="active"{% endif %}>
                         <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}">Projects</a></li>
                     <li {% if fin_page == 'funding' %}class="active"{% endif %}>
-                        <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">Funding</a></li>
+                        <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">SGA Funding</a></li>
                     <li {% if fin_page == 'reports' %}class="active"{% endif %}>
                         <a href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">Reports</a></li>
                 </ul>

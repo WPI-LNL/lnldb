@@ -17,8 +17,8 @@ from mptt.admin import MPTTModelAdmin
 from reversion.admin import VersionAdmin
 
 from finance.importers import COLUMN_ALIASES
-from finance.models import (BalanceCheckpoint, Billing, ColumnAlias, FinanceSettings, FiscalYearClose,
-                            FRLineItem, FundingRequest, FundSource, FundTransfer,
+from finance.models import (BalanceCheckpoint, Billing, BudgetCategory, ColumnAlias, FinanceSettings,
+                            FiscalYearClose, FRLineItem, FundingRequest, FundSource, FundTransfer,
                             ParsedTransaction, PartitionCode, ProjectTag, RevenueSource,
                             ServiceColor, SpendCategory, SuggestionRule, WorkdayTransaction)
 
@@ -103,8 +103,8 @@ class FundSourceAdmin(VocabularyAdmin):
     """
     Which pot of money paid, and the Workday values that identify it.
 
-    Two flags with teeth. ``requires_funding_request`` is what makes the
-    allocation form insist on a funding request line. ``is_default`` is what the
+    Two settings with teeth. ``draws_on`` is what makes the allocation form
+    insist on a funding request line, or a budget line. ``is_default`` is what the
     ingestion queue fills the Fund box in with when neither the memo nor the
     Fund worktag identifies one -- both are on the list view, because which
     fund holds which is worth being able to see at a glance rather than by
@@ -116,11 +116,11 @@ class FundSourceAdmin(VocabularyAdmin):
     balances add up.
     """
     list_display = ('name', 'slug', 'account', 'behaviour', 'workday_fund_codes',
-                    'requires_funding_request', 'is_default', 'sort_order', 'is_active',
+                    'draws_on', 'is_default', 'sort_order', 'is_active',
                     'in_use')
     list_select_related = ('account',)
     fields = ('name', 'slug', 'description', 'account', 'behaviour', 'workday_fund_codes',
-              'workday_tracking_values', 'requires_funding_request', 'is_default',
+              'workday_tracking_values', 'draws_on', 'is_default',
               'sort_order', 'is_active')
 
 
@@ -215,19 +215,52 @@ class WorkdayTransactionAdmin(admin.ModelAdmin):
 
 
 class FRLineItemInline(admin.TabularInline):
-    """ The individual awarded amounts that make up a funding request. """
+    """
+    The lines that make up a funding request or a budget: requested and
+    approved, and for a budget line its Request ID, side and category.
+    """
     model = FRLineItem
     extra = 1
+    fields = ('category', 'number', 'name', 'description', 'amount_requested', 'amount_awarded',
+              'is_projection', 'lnl_spend_category', 'undergraduates', 'sort_order')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """ Offer only the categories of the budget being edited. """
+        if db_field.name == 'category':
+            parent = getattr(request, '_finance_admin_parent', None)
+            kwargs['queryset'] = (BudgetCategory.objects.filter(funding_request=parent)
+                                  if parent is not None else BudgetCategory.objects.none())
+        return super(FRLineItemInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class BudgetCategoryInline(admin.TabularInline):
+    """ A budget's categories. The finance pages make them as lines name them. """
+    model = BudgetCategory
+    extra = 0
+    fields = ('name', 'sort_order')
 
 
 @admin.register(FundingRequest)
 class FundingRequestAdmin(VersionAdmin):
-    """ SGA funding requests, versioned so award changes stay traceable. """
-    list_display = ('name', 'reference', 'fiscal_year', 'total_awarded', 'total_spent',
-                    'total_remaining', 'total_received', 'awaiting_sga', 'closed')
-    list_filter = ('fiscal_year', 'closed', 'is_projection')
+    """ SGA funding requests and budgets, versioned so changes to what was approved stay traceable. """
+    list_display = ('name', 'kind', 'reference', 'fiscal_year', 'requested', 'approved',
+                    'total_spent', 'total_remaining', 'total_received', 'awaiting_sga', 'closed')
+    list_filter = ('kind', 'fiscal_year', 'closed', 'is_projection')
     search_fields = ('name', 'reference')
-    inlines = (FRLineItemInline,)
+    inlines = (BudgetCategoryInline, FRLineItemInline)
+
+    @admin.display(description="Requested")
+    def requested(self, obj):
+        return obj.total_requested
+
+    @admin.display(description="Approved")
+    def approved(self, obj):
+        return obj.total_awarded
+
+    def get_form(self, request, obj=None, **kwargs):
+        """ Remember which request is open, so the line inline offers only its categories. """
+        request._finance_admin_parent = obj
+        return super(FundingRequestAdmin, self).get_form(request, obj, **kwargs)
 
 
 @admin.register(ProjectTag)

@@ -18,7 +18,7 @@ def category(slug='consumables'):
     return SpendCategory.objects.get(slug=slug)
 
 
-def fund(slug='sga_budget'):
+def fund(slug='legacy'):
     return FundSource.objects.get(slug=slug)
 
 

@@ -239,7 +239,7 @@
         <table>
             <tr>
                 <td class="line-name">{{ line.name }}</td>
-                <td class="line-figures" width="220">{{ spent|invoice_money }} spent of {{ line.amount_awarded|invoice_money }} approved</td>
+                <td class="line-figures" width="220">{{ spent|invoice_money }} spent of {% if line.amount_awarded is None %}? (pending SGA approval){% else %}{{ line.amount_awarded|invoice_money }}{% endif %} approved</td>
             </tr>
         </table>
         {% if line.description %}<p class="line-description">{{ line.description|linebreaksbr }}</p>{% endif %}

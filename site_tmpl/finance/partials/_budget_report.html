@@ -1,0 +1,126 @@
+{% load finance_extras %}
+{% comment %}
+    The Budget Report Form's lines, in place of report.html's plain tables: one
+    panel a line item with what SGA's form asks for, its purchases, and its own
+    PDF. "Undergraduates" can be answered here, in one form saved by
+    finance.views.reports.budget_report_save -- the Treasurer fills SGA's form
+    in from this page, so the question is asked where it is read. The CSV
+    still comes from the report's sections.
+{% endcomment %}
+{% with can_save=can_edit_lines %}
+{% if budget_form.unspent %}
+    <div class="fin-panel fin-report-section">
+        <div class="fin-panel-head">
+            <span class="text-danger">Nothing spent yet: SGA cuts these lines from next year's budget</span>
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table fin-report-table">
+                <thead><tr><th>Request ID</th><th>Line</th><th class="fin-num">Approved</th></tr></thead>
+                <tbody>
+                    {% for item in budget_form.unspent %}
+                        <tr class="danger">
+                            <td>{% if item.line.number %}<code>{{ item.line.number }}</code>{% else %}<span class="fin-na">&mdash;</span>{% endif %}</td>
+                            <td>{{ item.line.name }}{% if item.line.category %} <span class="fin-muted">({{ item.line.category.name }})</span>{% endif %}</td>
+                            <td class="fin-num">{{ item.line.amount_awarded|money }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'finance:budget-report-save' budget.pk %}" id="fin-brf-form">
+    {% csrf_token %}
+    {% if can_save and budget_form.spent_lines %}
+        <div class="fin-brf-save fin-no-print">
+            <button type="submit" class="btn btn-primary btn-sm">Save answers</button>
+            <span class="fin-muted">How many undergraduates each line served.</span>
+        </div>
+    {% endif %}
+
+    {% for item in budget_form.lines %}
+        {% if item.purchases %}
+            <div class="fin-panel fin-report-section fin-brf-line" id="brf-line-{{ item.line.pk }}">
+                <div class="fin-panel-head">
+                    <span>
+                        {% if item.line.number %}<code>{{ item.line.number }}</code>{% endif %}
+                        {{ item.line.name }}
+                        {% if item.line.category %}<span class="fin-muted">({{ item.line.category.name }})</span>{% endif %}
+                    </span>
+                    {% if can_view_receipts %}
+                        <a href="?{{ budget_query }}&amp;format=pdf&amp;line={{ item.line.pk }}" class="btn btn-xs btn-primary fin-no-print" target="_blank">
+                            <span class="glyphicon glyphicon-file"></span> PDF for SGA
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="fin-panel-body">
+                    {% comment %} SGA's questions for the line, in the order its form asks them. {% endcomment %}
+                    <dl class="fin-brf-facts">
+                        <div><dt>Used for</dt><dd>{{ item.used_for|default:"—" }}</dd></div>
+                        <div><dt>Type</dt><dd>Expense</dd></div>
+                        <div><dt>SGA money</dt><dd><strong>{{ item.sga|money }}</strong>{% if item.line.amount_awarded is not None %} <span class="fin-muted">of {{ item.line.amount_awarded|money }} approved</span>{% endif %}</dd></div>
+                        <div><dt>Group funds</dt><dd>{{ item.group|money }}</dd></div>
+                        <div><dt>Date spent</dt><dd>{% if item.last_date %}{{ item.last_date|date:"M j, Y" }}{% if item.purchases|length > 1 %} <span class="fin-muted">(the last day)</span>{% endif %}{% else %}<span class="fin-na">&mdash;</span>{% endif %}</dd></div>
+                        <div><dt><label for="undergraduates-{{ item.line.pk }}">Undergraduates</label></dt><dd>
+                            {% if can_edit_lines %}
+                                <input type="number" min="0" step="1" class="form-control input-sm fin-brf-count"
+                                       id="undergraduates-{{ item.line.pk }}" name="undergraduates-{{ item.line.pk }}"
+                                       value="{{ item.line.undergraduates|default_if_none:'' }}"
+                                       title="How many undergraduates benefited, as SGA's form asks">
+                            {% elif item.line.undergraduates is None %}<span class="fin-unknown" title="Not known yet">?</span>{% else %}{{ item.line.undergraduates }}{% endif %}
+                        </dd></div>
+                    </dl>
+                </div>
+                <div class="fin-table-wrap">
+                    <table class="table fin-table fin-report-table">
+                        <thead>
+                            <tr>
+                                <th class="fin-num">Receipt</th>
+                                <th>Date</th>
+                                <th>Paid to</th>
+                                <th>Description</th>
+                                <th>Workday</th>
+                                <th class="fin-num">SGA money</th>
+                                <th class="fin-num" title="The rest of the same Workday line, charged to money that carries forward (Legacy, the mandatory transfer)">Group funds</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for purchase in item.purchases %}
+                                <tr {% if purchase.receipt is None and not purchase.is_refund %}class="danger"{% endif %}>
+                                    <td class="fin-num">{{ purchase.receipt.number|default:"" }}</td>
+                                    <td>{{ purchase.date|date:"M j, Y" }}</td>
+                                    <td>{{ purchase.payee }}</td>
+                                    <td>
+                                        <a href="{{ purchase.entry.get_absolute_url }}">{{ purchase.description|default:"(no description)" }}</a>
+                                        {% if purchase.is_refund %}<div class="fin-muted">Refund</div>
+                                        {% elif purchase.receipt is None %}<div class="fin-muted">No receipt</div>
+                                        {% elif purchase.receipt.from_encumbrance %}<div class="fin-muted">Receipt from the encumbrance: check it isn't a quote</div>{% endif %}
+                                        {% if purchase.receipt and purchase.charged_elsewhere %}<div class="fin-muted">The receipt is for {{ purchase.receipt_total|money }}: {{ purchase.charged_elsewhere|money }} of it is charged elsewhere</div>{% endif %}
+                                    </td>
+                                    <td>{{ purchase.workday }}</td>
+                                    <td class="fin-num">{{ purchase.sga|money }}</td>
+                                    <td class="fin-num">{{ purchase.group|money }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="fin-report-total">
+                                <td colspan="5">{{ item.line.label }}</td>
+                                <td class="fin-num">{{ item.sga|money }}</td>
+                                <td class="fin-num">{{ item.group|money }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if can_save and budget_form.spent_lines %}
+        <div class="fin-brf-save fin-no-print">
+            <button type="submit" class="btn btn-primary btn-sm">Save answers</button>
+        </div>
+    {% endif %}
+</form>
+{% endwith %}

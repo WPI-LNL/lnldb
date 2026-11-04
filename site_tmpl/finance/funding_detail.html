@@ -28,8 +28,12 @@
         <div class="fin-panel-body">
             <div class="fin-stats" style="margin-bottom:12px;">
                 <div class="fin-stat">
-                    <div class="fin-stat-label">Awarded</div>
-                    <div class="fin-stat-value">{{ fr.total_awarded|money }}</div>
+                    <div class="fin-stat-label">Requested</div>
+                    <div class="fin-stat-value">{% requested fr %}</div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Approved</div>
+                    <div class="fin-stat-value">{% approved fr %}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Spent</div>
@@ -46,7 +50,7 @@
                     <div class="fin-stat-value">FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</div>
                 </div>
             </div>
-            {% burndown_bar fr.total_spent fr.total_awarded %}
+            {% if fr.approved_known %}{% burndown_bar fr.total_spent fr.total_awarded %}{% endif %}
             {% if fr.notes %}<p class="fin-muted" style="margin-top:10px;">{{ fr.notes|linebreaksbr }}</p>{% endif %}
         </div>
     </div>
@@ -134,11 +138,16 @@
                 <span>{{ line.obj.name }}</span>
                 <span class="{% if line.overspent %}text-danger{% else %}fin-muted{% endif %}"
                       style="font-weight:400;font-size:13px;">
-                    {{ line.spent|money }} of {{ line.obj.amount_awarded|money }}
-                    {% if line.overspent %}
-                        &middot; <strong>over by {{ line.obj.overspent_by|money }}</strong>
+                    requested {% requested line.obj %} &middot;
+                    {% if line.obj.is_waiting or line.obj.is_turned_down %}
+                        approved {% approved line.obj %}
                     {% else %}
-                        &middot; {{ line.remaining|money }} left
+                        {{ line.spent|money }} of {{ line.obj.amount_awarded|money }} approved
+                        {% if line.overspent %}
+                            &middot; <strong>over by {{ line.obj.overspent_by|money }}</strong>
+                        {% else %}
+                            &middot; {{ line.remaining|money }} left
+                        {% endif %}
                     {% endif %}
                 </span>
             </div>
@@ -148,7 +157,7 @@
                         {{ line.obj.description|linebreaksbr }}
                     </p>
                 {% endif %}
-                {% burndown_bar line.spent line.obj.amount_awarded %}
+                {% if not line.obj.is_waiting %}{% burndown_bar line.spent line.obj.amount_awarded %}{% endif %}
             </div>
             {% if line.allocations %}
                 <div class="fin-table-wrap">

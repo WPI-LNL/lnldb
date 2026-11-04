@@ -444,7 +444,7 @@
     {# ---- Funding request burndowns ---- #}
     <div class="fin-panel">
         <div class="fin-panel-head">
-            <span>Funding Request Burndown</span>
+            <span>SGA Funding Burndown</span>
             <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}"
                class="fin-muted" style="font-weight:400;font-size:12px;">View all &rarr;</a>
         </div>
@@ -461,7 +461,9 @@
                         <span class="fin-fr-title">
                             <span class="fin-fr-caret glyphicon glyphicon-chevron-right"></span>
                             <strong>{{ fr.obj.name }}</strong>
-                            {% if fr.obj.is_projection %}
+                            {% if fr.obj.is_budget %}
+                                <span class="fin-tag">Budget</span>
+                            {% elif fr.obj.is_projection %}
                                 <span class="fin-tag is-projection">PROJ</span>
                             {% endif %}
                         </span>
@@ -475,23 +477,23 @@
                         </span>
                     </div>
 
-                    <div class="fin-fr-bar">{% burndown_bar fr.spent fr.awarded %}</div>
+                    <div class="fin-fr-bar">{% if fr.approved_known %}{% burndown_bar fr.spent fr.awarded %}{% endif %}</div>
 
                     <div class="fin-fr-meta">
                         <span class="fin-fr-count" data-toggle="collapse"
                               data-target="#fr-lines-{{ fr.obj.pk }}" role="button">
                             {{ fr.lines|length }} line item{{ fr.lines|length|pluralize }}
                         </span>
-                        <a href="{% url 'finance:fr-detail' fr.obj.pk %}">Open request &rarr;</a>
+                        <a href="{% url 'finance:fr-detail' fr.obj.pk %}">Open {% if fr.obj.is_budget %}budget{% else %}request{% endif %} &rarr;</a>
                     </div>
 
                     <div class="collapse fin-fr-lines" id="fr-lines-{{ fr.obj.pk }}">
                         {% for line in fr.lines %}
                             <div class="fin-fr-line">
                                 <div class="fin-fr-line-head">
-                                    <span>{{ line.name }}</span>
+                                    <span>{{ line.label }}</span>
                                     <span class="{% if line.is_overspent %}text-danger{% else %}fin-muted{% endif %}">
-                                        {{ line.spent|money }} / {{ line.amount_awarded|money }}
+                                        {{ line.spent|money }} / {% approved line %}
                                         {% if line.is_overspent %}
                                             <span class="label label-danger">Over</span>
                                         {% endif %}
@@ -507,7 +509,7 @@
             {% empty %}
                 <div class="fin-empty">
                     <span class="glyphicon glyphicon-inbox"></span>
-                    No active funding requests.
+                    No open funding requests or budgets.
                     {% permission request.user has 'finance.manage_fundingrequest' %}
                         <br><a href="{% url 'finance:fr-new' %}">Create one</a>
                     {% endpermission %}

@@ -1059,7 +1059,9 @@ def sga_receivables(today=None, statement_=None):
     today = today or datetime.date.today()
     books_start = books_start_date()
     rows = []
-    for request in FundingRequest.objects.with_totals().order_by('fiscal_year', 'reference'):
+    # Budgets are deposited, not paid back, so SGA never owes on one.
+    for request in (FundingRequest.objects.requests().with_totals()
+                    .order_by('fiscal_year', 'reference')):
         awaiting = request.awaiting_sga
         if not awaiting:
             continue

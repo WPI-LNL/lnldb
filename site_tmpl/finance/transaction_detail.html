@@ -149,16 +149,16 @@
                                                     <span class="fin-muted">&middot; into {{ entry.fund_source }}</span>
                                                 {% endif %}
                                                 {% if entry.funding_request %}
-                                                    <span class="fin-muted">&middot; repays
+                                                    <span class="fin-muted">&middot; {% if entry.funding_request.is_budget %}deposit for{% else %}repays{% endif %}
                                                         <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a></span>
                                                 {% endif %}
                                             {% elif entry.is_sga_return %}
-                                                SGA took back money for
+                                                {% if entry.funding_request.is_budget %}Returned to SGA from{% else %}SGA took back money for{% endif %}
                                                 <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
                                             {% else %}
                                                 {{ entry.lnl_spend_category|default:"—" }}
                                                 {% if entry.fr_line_target %}
-                                                    <span class="fin-muted">&middot; {{ entry.fr_line_target.name }}</span>
+                                                    <span class="fin-muted">&middot; {{ entry.fr_line_target.label }}</span>
                                                 {% endif %}
                                                 {% if entry.linked_event %}
                                                     <span class="fin-muted">&middot; for {{ entry.linked_event.event_name }}</span>
@@ -246,7 +246,7 @@
                                             {% else %}
                                                 <th>Fund</th>
                                                 <th>Spend Category</th>
-                                                <th title="Spending names a request's line; money SGA took back names the request">FR Line</th>
+                                                <th title="Spending names a funding request's or budget's line; money SGA took back names the request or budget">SGA Line</th>
                                                 <th>Incurred for event</th>
                                             {% endif %}
                                             <th>Project</th>

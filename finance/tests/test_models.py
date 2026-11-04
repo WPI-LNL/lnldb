@@ -106,7 +106,7 @@ class ImmutabilityTests(TestCase):
     def test_hard_delete_is_the_explicit_escape_hatch(self):
         parent = make_txn(op='OT-QS3')
         ParsedTransaction.objects.create(
-            parent_transaction=parent, amount=parent.net_amount, fund_source=fund('sga_budget'))
+            parent_transaction=parent, amount=parent.net_amount, fund_source=fund('legacy'))
         WorkdayTransaction.objects.filter(operational_transaction='OT-QS3').hard_delete()
         self.assertFalse(
             WorkdayTransaction.objects.filter(operational_transaction='OT-QS3').exists())
@@ -147,7 +147,7 @@ class PartitionDefaultTests(TestCase):
         """ The case the old lock made impossible to record. """
         parent = make_txn(op='E3', worktags_json={'student_organization': '226-AG'})
         entry = ParsedTransaction(parent_transaction=parent, amount=parent.net_amount,
-                                  is_projection=True, fund_source=fund('sga_budget'),
+                                  is_projection=True, fund_source=fund('legacy'),
                                   lnl_spend_category=category('consumables'))
         entry.full_clean()   # must not raise
         entry.save()
@@ -158,7 +158,7 @@ class PartitionDefaultTests(TestCase):
         parent = make_txn(op='E3B', worktags_json={'student_organization': '226-AG'})
         entry = ParsedTransaction.objects.create(
             parent_transaction=parent, amount=parent.net_amount, is_projection=True,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertTrue(entry.crosses_partition)
         self.assertIn('226-AG', entry.partition_note)
         self.assertIn('Projection', entry.partition_note)
@@ -167,7 +167,7 @@ class PartitionDefaultTests(TestCase):
         parent = make_txn(op='E3C', worktags_json={'student_organization': '226-AG'})
         entry = ParsedTransaction.objects.create(
             parent_transaction=parent, amount=parent.net_amount, is_projection=False,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertFalse(entry.crosses_partition)
         self.assertEqual(entry.partition_note, '')
 
@@ -179,7 +179,7 @@ class PartitionDefaultTests(TestCase):
         parent = make_txn(op='E4', worktags_json={'student_organization': '226-AG'})
         entry = ParsedTransaction.objects.create(
             parent_transaction=parent, amount=parent.net_amount, is_projection=True,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         entry.refresh_from_db()
         self.assertTrue(entry.is_projection)
 
@@ -187,7 +187,7 @@ class PartitionDefaultTests(TestCase):
         parent = make_txn(op='E5', worktags_json={'ledger_account': '71100:Supplies'})
         self.assertIsNone(parent.default_partition)
         entry = ParsedTransaction(parent_transaction=parent, amount=parent.net_amount,
-                                  is_projection=True, fund_source=fund('sga_budget'),
+                                  is_projection=True, fund_source=fund('legacy'),
                                   lnl_spend_category=category('consumables'))
         entry.full_clean()   # must not raise
         entry.save()
@@ -208,7 +208,7 @@ class ProjectionAccountNeedsAReasonTests(TestCase):
 
     def _entry(self, **kwargs):
         values = dict(parent_transaction=self.parent, amount=self.parent.net_amount,
-                      fund_source=fund('sga_budget'),
+                      fund_source=fund('legacy'),
                       lnl_spend_category=category('consumables'))
         values.update(kwargs)
         return ParsedTransaction(**values)
@@ -240,7 +240,7 @@ class ProjectionAccountNeedsAReasonTests(TestCase):
         parent = make_txn(op='P7', worktags_json={'student_organization': '226-AG'})
         self.assertFalse(parent.crossing_requires_reason)
         ParsedTransaction(parent_transaction=parent, amount=parent.net_amount,
-                          is_projection=True, fund_source=fund('sga_budget'),
+                          is_projection=True, fund_source=fund('legacy'),
                           lnl_spend_category=category('consumables')).full_clean()
 
 
@@ -294,7 +294,7 @@ class FundingRequestSetsThePartitionTests(TestCase):
     def test_an_entry_with_no_award_keeps_its_own_answer(self):
         entry = ParsedTransaction.objects.create(
             parent_transaction=self.parent, amount=Decimal('-500.00'), is_projection=True,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         entry.refresh_from_db()
         self.assertTrue(entry.is_projection)
 
@@ -337,7 +337,7 @@ class RoutingExclusivityTests(TestCase):
         parent = make_txn(op='R2')
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('-1200.00'),
                                   non_event_revenue_type=revenue_source('donations'),
-                                  fund_source=fund('sga_budget'))
+                                  fund_source=fund('legacy'))
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
         self.assertIn('non_event_revenue_type', ctx.exception.error_dict)
@@ -350,7 +350,7 @@ class RoutingExclusivityTests(TestCase):
         """
         parent = make_txn(op='R2B')
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('-1200.00'),
-                                  linked_event=self.event, fund_source=fund('sga_budget'),
+                                  linked_event=self.event, fund_source=fund('legacy'),
                                   lnl_spend_category=category('consumables'))
         entry.full_clean()
         entry.save()
@@ -399,7 +399,7 @@ class SplitAndSettleTests(TestCase):
         self.parent = make_txn(op='S1', net_amount=Decimal('-1200.00'))
 
     def _slice(self, amount, **kwargs):
-        kwargs.setdefault('fund_source', fund('sga_budget'))
+        kwargs.setdefault('fund_source', fund('legacy'))
         kwargs.setdefault('lnl_spend_category', category('consumables'))
         return ParsedTransaction.objects.create(
             parent_transaction=self.parent, amount=Decimal(amount), **kwargs)
@@ -455,7 +455,7 @@ class EncumbranceTests(TestCase):
     """ Funds can be reserved before the bank feed catches up. """
 
     def test_encumbrance_needs_no_parent(self):
-        entry = ParsedTransaction(amount=Decimal('-75.00'), fund_source=fund('sga_budget'),
+        entry = ParsedTransaction(amount=Decimal('-75.00'), fund_source=fund('legacy'),
                                   lnl_spend_category=category('consumables'),
                                   description='Gaff tape run')
         entry.full_clean()
@@ -464,7 +464,7 @@ class EncumbranceTests(TestCase):
         self.assertEqual(entry.status, TransactionStatus.PENDING)
 
     def test_encumbrance_cannot_be_settled(self):
-        entry = ParsedTransaction(amount=Decimal('-75.00'), fund_source=fund('sga_budget'),
+        entry = ParsedTransaction(amount=Decimal('-75.00'), fund_source=fund('legacy'),
                                   status=TransactionStatus.SETTLED)
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
@@ -498,7 +498,7 @@ class RefundTests(TestCase):
         refund_parent = make_txn(op='F2', net_amount=Decimal('150.00'))
         ParsedTransaction.objects.create(
             parent_transaction=refund_parent, amount=Decimal('150.00'),
-            refund_of=self.purchase, fund_source=fund('sga_budget'),
+            refund_of=self.purchase, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'), fr_line_target=self.line)
         self.assertEqual(self.line.spent, Decimal('250.00'))
         self.assertEqual(self.line.remaining, Decimal('750.00'))
@@ -507,7 +507,7 @@ class RefundTests(TestCase):
         refund_parent = make_txn(op='F3', net_amount=Decimal('150.00'))
         refund = ParsedTransaction.objects.create(
             parent_transaction=refund_parent, amount=Decimal('150.00'),
-            refund_of=self.purchase, fund_source=fund('sga_budget'))
+            refund_of=self.purchase, fund_source=fund('legacy'))
         self.assertEqual(refund.entry_type, ParsedTransaction.REFUND)
         self.assertTrue(refund.is_expense)
         self.assertFalse(refund.is_revenue)
@@ -519,7 +519,7 @@ class RefundTests(TestCase):
         """
         refund_parent = make_txn(op='F4', net_amount=Decimal('150.00'))
         refund = ParsedTransaction(parent_transaction=refund_parent, amount=Decimal('150.00'),
-                                   refund_of=self.purchase, fund_source=fund('sga_budget'),
+                                   refund_of=self.purchase, fund_source=fund('legacy'),
                                    lnl_spend_category=category('consumables'))
         refund.full_clean()  # must not raise despite being positive
         self.assertEqual((refund.fund_source, refund.fr_line_target), (fund('sga_fr'), self.line))
@@ -551,7 +551,7 @@ class RefundTests(TestCase):
             parent_transaction=rev_parent, amount=Decimal('500.00'),
             non_event_revenue_type=revenue_source('donations'))
         bad = ParsedTransaction(amount=Decimal('50.00'), refund_of=revenue,
-                                fund_source=fund('sga_budget'))
+                                fund_source=fund('legacy'))
         with self.assertRaises(ValidationError) as ctx:
             bad.full_clean()
         self.assertIn('refund_of', ctx.exception.error_dict)
@@ -560,7 +560,7 @@ class RefundTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 ParsedTransaction.objects.create(
-                    amount=Decimal('-50.00'), refund_of=self.purchase, fund_source=fund('sga_budget'))
+                    amount=Decimal('-50.00'), refund_of=self.purchase, fund_source=fund('legacy'))
 
 
 class InheritedEventMetadataTests(TestCase):
@@ -609,7 +609,7 @@ class FundingRequestBurndownTests(TestCase):
     def _spend(self, line, amount, op):
         parent = make_txn(op=op, net_amount=Decimal(amount))
         return ParsedTransaction.objects.create(
-            parent_transaction=parent, amount=Decimal(amount), fund_source=fund('sga_budget'),
+            parent_transaction=parent, amount=Decimal(amount), fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'), fr_line_target=line)
 
     def test_totals_roll_up(self):
@@ -641,7 +641,7 @@ class ProjectTagTests(TestCase):
         parent = make_txn(op=op, net_amount=Decimal(amount), accounting_date=date)
         return ParsedTransaction.objects.create(
             parent_transaction=parent, amount=Decimal(amount), effective_date=date,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('equipment_noncapital'),
+            fund_source=fund('legacy'), lnl_spend_category=category('equipment_noncapital'),
             project_tag=tag)
 
     def test_hierarchy(self):
@@ -667,7 +667,7 @@ class ProjectTagTests(TestCase):
         refund_parent = make_txn(op='T6', net_amount=Decimal('500.00'))
         ParsedTransaction.objects.create(
             parent_transaction=refund_parent, amount=Decimal('500.00'), refund_of=purchase,
-            fund_source=fund('sga_budget'), project_tag=self.child,
+            fund_source=fund('legacy'), project_tag=self.child,
             effective_date=datetime.date(2025, 10, 1))
         self.assertEqual(self.child.total_cost(), Decimal('7500.00'))
 
@@ -753,14 +753,14 @@ class MoneyRoundingTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-2808.24'),
             effective_date=self.txn.accounting_date,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertEqual(str(self.txn.allocated_amount), '-2808.24')
 
     def test_a_balanced_remainder_prints_as_zero(self):
         ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-2808.24'),
             effective_date=self.txn.accounting_date,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertEqual(str(self.txn.unallocated_amount), '0.00')
         self.assertTrue(self.txn.is_fully_allocated)
 
@@ -770,7 +770,7 @@ class MoneyRoundingTests(TestCase):
             ParsedTransaction.objects.create(
                 parent_transaction=self.txn, amount=Decimal(amount),
                 effective_date=self.txn.accounting_date,
-                fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+                fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
         self.assertEqual(str(self.txn.unallocated_amount), '0.00')
 
 
@@ -785,7 +785,7 @@ class EncumbranceTypeTests(TestCase):
     def _encumbrance(self, amount='-400.00'):
         return ParsedTransaction.objects.create(
             amount=Decimal(amount), effective_date=datetime.date(2025, 9, 15),
-            description='Deposit on a console', fund_source=fund('sga_budget'),
+            description='Deposit on a console', fund_source=fund('legacy'),
             lnl_spend_category=category('equipment_noncapital'))
 
     def test_an_encumbrance_says_encumbrance(self):
@@ -797,7 +797,7 @@ class EncumbranceTypeTests(TestCase):
         txn = make_txn(op='OT-E1', net_amount=Decimal('-400.00'))
         entry = ParsedTransaction.objects.create(
             parent_transaction=txn, amount=Decimal('-400.00'),
-            effective_date=txn.accounting_date, fund_source=fund('sga_budget'),
+            effective_date=txn.accounting_date, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         self.assertEqual(entry.get_entry_type_display(), 'Expense')
 
@@ -826,7 +826,7 @@ class RefundPickerLabelTests(TestCase):
         self.entry = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal('-129.00'),
             effective_date=datetime.date(2025, 9, 15), description='Gaff tape',
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def test_the_label_identifies_the_purchase(self):
         label = self.entry.picker_label
@@ -842,7 +842,7 @@ class RefundPickerLabelTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=make_txn(op='OT-P2', net_amount=Decimal('29.00')),
             amount=Decimal('29.00'), effective_date=datetime.date(2025, 9, 20),
-            refund_of=self.entry, fund_source=fund('sga_budget'),
+            refund_of=self.entry, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         self.assertIn('$100.00 left to refund', self.entry.picker_label)
 
@@ -850,6 +850,6 @@ class RefundPickerLabelTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=make_txn(op='OT-P3', net_amount=Decimal('129.00')),
             amount=Decimal('129.00'), effective_date=datetime.date(2025, 9, 20),
-            refund_of=self.entry, fund_source=fund('sga_budget'),
+            refund_of=self.entry, fund_source=fund('legacy'),
             lnl_spend_category=category('consumables'))
         self.assertIn('fully refunded', self.entry.picker_label)

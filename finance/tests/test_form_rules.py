@@ -53,7 +53,7 @@ class SplitFormSetTests(TestCase):
             data.update({
                 'slices-%s-amount' % index: amount,
                 'slices-%s-description' % index: 'Slice %s' % index,
-                'slices-%s-fund_source' % index: str(fund('sga_budget').pk),
+                'slices-%s-fund_source' % index: str(fund('legacy').pk),
                 'slices-%s-lnl_spend_category' % index: str(category('consumables').pk),
             })
         data.update(kwargs)
@@ -200,7 +200,7 @@ class DirectionRuleTests(TestCase):
     def test_an_encumbrance_normalises_the_sign(self):
         form = EncumbranceLineForm(data={
             'amount': '75.00', 'description': 'Gaff tape run',
-            'fund_source': str(fund('sga_budget').pk),
+            'fund_source': str(fund('legacy').pk),
             'lnl_spend_category': str(category('consumables').pk)})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['amount'], Decimal('-75.00'))
@@ -208,7 +208,7 @@ class DirectionRuleTests(TestCase):
     def test_a_negative_encumbrance_stays_negative(self):
         form = EncumbranceLineForm(data={
             'amount': '-75.00', 'description': 'Gaff tape run',
-            'fund_source': str(fund('sga_budget').pk),
+            'fund_source': str(fund('legacy').pk),
             'lnl_spend_category': str(category('consumables').pk)})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['amount'], Decimal('-75.00'))
@@ -229,7 +229,7 @@ class FundAndFundingRequestTests(TestCase):
             amount_awarded=Decimal('5000.00'))
 
     def _form(self, **data):
-        payload = {'fund_source': str(fund('sga_budget').pk),
+        payload = {'fund_source': str(fund('legacy').pk),
                    'lnl_spend_category': str(category('consumables').pk)}
         payload.update(data)
         return ReconcileForm(payload, parent_transaction=self.txn, prefix='t')
@@ -243,7 +243,7 @@ class FundAndFundingRequestTests(TestCase):
         self.assertIn('fr_line_target', form.errors)
 
     def test_another_fund_may_not_name_a_line(self):
-        form = ReconcileForm({'t-fund_source': str(fund('sga_budget').pk),
+        form = ReconcileForm({'t-fund_source': str(fund('legacy').pk),
                               't-lnl_spend_category': str(category('consumables').pk),
                               't-fr_line_target': str(self.line.pk)},
                              parent_transaction=self.txn, prefix='t')
@@ -352,18 +352,18 @@ class BulkReconcileFormTests(TestCase):
 
     def test_the_category_and_project_are_optional(self):
         form = BulkReconcileForm({'selected': '1',
-                                  'fund_source': str(fund('sga_budget').pk)})
+                                  'fund_source': str(fund('legacy').pk)})
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_the_selection_is_parsed_into_ids(self):
         form = BulkReconcileForm({'selected': '3,1,notanid,,2',
-                                  'fund_source': str(fund('sga_budget').pk)})
+                                  'fund_source': str(fund('legacy').pk)})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.selected_ids, [3, 1, 2])
 
     def test_an_empty_selection_parses_to_nothing(self):
         form = BulkReconcileForm({'selected': '',
-                                  'fund_source': str(fund('sga_budget').pk)})
+                                  'fund_source': str(fund('legacy').pk)})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.selected_ids, [])
 
@@ -429,7 +429,7 @@ class BulkReconcileFundingRequestTests(TestCase):
 
     def test_a_line_without_fr_money_is_refused(self):
         """ An FR balance must not move without an award behind it. """
-        form = self._form(fund_source=str(fund('sga_budget').pk),
+        form = self._form(fund_source=str(fund('legacy').pk),
                           fr_line_target=str(self.line.pk))
         self.assertFalse(form.is_valid())
         self.assertIn('fr_line_target', form.errors)
