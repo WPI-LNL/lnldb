@@ -11,17 +11,19 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from finance.calculators import sga_receivables
+from finance.calculators import revenue_by_source, sga_receivables
 from finance.forms import (BudgetCategoryFormSet, BulkActionForm, FRLineItemFormSet,
                            FundingRequestForm, ReconcileForm, open_fr_lines)
 from finance.models import (BudgetCategory, DrawsOn, FRLineItem, FundingKind, FundingRequest,
                             FundSource, LineTotals, ParsedTransaction, RevenueSource,
                             WorkdayTransaction, current_fiscal_year, fiscal_year_bounds)
+from finance.reports import _money_in
 from finance.suggestions import AWARD, EXPORT, HIGH, MEDIUM, MEMO, parse_memo, suggest_all
 from finance.templatetags.finance_extras import approved, requested
 from finance.tests.test_forms import bank
 from finance.tests.test_views import FinanceViewTestCase
-from finance.tests.util import category, fund
+from finance.tests.util import category, encumbrance, fund, revenue_source
+from finance.views.ledger import LEDGER_CSV_COLUMNS
 
 YEAR = current_fiscal_year()
 YY = str(YEAR)[-2:]
@@ -266,7 +268,7 @@ class DepositTests(TestCase):
         self.assertEqual(self.budget.total_returned, Decimal('600.00'))
         self.assertEqual(self.budget.left_in_account, Decimal('0.00'))
         self.assertEqual(self.budget.deposit_status, 'Returned $600.00 to SGA')
-        self.assertEqual(self.budget.budget_status, 'Fully spent')
+        self.assertEqual(self.budget.budget_status, 'The rest went back to SGA')
 
     def test_sga_never_owes_on_a_budget(self):
         self.pay('1000.00', 'OT-D1')
@@ -971,3 +973,205 @@ class BudgetPagesTests(BudgetWorld, FinanceViewTestCase):
         response = self.client.get(reverse('finance:ledger') + '?fy=%s' % YEAR)
         self.assertContains(response, '4521 Gaff tape')
         self.assertContains(response, 'SGA Line')
+
+
+class LargeBudgetTests(FinanceViewTestCase):
+    """ Django refuses more than 1000 fields by default; a budget can run past that. """
+
+    def test_a_hundred_lines_half_on_projection_save(self):
+        self.grant('view_fundingrequest', 'manage_fundingrequest')
+        budget = make_budget()
+        data = {'kind': 'budget', 'name': budget.name, 'fiscal_year': str(YEAR),
+                'line_items-TOTAL_FORMS': '100', 'line_items-INITIAL_FORMS': '100',
+                'line_items-MIN_NUM_FORMS': '0', 'line_items-MAX_NUM_FORMS': '1000'}
+        for index in range(100):
+            line = FRLineItem.objects.create(funding_request=budget, name='Line %d' % index,
+                                             number='%04d' % (5000 + index),
+                                             amount_awarded=Decimal('10.00'))
+            row = {'id': line.pk, 'funding_request': budget.pk, 'number': line.number,
+                   'name': line.name, 'description': '', 'amount_requested': '',
+                   'amount_awarded': '12.00', 'lnl_spend_category': '', 'sort_order': index,
+                   'category_key': ''}
+            if index % 2:
+                row['is_projection'] = 'on'
+            data.update({'line_items-%d-%s' % (index, key): value for key, value in row.items()})
+        self.assertGreater(len(data), 1000)
+        response = self.client.post(reverse('finance:fr-edit', args=[budget.pk]), data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(budget.line_items.filter(amount_awarded=Decimal('12.00')).count(), 100)
+        self.assertEqual(budget.line_items.filter(is_projection=True).count(), 50)
+
+
+class SideLockTests(BudgetWorld, TestCase):
+    """ Each entry took its side from its line, so a side with money on it stays put. """
+
+    def setUp(self):
+        self.make_world()
+
+    def side_box(self, line, budget=None):
+        formset = FRLineItemFormSet(instance=budget or self.budget, kind=FundingKind.BUDGET)
+        form = next(form for form in formset.forms if form.instance.pk == line.pk)
+        return form.fields['is_projection']
+
+    def test_the_box_locks_once_anything_is_charged(self):
+        self.assertFalse(self.side_box(self.gaff).disabled)
+        self.entry(self.gaff).save()
+        self.assertTrue(self.side_box(self.gaff).disabled)
+        self.assertFalse(self.side_box(self.film).disabled)
+
+    def test_an_encumbrance_locks_it_too(self):
+        ParsedTransaction.objects.create(
+            encumbrance=encumbrance('Order', DAY), amount=Decimal('-25.00'), effective_date=DAY,
+            fund_source=fund('sga_budget'), fr_line_target=self.gaff,
+            lnl_spend_category=category('consumables'))
+        self.assertTrue(self.side_box(self.gaff).disabled)
+
+    def test_a_tick_sent_anyway_changes_nothing(self):
+        self.entry(self.gaff).save()
+        data = {'line_items-TOTAL_FORMS': '1', 'line_items-INITIAL_FORMS': '1',
+                'line_items-MIN_NUM_FORMS': '0', 'line_items-MAX_NUM_FORMS': '1000',
+                'line_items-0-id': self.gaff.pk, 'line_items-0-name': self.gaff.name,
+                'line_items-0-number': '4521', 'line_items-0-amount_awarded': '300.00',
+                'line_items-0-is_projection': 'on'}
+        formset = FRLineItemFormSet(data, instance=self.budget, kind=FundingKind.BUDGET,
+                                    queryset=FRLineItem.objects.filter(pk=self.gaff.pk))
+        self.assertTrue(formset.is_valid(), formset.errors)
+        formset.save()
+        self.gaff.refresh_from_db()
+        self.assertFalse(self.gaff.is_projection)
+
+    def test_the_model_refuses_it_for_the_admin(self):
+        self.entry(self.gaff).save()
+        self.gaff.is_projection = True
+        with self.assertRaises(ValidationError) as caught:
+            self.gaff.full_clean()
+        self.assertIn('is_projection', caught.exception.message_dict)
+
+    def test_a_line_with_nothing_on_it_can_change(self):
+        self.film.is_projection = False
+        self.film.full_clean()
+
+    def test_a_requests_side_locks_as_well(self):
+        self.assertFalse(FundingRequestForm(instance=self.request).fields['is_projection'].disabled)
+        self.entry(self.truss, fund_slug='sga_fr').save()
+        self.assertTrue(FundingRequestForm(instance=self.request).fields['is_projection'].disabled)
+        self.request.is_projection = True
+        with self.assertRaises(ValidationError) as caught:
+            self.request.full_clean()
+        self.assertIn('is_projection', caught.exception.message_dict)
+
+
+class ClosedBudgetTests(BudgetWorld, TestCase):
+    """ A closed budget isn't in the line picker, so the queue says so instead. """
+
+    def setUp(self):
+        self.make_world()
+        self.budget.closed = True
+        self.budget.save()
+
+    def test_a_request_id_on_a_closed_budget_warns_and_fills_no_line(self):
+        found = suggest_all(workday('Velcro, consumables, (4521)', '-40.00'))
+        self.assertIsNone(found['fr_line_target'])
+        self.assertIsNone(found['fr_request'])
+        self.assertEqual(found['warning_label'], 'FY%s budget closed' % YY)
+        self.assertIn('4521 Gaff tape', found['warning'])
+        self.assertIn('is closed', found['warning'])
+
+    def test_tracked_to_a_closed_budget_warns(self):
+        found = suggest_all(workday('Tape, consumables', '-40.00', tracking='SGA Budget'))
+        self.assertIsNone(found['fr_line_target'])
+        self.assertEqual(found['warning_label'], 'FY%s budget closed' % YY)
+
+    def test_sgas_money_still_finds_a_closed_budget(self):
+        found = suggest_all(workday('FY%s budget' % YY, '2300.00', journal=True,
+                                    tracking='SGA Budget'))
+        self.assertEqual(found['funding_request'].value, self.budget.pk)
+
+
+class MoneyGoingBackInReportsTests(BudgetWorld, TestCase):
+    """ Money going back to SGA undoes what it came in as, whichever that was. """
+
+    def setUp(self):
+        self.make_world()
+        self.baseline = revenue_source('sga_baseline')
+        self.reimbursement = revenue_source('sga_fr_reimbursement')
+        ParsedTransaction.objects.create(
+            parent_transaction=workday('Deposit', '900.00', journal=True),
+            amount=Decimal('900.00'), effective_date=DAY, fund_source=fund('sga_budget'),
+            funding_request=self.budget, non_event_revenue_type=self.baseline)
+        ParsedTransaction.objects.create(
+            parent_transaction=workday('Unspent', '-200.00', journal=True),
+            amount=Decimal('-200.00'), effective_date=DAY, fund_source=fund('sga_budget'),
+            funding_request=self.budget)
+
+    def take_back_from_the_request(self):
+        ParsedTransaction.objects.create(
+            parent_transaction=workday('Paid twice', '-50.00', journal=True),
+            amount=Decimal('-50.00'), effective_date=DAY, fund_source=fund('sga_fr'),
+            funding_request=self.request)
+
+    def test_revenue_by_source(self):
+        rows = {row['label']: row for row in revenue_by_source(YEAR)}
+        self.assertEqual(rows[self.baseline.name]['amount'], Decimal('700.00'))
+        self.assertEqual(rows[self.baseline.name]['taken_back'], Decimal('200.00'))
+        self.assertNotIn(self.reimbursement.name, rows)
+
+    def test_income_and_spending(self):
+        out, taken = _money_in(ParsedTransaction.objects.all())
+        self.assertEqual(out[('source', self.baseline.pk)], Decimal('700.00'))
+        self.assertEqual(out[('source', self.reimbursement.pk)], Decimal('0.00'))
+        self.assertEqual(taken, Decimal('200.00'))
+
+    def test_each_kind_comes_off_its_own_line(self):
+        self.take_back_from_the_request()
+        rows = {row['label']: row for row in revenue_by_source(YEAR)}
+        self.assertEqual(rows[self.baseline.name]['amount'], Decimal('700.00'))
+        self.assertEqual(rows[self.reimbursement.name]['amount'], Decimal('-50.00'))
+        out, taken = _money_in(ParsedTransaction.objects.all())
+        self.assertEqual(out[('source', self.reimbursement.pk)], Decimal('-50.00'))
+        self.assertEqual(taken, Decimal('250.00'))
+
+
+class BudgetDashboardTests(BudgetWorld, FinanceViewTestCase):
+
+    def setUp(self):
+        super(BudgetDashboardTests, self).setUp()
+        self.grant('view_subledger', 'view_fundingrequest')
+        self.make_world()
+
+    def test_the_budget_comes_after_the_requests(self):
+        html = self.client.get(reverse('finance:dashboard') + '?fy=%s' % YEAR).content.decode()
+        self.assertLess(html.index('<strong>Truss</strong>'),
+                        html.index('<strong>%s</strong>' % self.budget.name))
+
+    def test_nothing_decided_is_unknown_rather_than_zero(self):
+        pending = make_budget(year=YEAR + 1)
+        FRLineItem.objects.create(funding_request=pending, name='Later', number='9001')
+        html = self.client.get(reverse('finance:dashboard')
+                               + '?fy=%s' % (YEAR + 1)).content.decode()
+        figures = html[html.index('fin-fr-figures'):]
+        figures = ' '.join(figures[:figures.index('</span>')].split())
+        self.assertIn('$0 of ?', figures)
+
+
+class BudgetWordingTests(BudgetWorld, FinanceViewTestCase):
+
+    def setUp(self):
+        super(BudgetWordingTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        self.make_world()
+
+    def test_the_ledger_download_says_sga_line_and_the_request_id(self):
+        entry = self.entry(self.gaff)
+        entry.save()
+        columns = dict(LEDGER_CSV_COLUMNS)
+        self.assertNotIn('FR line', columns)
+        self.assertEqual(columns['SGA line'](entry), '4521 Gaff tape')
+
+    def test_a_bulk_refusal_across_years_calls_a_budget_a_budget(self):
+        txn = workday('Tape', '-10.00', date=DAY - datetime.timedelta(days=366))
+        response = self.client.post(reverse('finance:bulk-reconcile'), {
+            'selected': str(txn.pk), 'fund_source': fund('sga_budget').pk,
+            'lnl_spend_category': category('consumables').pk,
+            'fr_line_target': self.gaff.pk}, follow=True)
+        self.assertContains(response, 'is an FY%s budget' % YY)

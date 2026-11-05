@@ -1583,7 +1583,12 @@ must name the budget (SGA's deposit), and money out of it with no line is
 money returned to SGA, naming the budget too. An entry on a budget line takes
 the line's own side (``FRLineItem.side_is_projection``); a deposit or a
 return stays on its account's side, as a budget has none
-(``_adopt_partition_from_funding_request``).
+(``_adopt_partition_from_funding_request``). A side is copied onto each entry
+when it is saved, so it can't change once entries depend on it:
+``FRLineItem.clean`` and ``FundingRequest.clean`` refuse the change, and the
+forms lock the box (``BaseFRLineItemFormSet.add_fields``,
+``FundingRequestForm``). Moving the entries instead would reach into settled
+entries in closed years.
 
 **Pickers.** ``open_fr_lines`` offers both kinds; ``FRLineChoiceIterator``
 heads a budget's lines one ``<optgroup>`` per category (``FY27 · Budget ·
@@ -2302,8 +2307,10 @@ billing organisation. Non-event revenue (SGA's payments, donations) has no
 client and is excluded rather than silently bucketed as "Unknown".
 
 **Revenue by source** is event billing against each kind of non-event income.
-Money SGA took back is netted off the reimbursement source, with a note saying
-how much, because it undoes income rather than being spending.
+Money that went back to SGA is netted off the income it undoes, with a note
+saying how much, because it isn't spending: the reimbursement source for a
+funding request, the source whose fund draws on budgets for a budget
+(``models.source_given_back``).
 
 **Event billing, kept** sets every cost in the pass-through category
 against event billing. A $26,000 video wall billed to a client goes straight

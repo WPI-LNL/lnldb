@@ -2110,6 +2110,11 @@ class FundingRequestForm(forms.ModelForm):
             kind.disabled = True
             kind.help_text = ("Money is charged to it or SGA has paid for it, so its type can't "
                               "change.")
+            # Each entry took its side from the request when it was saved.
+            side = self.fields['is_projection']
+            side.disabled = True
+            side.help_text = ("Money is charged to it or SGA has paid for it, so its side can't "
+                              "change.")
         self.helper = finance_form_helper()
 
     def clean_kind(self):
@@ -2243,14 +2248,29 @@ class BaseFRLineItemFormSet(BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         self.kind = kwargs.pop('kind', None)
         super(BaseFRLineItemFormSet, self).__init__(*args, **kwargs)
+        saved = self.instance is not None and self.instance.pk is not None
         if self.kind is None:
-            saved = self.instance is not None and self.instance.pk is not None
             self.kind = self.instance.kind if saved else FundingKind.REQUEST
+        # Asked once here rather than by each of a hundred rows.
+        self.charged = set()
+        if saved:
+            self.charged = set(ParsedTransaction.objects
+                               .filter(fr_line_target__funding_request=self.instance)
+                               .values_list('fr_line_target_id', flat=True))
 
     def get_form_kwargs(self, index):
         kwargs = super(BaseFRLineItemFormSet, self).get_form_kwargs(index)
         kwargs['kind'] = self.kind
         return kwargs
+
+    def add_fields(self, form, index):
+        """ Lock the side of a line with money on it (see :class:`FRLineItem`). """
+        super(BaseFRLineItemFormSet, self).add_fields(form, index)
+        if form.instance.pk in self.charged:
+            side = form.fields['is_projection']
+            side.disabled = True
+            side.widget.attrs['title'] = ("Money is charged to this line, so its side can't "
+                                          "change.")
 
     @property
     def is_budget(self):

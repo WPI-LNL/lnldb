@@ -1318,10 +1318,10 @@ def bulk_reconcile(request):
             entry_year = fiscal_year_for(txn.accounting_date)
             if line_year is not None and line_year != entry_year and not cross_year_allowed:
                 refused.append((txn, ValidationError({'fr_line_target': [
-                    "This is FY%s spending but %s is an FY%s request. If that is genuinely "
+                    "This is FY%s spending but %s is an FY%s %s. If that is genuinely "
                     "intended, tick “Other year”."
-                    % (str(entry_year)[-2:], line.funding_request.name,
-                       str(line_year)[-2:])]})))
+                    % (str(entry_year)[-2:], line.funding_request.name, str(line_year)[-2:],
+                       "budget" if line.funding_request.is_budget else "request")]})))
                 continue
 
             remaining = txn.unallocated_amount

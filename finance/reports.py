@@ -41,7 +41,7 @@ from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
 from finance.models import (ZERO, ClientType, FiscalYearClose, FundBehaviour, ParsedTransaction,
                             RevenueSource, SpendCategory, WorkdayTransaction, books_start_date,
                             client_type_for, dollars, fiscal_year_bounds, money,
-                            reimbursement_source)
+                            source_given_back)
 
 
 # ---------------------------------------------------------------------------
@@ -408,8 +408,8 @@ def _money_in(entries):
     ``({line key: amount}, taken back)`` for the money that came in.
 
     Event billing is split by who paid, which is the events app's answer, not
-    the ledger's. Money SGA took back is netted off the source that repays
-    funding requests: it is that income undone, not spending.
+    the ledger's. Money that went back to SGA is netted off the income it
+    undoes -- a budget's deposit, a request's reimbursement -- not spending.
     """
     from events.models import BaseEvent
 
@@ -436,12 +436,15 @@ def _money_in(entries):
                 .values('non_event_revenue_type').annotate(t=Sum('amount'))):
         out[('source', row['non_event_revenue_type'])] += money(row['t'])
 
-    taken = -money(entries.filter(Q(amount__lt=0) | Q(refund_of__isnull=False),
-                                  funding_request__isnull=False)
-                   .aggregate(t=Sum('amount'))['t'])
-    if taken:
-        repays = reimbursement_source()
-        out[('source', repays.pk if repays is not None else 'taken_back')] -= taken
+    taken = ZERO
+    for row in (entries.filter(Q(amount__lt=0) | Q(refund_of__isnull=False),
+                               funding_request__isnull=False)
+                .values('funding_request__kind').annotate(t=Sum('amount'))):
+        amount = -money(row['t'])
+        if amount:
+            taken += amount
+            undone = source_given_back(row['funding_request__kind'])
+            out[('source', undone.pk if undone is not None else 'taken_back')] -= amount
     return out, taken
 
 
@@ -588,8 +591,8 @@ def income_and_spending(period, is_projection=None, fund=None):
              "Each entry counts on its own date, so an event billed after it ran counts "
              "when the money arrived."]
     if taken_back:
-        notes.append("Money in is after %s SGA took back, which undoes a reimbursement "
-                     "rather than being spending." % _dollars(taken_back))
+        notes.append("Money in is after %s SGA took back, which undoes a reimbursement or a "
+                     "budget deposit rather than being spending." % _dollars(taken_back))
     if fund is not None:
         notes.append("Only money in %s." % fund.name)
     if _partition_words(is_projection):
@@ -1783,7 +1786,7 @@ REPORTS = OrderedDict((
                         "the PDF to submit, with the receipts in it.", 'request')),
     ('budget-report-form', ("Budget Report Form",
                             "SGA's proof of spending for the year's budget: a payment request for "
-                            "each line item, with how it was paid, SGA money and group funds "
+                            "each line item, with what it was used for, SGA money and group funds "
                             "spent, the date and the undergraduates who benefited, and every "
                             "purchase under it with its receipt. Downloads as one PDF a line, or "
                             "all of them in a zip.", 'budget')),

@@ -160,6 +160,7 @@
             if (f.lineRequest.length) {
                 container(f.lineRequest).toggle(required);
                 narrowKind(f.lineRequest, kind);
+                if (!required) { f.lineRequest.val(''); }
             }
             narrowLines(f.line);
 
@@ -173,6 +174,9 @@
         if (f.request.length) {
             container(f.request).toggle(required);
             narrowKind(f.request, kind);
+            /* A hidden box must send nothing: the server would refuse a value
+               the Treasurer can no longer see, or clear. */
+            if (!required) { f.request.val(''); }
         }
     }
 

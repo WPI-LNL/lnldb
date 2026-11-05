@@ -689,8 +689,8 @@ def _budget_spending(txn, fields, rules):
     money is the budget's. Either is enough to fill the fund and the budget
     in. The line is filled from the Request ID, and without one only when the
     memo's words point to a single line. Saying so out loud: a Request ID the
-    year's budget doesn't have, a line SGA hasn't approved, or a year with no
-    budget in lnldb.
+    year's budget doesn't have, a line SGA hasn't approved, a budget that has
+    been closed, or a year with no budget in lnldb.
     """
     tracked = _tracked_to_budget(txn)
     number = fields.budget_line
@@ -724,6 +724,13 @@ def _budget_spending(txn, fields, rules):
         if number:
             warning = 'The memo quotes Request ID %s. %s' % (number, warning)
         label = 'No %s budget' % short
+    elif budget.closed:
+        # A closed budget isn't in the line picker, so naming it would fill in
+        # nothing and say nothing. Tell the Treasurer why the boxes are empty.
+        warning = ('%s is closed, so nothing can be charged to %s. Reopen it on the SGA Funding '
+                   'tab, or route this line by hand.'
+                   % (budget.name, line.label if line is not None else 'its lines'))
+        label = '%s budget closed' % short
     elif line is not None:
         fr_request = Suggestion(budget.pk, HIGH, 'Memo quotes Request ID %s' % number,
                                 budget.short_label, source=MEMO)

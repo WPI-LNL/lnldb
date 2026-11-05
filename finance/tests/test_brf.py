@@ -18,7 +18,7 @@ from pypdf import PdfReader
 from finance.brf import gather, line_pdf, save_answers
 from finance.models import (BudgetCategory, FRLineItem, FundingKind, FundingRequest,
                             ParsedTransaction, TransactionStatus, WorkdayTransaction)
-from finance.reports import as_csv, budget_report_form
+from finance.reports import REPORTS, as_csv, budget_report_form
 from finance.tests.test_frrf import attach, jpeg
 from finance.tests.test_views import FinanceViewTestCase
 from finance.tests.util import category, fund
@@ -178,6 +178,12 @@ class ReportTests(BudgetFormMixin, TestCase):
         self.assertIn('100.00,50.00', text)
 
 
+class ReportsTabTests(TestCase):
+
+    def test_the_blurb_does_not_promise_how_each_was_paid(self):
+        self.assertNotIn('how it was paid', REPORTS['budget-report-form'][1])
+
+
 class PdfTests(BudgetFormMixin, TestCase):
 
     def test_a_lines_pdf_has_sgas_questions_then_its_receipts(self):
@@ -228,6 +234,14 @@ class SaveAnswersTests(BudgetFormMixin, FinanceViewTestCase):
         self.assertEqual((saved, len(problems)), (1, 1))
         self.film.refresh_from_db()
         self.assertEqual(self.film.undergraduates, 40)
+
+    def test_a_count_the_box_cannot_hold_is_refused_rather_than_an_error(self):
+        for typed in ('9' * 30, '9' * 5000, '\u00b2', '-4', '1.5'):
+            saved, problems = save_answers(gather(self.budget), {
+                'undergraduates-%s' % self.gaff.pk: typed})
+            self.assertEqual((saved, len(problems)), (0, 1), typed[:10])
+        self.gaff.refresh_from_db()
+        self.assertIsNone(self.gaff.undergraduates)
 
     def test_lines_of_another_budget_are_not_touched(self):
         self.grant('view_subledger', 'manage_fundingrequest')

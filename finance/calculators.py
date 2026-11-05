@@ -902,12 +902,12 @@ def revenue_by_source(fiscal_year=None, is_projection=None):
     """
     Income by kind, biggest first: event billing, then each non-event source.
 
-    Money SGA took back -- a reimbursement it paid twice, reclaimed -- is
-    netted off the source that repays funding requests, because it is that
-    income being undone rather than anything LNL spent. The row says how much
-    was netted, so the figure never hides a correction.
+    Money that went back to SGA -- a reimbursement it paid twice, reclaimed,
+    or a budget's unspent money -- is netted off the source it came in as,
+    because it is that income being undone rather than anything LNL spent.
+    The row says how much was netted, so the figure never hides a correction.
     """
-    from finance.models import reimbursement_source
+    from finance.models import source_given_back
 
     entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
     income = entries.revenue()
@@ -932,21 +932,21 @@ def revenue_by_source(fiscal_year=None, is_projection=None):
             'taken_back': ZERO, 'entries': row['n'],
             'source': row['non_event_revenue_type']}
 
-    taken = entries.filter(amount__lt=0, refund_of__isnull=True,
-                           funding_request__isnull=False).aggregate(t=Sum('amount'))['t']
-    taken = -money(taken)
-    if taken:
-        repays = reimbursement_source()
-        if repays is not None:
-            target = source_rows.setdefault(repays.pk, {
-                'key': repays.slug, 'label': repays.name, 'amount': ZERO,
-                'taken_back': ZERO, 'entries': 0, 'source': repays.pk})
-            target['amount'] -= taken
-            target['taken_back'] += taken
+    for row in (entries.filter(amount__lt=0, refund_of__isnull=True,
+                               funding_request__isnull=False)
+                .values('funding_request__kind').annotate(t=Sum('amount'))):
+        taken = -money(row['t'])
+        undone = source_given_back(row['funding_request__kind'])
+        if undone is not None:
+            target = source_rows.setdefault(undone.pk, {
+                'key': undone.slug, 'label': undone.name, 'amount': ZERO,
+                'taken_back': ZERO, 'entries': 0, 'source': undone.pk})
         else:
-            source_rows[None] = {'key': 'taken_back', 'label': 'Taken back by SGA',
-                                 'amount': -taken, 'taken_back': taken, 'entries': 0,
-                                 'source': None}
+            target = source_rows.setdefault(None, {
+                'key': 'taken_back', 'label': 'Taken back by SGA', 'amount': ZERO,
+                'taken_back': ZERO, 'entries': 0, 'source': None})
+        target['amount'] -= taken
+        target['taken_back'] += taken
     rows.extend(source_rows.values())
 
     rows.sort(key=lambda r: -r['amount'])

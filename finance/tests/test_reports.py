@@ -803,7 +803,7 @@ class LedgerDownloadTests(FinanceViewTestCase):
         spend(request, '30.00', datetime.date(2026, 8, 5))
         _, rows = self.download()
         row = dict(zip(rows[0], rows[1]))
-        self.assertEqual((row['Funding request'], row['FR line']),
+        self.assertEqual((row['Funding request'], row['SGA line']),
                          ('F.27.9 Film rights', 'Posters'))
 
     def test_the_ledger_offers_it(self):

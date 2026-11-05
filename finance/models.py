@@ -1030,6 +1030,27 @@ def reimbursement_source():
     return None
 
 
+def deposit_source():
+    """
+    The revenue source for SGA depositing a budget, or ``None``: the first
+    active source whose fund draws on budgets.
+    """
+    for sources in revenue_sources_by_fund().values():
+        for source in sources:
+            if source.credits_fund.draws_on_budget:
+                return source
+    return None
+
+
+def source_given_back(kind):
+    """
+    The income that money going back to SGA undoes, for a :class:`FundingKind`:
+    a budget's deposit, or a funding request's reimbursement. ``None`` when
+    that source has been retired.
+    """
+    return deposit_source() if kind == FundingKind.BUDGET else reimbursement_source()
+
+
 class PartitionCode(models.Model):
     """
     The organisation codes that say which side of the Event Production /
@@ -1720,12 +1741,19 @@ class FundingRequest(models.Model):
         """
         super(FundingRequest, self).clean()
         if self.pk is not None:
-            saved = FundingRequest.objects.filter(pk=self.pk).values_list('kind', flat=True).first()
-            if saved is not None and saved != self.kind and self.has_money:
+            saved = (FundingRequest.objects.filter(pk=self.pk)
+                     .values('kind', 'is_projection').first())
+            if saved is not None and saved['kind'] != self.kind and self.has_money:
                 raise ValidationError({'kind': (
                     "Money is already charged to this %s or paid for it by SGA, so it can't "
-                    "become a %s." % (FundingKind(saved).label.lower(),
+                    "become a %s." % (FundingKind(saved['kind']).label.lower(),
                                       FundingKind(self.kind).label.lower()))})
+            if (saved is not None and not self.is_budget
+                    and saved['is_projection'] != self.is_projection and self.has_money):
+                # Every entry took its side from the request when it was saved.
+                raise ValidationError({'is_projection': (
+                    "Money is already charged to this request or paid for it by SGA, and each "
+                    "entry took its side from the request, so the side can't change.")})
         if self.is_budget:
             self._clean_budget()
             return
@@ -1992,7 +2020,7 @@ class FundingRequest(models.Model):
             return "Goes back to SGA" if self.year_over else "Left to spend this year"
         if left < 0:
             return "Overspent -- cover it from money that carries forward"
-        return "Fully spent"
+        return "The rest went back to SGA" if self.total_returned else "Fully spent"
 
     @property
     def reimbursement_status(self):
@@ -2182,6 +2210,21 @@ class FRLineItem(models.Model):
 
     def __str__(self):
         return "%s – %s" % (self.funding_request.name, self.name)
+
+    def clean(self):
+        """
+        Keep a line on its side once anything is charged to it. Each entry took
+        its side from the line when it was saved, and moving them all would
+        reach into settled entries, closed years included.
+        """
+        super(FRLineItem, self).clean()
+        if self.pk is None:
+            return
+        saved = FRLineItem.objects.filter(pk=self.pk).values_list('is_projection', flat=True).first()
+        if saved is not None and saved != self.is_projection and self.allocations.exists():
+            raise ValidationError({'is_projection': (
+                "Money is already charged to this line, and each entry took its side from the "
+                "line, so the side can't change.")})
 
     @property
     def spent(self):

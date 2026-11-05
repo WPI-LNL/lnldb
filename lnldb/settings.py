@@ -242,6 +242,10 @@ STATICFILES_DIRS = (
     from_root("static"),
 )
 FILE_UPLOAD_PERMISSIONS = 0o644
+# Django refuses a form of more than 1000 fields with a bare 400, and everything
+# typed on the page is lost. A budget's form sends about eleven fields a line and
+# a budget can run past a hundred lines, so the limit has to clear that comfortably.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # List of finder classes that know how to find static files in
 # various locations.

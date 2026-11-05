@@ -22,6 +22,7 @@ on its own. :func:`finance.reports.budget_report_form` lays the form out to
 check on screen; :func:`line_pdf` draws one line's PDF and :func:`all_pdfs`
 puts every line's in a zip.
 """
+import re
 import zipfile
 from io import BytesIO
 
@@ -36,6 +37,9 @@ from finance.models import (ZERO, FundBehaviour, ParsedTransaction, WorkdayTrans
                             fiscal_year_for, fund_source_for_tracking, money)
 from finance.suggestions import parse_memo
 from pdfs.views import link_callback
+
+#: What the Undergraduates box takes: plain digits, few enough for its column.
+UNDERGRADUATES = re.compile(r'^[0-9]{1,9}$')
 
 
 class BudgetPurchase(object):
@@ -319,7 +323,7 @@ def save_answers(form, data):
         if key not in data:
             continue
         raw = (data.get(key) or '').strip()
-        if raw and not raw.isdigit():
+        if raw and not UNDERGRADUATES.match(raw):
             problems.append("%s: undergraduates has to be a whole number." % line.line.label)
             continue
         value = int(raw) if raw else None

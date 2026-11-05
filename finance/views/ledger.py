@@ -93,7 +93,7 @@ LEDGER_CSV_COLUMNS = (
     ('Revenue source',
      lambda e: e.non_event_revenue_type.name if e.non_event_revenue_type_id else ''),
     ('Funding request', _request_label),
-    ('FR line', lambda e: e.fr_line_target.name if e.fr_line_target_id else ''),
+    ('SGA line', lambda e: e.fr_line_target.label if e.fr_line_target_id else ''),
     ('Project', lambda e: str(e.project_tag) if e.project_tag_id else ''),
     ('Workday reference', lambda e: _workday(e, 'reference')),
     ('Ledger account', lambda e: _workday(e, 'ledger_account')),

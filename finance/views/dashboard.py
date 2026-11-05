@@ -93,7 +93,7 @@ def dashboard(request):
     # a side of their own, so the side filter narrows a budget to that side's
     # lines rather than keeping or dropping it whole.
     fr_qs = (FundingRequest.objects.filter(closed=False).with_totals().with_lines()
-             .order_by('kind', '-fiscal_year', 'name'))
+             .order_by('-kind', '-fiscal_year', 'name'))
     if projection_flag is not None:
         fr_qs = fr_qs.exclude(kind=FundingKind.REQUEST, is_projection=not projection_flag)
     if state.fiscal_year:
@@ -111,7 +111,8 @@ def dashboard(request):
         funding_requests.append({
             'obj': fr,
             'lines': lines,
-            'awarded': figures.total_awarded,
+            # None is ?: every line is pending SGA approval, which isn't $0.
+            'awarded': figures.total_awarded if figures.approved_known else None,
             'spent': figures.total_spent,
             'remaining': figures.total_remaining,
             'percent': figures.percent_spent,

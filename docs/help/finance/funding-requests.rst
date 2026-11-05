@@ -159,7 +159,7 @@ is Event Production or Projection on its own.
      ``Velcro restock, consumables, (4521)``. Two lines of one budget can't share a Request ID. A line can be saved
      without one, but the budget's page lists those lines, because a memo can't name them.
    - **Name**, **Description**, **Requested** and **Approved** -- as above.
-   - **Projection** -- tick it for a Projection line.
+   - **Projection** -- tick it for a Projection line. The box locks once anything is charged to the line.
    - **Spend category** -- as for a request.
 
 #. Click `Save`.
@@ -202,7 +202,8 @@ only to a funding request line, and no other fund to either.
 **From the memo.** If the Workday memo ends with the line's Request ID -- ``Velcro restock, consumables, (4521)``, or
 ``Gaff tape (4521)`` -- the queue fills in the fund, the budget, the line and the line's spend category. If the middle
 of the memo doesn't fit the line (``Lamps, lighting, (4521)`` on Gaff tape), the line is still filled in but the caption
-says to check it. The row is tagged when the Request ID is a line SGA hasn't approved, or isn't in the budget at all.
+says to check it. The row is tagged when the Request ID is a line SGA hasn't approved, or isn't in the budget at all,
+and when the budget has been closed: reopen it to charge the line, or route the row by hand.
 
 **From Workday's Tracking.** A line tracked as ``SGA Budget`` with no Request ID gets the fund and the budget, and the
 line only when the memo's words point to exactly one line. If lnldb has no budget for that year, the row is tagged
@@ -213,7 +214,8 @@ line only when the memo's words point to exactly one line. If lnldb has no budge
 
 **Money going back to SGA** at year end is a journal entry out of the account, tracked the same way. The queue fills in
 the budget under `More`, in `Returned to SGA from budget`; it needs no spend category. Unspent money often goes back
-just after June 30, so it is matched to last year's budget while that budget still has money left.
+just after June 30, so it is matched to last year's budget while that budget still has money left. In reports it
+comes off the `SGA Budget` income line, as it undoes the deposit.
 
 Both show on the budget's page under **SGA deposit**, and on the ledger, where the **SGA Line** column says `deposit
 for` or `returned:` before the budget's name.
@@ -226,6 +228,11 @@ Closing a Request
 -----------------
 
 Once a request or a budget is finished, edit it and tick **Closed**. It disappears from the dashboard's burndown, but
-its history stays, and SGA's payments are still matched to it.
+its history stays, and SGA's payments are still matched to it. Nothing more can be charged to its lines.
+
+**A side can't change once money depends on it.** Each entry takes its side from its request or budget line when it is
+saved, so **Projection request** locks once a request has money charged to it or a payment from SGA, and a budget
+line's **Projection** box locks once anything is charged to the line, encumbrances included. To correct one, move the
+entries to another line first.
 
 `Last Modified: November 4, 2026`
