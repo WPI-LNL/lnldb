@@ -131,6 +131,9 @@ class BurndownBarTests(TestCase):
     def test_rubbish_renders_nothing_rather_than_raising(self):
         self.assertEqual(burndown_bar('elephant', 'giraffe'), '')
 
+    def test_nothing_approved_and_nothing_spent_has_no_bar(self):
+        self.assertEqual(burndown_bar(Decimal('0'), Decimal('0')), '')
+
     def test_the_amounts_are_escaped_into_the_markup(self):
         """ ``format_html`` throughout, so a value can never inject markup. """
         html = burndown_bar(Decimal('250'), Decimal('1000'))

@@ -1562,8 +1562,10 @@ Every line, of a request or a budget, has ``amount_requested`` and
 amount is SGA not having decided, shown as ``?`` *Pending SGA Approval*; ``0``
 is a line SGA denied, shown as ``$0`` *Denied* (the ``approved`` and
 ``requested`` template tags). Neither is offered when charging
-(``FRLineItemQuerySet.chargeable``), and once anything is charged to a line its
-approved amount can't be blanked or cut below what is spent. Totals
+(``FRLineItemQuerySet.chargeable``), and ``ParsedTransaction.clean`` refuses an
+entry newly naming one, so the rule holds in the admin too; a refund follows its
+purchase regardless. Once anything is charged to a line its approved amount
+can't be blanked or cut below what is spent. Totals
 (``FundingRequest.total_awarded``, :class:`~finance.models.LineTotals`) add up
 the decided lines and count the pending ones; ``approved_known`` is false only
 when none is decided. Lines have no project: requests and budgets don't need

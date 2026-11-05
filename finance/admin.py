@@ -12,6 +12,7 @@ offer.
 """
 from django import forms
 from django.contrib import admin
+from django.forms.models import BaseInlineFormSet
 from django.utils.html import format_html
 from mptt.admin import MPTTModelAdmin
 from reversion.admin import VersionAdmin
@@ -20,7 +21,8 @@ from finance.importers import COLUMN_ALIASES
 from finance.models import (BalanceCheckpoint, Billing, BudgetCategory, ColumnAlias, FinanceSettings,
                             FiscalYearClose, FRLineItem, FundingRequest, FundSource, FundTransfer,
                             ParsedTransaction, PartitionCode, ProjectTag, RevenueSource,
-                            ServiceColor, SpendCategory, SuggestionRule, WorkdayTransaction)
+                            ServiceColor, SpendCategory, SuggestionRule, WorkdayTransaction,
+                            check_request_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -214,12 +216,25 @@ class WorkdayTransactionAdmin(admin.ModelAdmin):
         return obj.defaults_to_projection
 
 
+class FRLineItemInlineFormSet(BaseInlineFormSet):
+    """ Holds a budget's lines to one Request ID each, as the budget's own form does. """
+
+    def clean(self):
+        super(FRLineItemInlineFormSet, self).clean()
+        if any(self.errors) or not self.instance.is_budget:
+            return
+        check_request_ids((form.cleaned_data.get('number'), form.cleaned_data.get('name'))
+                          for form in self.forms
+                          if form.cleaned_data and not form.cleaned_data.get('DELETE'))
+
+
 class FRLineItemInline(admin.TabularInline):
     """
     The lines that make up a funding request or a budget: requested and
     approved, and for a budget line its Request ID, side and category.
     """
     model = FRLineItem
+    formset = FRLineItemInlineFormSet
     extra = 1
     fields = ('category', 'number', 'name', 'description', 'amount_requested', 'amount_awarded',
               'is_projection', 'lnl_spend_category', 'undergraduates', 'sort_order')

@@ -33,7 +33,7 @@ from finance.models import (ZERO, BalanceCheckpoint, BudgetCategory, DrawsOn, En
                             FundTransfer, MultiBilling, ParsedTransaction, PartitionCode,
                             ProjectTag, RevenueSource, SpendCategory,
                             TransactionStatus,
-                            WorkdayTransaction, current_fiscal_year, dollars,
+                            WorkdayTransaction, check_request_ids, current_fiscal_year, dollars,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for, line_charge_problem, money,
                             own_fund_for_account, refund_window, summed_money)
@@ -2297,18 +2297,8 @@ class BaseFRLineItemFormSet(BaseInlineFormSet):
                     "“%s” can't be deleted: entries or encumbrances are charged to it. Move them "
                     "to another line first." % form.instance.name)
         if self.is_budget:
-            # The Request ID is how a memo names the line, so two lines sharing
-            # one would leave the queue unable to tell them apart.
-            seen = {}
-            for form in self._live_forms():
-                number = form.cleaned_data.get('number')
-                if not number:
-                    continue
-                if number in seen:
-                    raise ValidationError(
-                        "“%s” and “%s” both have the Request ID %s. Each line of a budget needs "
-                        "its own." % (seen[number], form.cleaned_data.get('name'), number))
-                seen[number] = form.cleaned_data.get('name')
+            check_request_ids((form.cleaned_data.get('number'), form.cleaned_data.get('name'))
+                              for form in self._live_forms())
         position = 0
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get('DELETE'):

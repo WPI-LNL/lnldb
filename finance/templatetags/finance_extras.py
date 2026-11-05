@@ -305,7 +305,8 @@ def burndown_bar(spent, awarded):
     """
     Green remaining / red spent, with an overspend rendered as a full red bar
     plus an explicit overage figure -- a bar that silently clamps at 100% would
-    hide the one case the Treasurer most needs to see.
+    hide the one case the Treasurer most needs to see. Nothing approved and
+    nothing spent, as on a line SGA denied, has nothing to show, so no bar.
     """
     try:
         spent, awarded = Decimal(spent), Decimal(awarded)
@@ -313,6 +314,8 @@ def burndown_bar(spent, awarded):
         return ''
 
     if awarded <= 0:
+        if spent <= 0:
+            return ''
         return mark_safe('<div class="progress fin-burndown"><div class="progress-bar '
                          'progress-bar-danger" style="width:100%"></div></div>')
 

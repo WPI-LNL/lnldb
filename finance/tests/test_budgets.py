@@ -7,10 +7,13 @@ approved amount is SGA not having decided and $0 is SGA turning a line down.
 import datetime
 from decimal import Decimal
 
+from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
+from finance.admin import FRLineItemInline
 from finance.calculators import revenue_by_source, sga_receivables
 from finance.forms import (BudgetCategoryFormSet, BulkActionForm, FRLineItemFormSet,
                            FundingRequestForm, ReconcileForm, open_fr_lines)
@@ -1175,3 +1178,116 @@ class BudgetWordingTests(BudgetWorld, FinanceViewTestCase):
             'lnl_spend_category': category('consumables').pk,
             'fr_line_target': self.gaff.pk}, follow=True)
         self.assertContains(response, 'is an FY%s budget' % YY)
+
+
+class UnapprovedLineTests(BudgetWorld, TestCase):
+    """ Nothing is charged to a pending or denied line, whichever form saves it. """
+
+    def setUp(self):
+        self.make_world()
+        self.denied = FRLineItem.objects.create(funding_request=self.budget, name='Denied',
+                                                number='4523', amount_awarded=Decimal('0.00'))
+
+    def refused(self, line):
+        with self.assertRaises(ValidationError) as caught:
+            self.entry(line).full_clean()
+        return caught.exception.message_dict['fr_line_target'][0]
+
+    def test_a_pending_line_is_refused(self):
+        self.assertIn('4522 Batteries is pending SGA approval', self.refused(self.pending))
+
+    def test_a_denied_line_is_refused(self):
+        self.assertIn('4523 Denied is denied by SGA', self.refused(self.denied))
+
+    def test_moving_an_entry_onto_one_is_refused(self):
+        entry = self.entry(self.gaff)
+        entry.save()
+        entry.fr_line_target = self.pending
+        with self.assertRaises(ValidationError):
+            entry.full_clean()
+
+    def test_an_entry_already_on_a_line_since_denied_stays_editable(self):
+        entry = self.entry(self.gaff)
+        entry.save()
+        FRLineItem.objects.filter(pk=self.gaff.pk).update(amount_awarded=Decimal('0.00'))
+        entry = ParsedTransaction.objects.get(pk=entry.pk)
+        entry.description = 'Corrected'
+        entry.full_clean()
+
+    def test_a_refund_follows_its_purchase_onto_a_line_since_denied(self):
+        purchase = self.entry(self.gaff)
+        purchase.save()
+        FRLineItem.objects.filter(pk=self.gaff.pk).update(amount_awarded=Decimal('0.00'))
+        refund = ParsedTransaction(parent_transaction=workday('Credit', '20.00'),
+                                   amount=Decimal('20.00'), effective_date=DAY,
+                                   refund_of=ParsedTransaction.objects.get(pk=purchase.pk))
+        refund.full_clean()
+
+
+class RequestIdInAdminTests(BudgetWorld, TestCase):
+    """ The admin holds a budget to one Request ID a line, and swapping two is fine. """
+
+    def setUp(self):
+        self.make_world()
+        self.request_ = RequestFactory().post('/')
+        self.request_.user = get_user_model().objects.create_superuser(
+            'budget-admin', 'budget-admin@example.com', 'x')
+
+    def formset(self, parent, rows):
+        request = self.request_
+        request._finance_admin_parent = parent
+        formset_class = FRLineItemInline(FundingRequest, admin.site).get_formset(request, parent)
+        data = {'line_items-TOTAL_FORMS': str(len(rows)),
+                'line_items-INITIAL_FORMS': str(sum(1 for row in rows if row.get('id'))),
+                'line_items-MIN_NUM_FORMS': '0', 'line_items-MAX_NUM_FORMS': '1000'}
+        for index, row in enumerate(rows):
+            data.update({'line_items-%d-%s' % (index, key): value for key, value in row.items()})
+        return formset_class(data, instance=parent)
+
+    def line(self, line, number):
+        return {'id': line.pk, 'name': line.name, 'number': number, 'sort_order': '0',
+                'funding_request': line.funding_request_id}
+
+    def test_a_second_line_with_the_same_id_is_refused(self):
+        lines = FRLineItem.objects.filter(funding_request=self.budget).order_by('pk')
+        rows = [self.line(lines[0], '4521'), self.line(lines[1], '4541'),
+                self.line(lines[2], '4522'), {'name': 'Twin', 'number': '4521', 'sort_order': '0'}]
+        formset = self.formset(self.budget, rows)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('both have the Request ID 4521', str(formset.non_form_errors()))
+
+    def test_swapping_two_ids_is_allowed(self):
+        lines = FRLineItem.objects.filter(funding_request=self.budget).order_by('pk')
+        rows = [self.line(lines[0], '4541'), self.line(lines[1], '4521'),
+                self.line(lines[2], '4522')]
+        formset = self.formset(self.budget, rows)
+        self.assertTrue(formset.is_valid(), formset.errors)
+        formset.save()
+        self.gaff.refresh_from_db()
+        self.assertEqual(self.gaff.number, '4541')
+
+    def test_a_requests_lines_are_left_alone(self):
+        formset = self.formset(self.request, [
+            {'name': 'A', 'number': '', 'sort_order': '0'},
+            {'name': 'B', 'number': '', 'sort_order': '0'}])
+        self.assertTrue(formset.is_valid(), formset.errors)
+
+
+class DeniedLineBarTests(BudgetWorld, FinanceViewTestCase):
+    """ A denied line has nothing to burn down, so it has no bar, least of all a red one. """
+
+    def setUp(self):
+        super(DeniedLineBarTests, self).setUp()
+        self.grant('view_subledger', 'view_fundingrequest')
+        self.make_world()
+
+    def test_the_dashboard_and_the_requests_page(self):
+        FRLineItem.objects.filter(funding_request=self.request).update(
+            amount_awarded=Decimal('0.00'))
+        red = 'progress-bar-danger" style="width:100%"'
+        dashboard = self.client.get(reverse('finance:dashboard') + '?fy=%s' % YEAR)
+        lines = dashboard.content.decode().split('fin-fr-line-head')
+        self.assertNotIn(red, next(chunk for chunk in lines[1:] if '>Truss<' in chunk))
+        page = self.client.get(reverse('finance:fr-detail', args=[self.request.pk]))
+        self.assertContains(page, 'Denied')
+        self.assertNotContains(page, 'width:100%')

@@ -1644,6 +1644,25 @@ BUDGET_LINE_NUMBER = re.compile(r'^\d{4}$')
 FISCAL_YEAR_IN_TEXT = re.compile(r'\bFY\s*(\d{4}|\d{2})\b', re.IGNORECASE)
 
 
+def check_request_ids(rows):
+    """
+    Refuse two of a budget's lines sharing a Request ID, which is how a memo
+    names a line. ``rows`` is every line being saved, as ``(Request ID, name)``.
+
+    Asked of a whole form rather than of each line, because two lines can swap
+    their IDs, or a new line take a removed one's, in a single save.
+    """
+    seen = {}
+    for number, name in rows:
+        if not number:
+            continue
+        if number in seen:
+            raise ValidationError(
+                "“%s” and “%s” both have the Request ID %s. Each line of a budget needs its own."
+                % (seen[number], name, number))
+        seen[number] = name
+
+
 def budget_name(fiscal_year):
     """ The name a new budget starts with: ``FY27 SGA Budget``. """
     return "FY%s SGA Budget" % str(fiscal_year)[-2:]
@@ -3319,6 +3338,19 @@ class ParsedTransaction(models.Model):
         for attname, value in (routing or {}).items():
             setattr(self, attname, value)
 
+    def _newly_names_its_line(self):
+        """
+        Whether this save charges a line it wasn't on. A refund follows its
+        purchase, and an entry already on a line stays editable.
+        """
+        if self.refund_of_id is not None:
+            return False
+        if self.pk is None:
+            return True
+        saved = (ParsedTransaction.objects.filter(pk=self.pk)
+                 .values_list('fr_line_target_id', flat=True).first())
+        return saved != self.fr_line_target_id
+
     def _carry_routing_to_refunds(self):
         """ Move every refund of this purchase to wherever the purchase is now charged. """
         attnames = self._routing_attnames()
@@ -3459,6 +3491,10 @@ class ParsedTransaction(models.Model):
                     % (problem, what, "budget" if fund.draws_on_budget else "funding request"))
             elif problem:
                 errors['fr_line_target'] = problem
+            elif line is not None and not line.amount_awarded and self._newly_names_its_line():
+                errors['fr_line_target'] = (
+                    "%s is %s, so nothing can be charged to it."
+                    % (line.label, "pending SGA approval" if line.is_waiting else "denied by SGA"))
 
         if payment_for is not None and 'funding_request' not in errors:
             word = "budget" if payment_for.is_budget else "funding request"
