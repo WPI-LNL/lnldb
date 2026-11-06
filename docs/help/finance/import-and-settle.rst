@@ -26,7 +26,7 @@ overlaps last month's is safe. If in doubt, export the whole fiscal year so far.
 Import the File
 ---------------
 
-#. Open the `Queue` tab and click `Import an export`.
+#. Open the `Queue` tab and click `Import an export`, or choose `Import Workday Export` from the `Finance` menu.
 #. Drop the file onto the box, or click `browse for a file`, then click `Import`. Tick `Preview only` if you just want to
    look at what is in the file.
 #. **Check the confirmation page before going on.** It says how many new lines the file will add to the queue, their

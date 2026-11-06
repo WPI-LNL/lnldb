@@ -14,8 +14,8 @@
         </a>
     {% endpermission %}
     {% if can_import %}
-        <button type="button" class="btn btn-default" id="fin-import-toggle"
-                aria-expanded="false" aria-controls="fin-import-panel">
+        <button type="button" class="btn {% if import_open %}btn-primary{% else %}btn-default{% endif %}" id="fin-import-toggle"
+                aria-expanded="{% if import_open %}true{% else %}false{% endif %}" aria-controls="fin-import-panel">
             <span class="glyphicon glyphicon-cloud-upload"></span> Import an export
         </button>
     {% endif %}
@@ -46,10 +46,13 @@
     {% comment %}
         Collapsed by default. Importing happens once a month; reconciling is
         what this page is for, and a drop zone the height of three rows sitting
-        above the work is not a fair trade for one button.
+        above the work is not a fair trade for one button. ?import=1, the Finance
+        menu's Import Workday Export, opens it: decided here rather than in
+        queue.js, so the link still works when the page it is clicked on is the
+        queue itself.
     {% endcomment %}
     {% if can_import %}
-        <div class="fin-panel fin-import-panel is-folded" id="fin-import-panel">
+        <div class="fin-panel fin-import-panel{% if not import_open %} is-folded{% endif %}" id="fin-import-panel">
             <div class="fin-panel-body">
                 <form method="post" action="{% url 'finance:upload' %}"
                       enctype="multipart/form-data" id="fin-upload-form">

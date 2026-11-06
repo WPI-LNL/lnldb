@@ -171,10 +171,11 @@ The pages
 
 Every page is under ``/db/finance/``. Looking needs ``view_subledger`` (the
 *SGA Funding* tab needs ``view_fundingrequest``, which is granted with it); the last
-column is what changing anything there needs. The site's *Finance* menu links
-to the dashboard, the ledger, projects, funding requests, the queue and *Log a
-purchase*, and to *Billing* for whoever can bill; every page is a tab across
-the top of the others.
+column is what changing anything there needs. Every page is a tab across the
+top of the others, and the site's *Finance* menu lists the same pages in the
+same order, to the same people. Under them are *Import Workday Export*, for
+whoever can import, which opens the queue with its import panel unfolded
+(``?import=1``), and *Add Encumbrance*, for whoever can edit the subledger.
 
 ===========  ==============  ===============================================  ==========================
 Tab          URL             What it is for                                   To change anything

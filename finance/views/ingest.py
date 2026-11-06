@@ -128,6 +128,7 @@ def queue(request):
         'queue_total': sum((abs(t.unallocated_amount) for t in unreconciled), Decimal('0.00')),
         'autofilled_count': filled,
         'can_import': request.user.has_perm('finance.import_workdaytransaction'),
+        'import_open': request.GET.get('import') == '1',
         'can_edit': can_edit,
         # A memo quoting a request lnldb lacks offers to add it, pre-filled.
         'can_add_request': request.user.has_perm('finance.manage_fundingrequest'),

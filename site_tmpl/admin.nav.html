@@ -220,15 +220,25 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url "finance:dashboard" %}">Dashboard</a></li>
-                            <li><a href="{% url "finance:ledger" %}">Subledger</a></li>
-                            <li><a href="{% url "finance:projects" %}">Project Explorer</a></li>
-                            <li><a href="{% url "finance:fr-list" %}">Funding Requests</a></li>
+                            <li><a href="{% url "finance:ledger" %}">Ledger</a></li>
+                            {% permission request.user has 'finance.edit_subledger' %}
+                                <li><a href="{% url "finance:queue" %}">Queue</a></li>
+                            {% endpermission %}
+                            <li><a href="{% url "finance:events" %}">Events</a></li>
                             {% permission request.user has 'events.bill_event' %}
                                 <li><a href="{% url "finance:billing" %}">Billing</a></li>
                             {% endpermission %}
-                            {% permission request.user has 'finance.edit_subledger' %}
+                            <li><a href="{% url "finance:balances" %}">Balances</a></li>
+                            <li><a href="{% url "finance:projects" %}">Projects</a></li>
+                            <li><a href="{% url "finance:fr-list" %}">SGA Funding</a></li>
+                            <li><a href="{% url "finance:reports" %}">Reports</a></li>
+                            {% if perms.finance.import_workdaytransaction or perms.finance.edit_subledger %}
                                 <li class="divider"></li>
-                                <li><a href="{% url "finance:queue" %}">Ingestion Queue</a></li>
+                            {% endif %}
+                            {% permission request.user has 'finance.import_workdaytransaction' %}
+                                <li><a href="{% url "finance:queue" %}?import=1">Import Workday Export</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'finance.edit_subledger' %}
                                 <li><a href="{% url "finance:encumbrance-new" %}">Add Encumbrance</a></li>
                             {% endpermission %}
                         </ul>

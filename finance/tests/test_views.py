@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import re
 from decimal import Decimal
 
 import reversion
@@ -125,6 +126,47 @@ class PermissionTests(FinanceViewTestCase):
         self.grant('view_subledger', 'edit_subledger')
         response = self.client.get(reverse('finance:dashboard'))
         self.assertNotContains(response, "Read-only view")
+
+    def finance_menu_html(self):
+        html = self.client.get(reverse('finance:dashboard')).content.decode()
+        return re.search(r'Finance\s*<b class="caret"></b>\s*</a>\s*'
+                         r'<ul class="dropdown-menu">(.*?)</ul>', html, re.S).group(1)
+
+    def finance_menu(self):
+        """ The labels in the site's Finance dropdown, in order, as this user sees them. """
+        return re.findall(r'<a href="[^"]*">([^<]+)</a>', self.finance_menu_html())
+
+    def test_finance_menu_lists_the_tabs_for_a_member(self):
+        self.grant('view_subledger')
+        self.assertEqual(self.finance_menu(), [
+            'Dashboard', 'Ledger', 'Events', 'Balances', 'Projects', 'SGA Funding', 'Reports'])
+        self.assertNotIn('divider', self.finance_menu_html())
+
+    def test_finance_menu_adds_what_the_treasurer_can_do(self):
+        self.grant('view_subledger', 'edit_subledger', 'import_workdaytransaction')
+        self.user.user_permissions.add(Permission.objects.get(
+            codename='bill_event', content_type__app_label='events'))
+        self.assertEqual(self.finance_menu(), [
+            'Dashboard', 'Ledger', 'Queue', 'Events', 'Billing', 'Balances', 'Projects',
+            'SGA Funding', 'Reports', 'Import Workday Export', 'Add Encumbrance'])
+
+    def test_finance_menu_divides_off_import_for_someone_who_can_only_import(self):
+        self.grant('view_subledger', 'import_workdaytransaction')
+        self.assertEqual(self.finance_menu()[-2:], ['Reports', 'Import Workday Export'])
+        self.assertIn('divider', self.finance_menu_html())
+
+    def test_import_panel_is_folded_unless_the_link_asks_for_it(self):
+        self.grant('view_subledger', 'import_workdaytransaction')
+        queue = reverse('finance:queue')
+        self.assertContains(self.client.get(queue), 'fin-import-panel is-folded')
+        response = self.client.get(queue + '?import=1')
+        self.assertContains(response, 'class="fin-panel fin-import-panel"')
+        self.assertContains(response, 'aria-expanded="true"')
+
+    def test_import_link_shows_no_panel_to_someone_who_cannot_import(self):
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:queue') + '?import=1')
+        self.assertNotContains(response, 'id="fin-import-panel"')
 
 
 class DashboardTests(FinanceViewTestCase):
