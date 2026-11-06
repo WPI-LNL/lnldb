@@ -22,6 +22,20 @@ Excel or CSV. Either format works, and so does a file that still has Workday's r
 The date range doesn't need to be exact. Lines that were already imported are recognised and skipped, so an export that
 overlaps last month's is safe. If in doubt, export the whole fiscal year so far.
 
+Workday's account report has separate columns, and each column's figure opens its own export. **Checks and cash sale
+forms post under YTD Revenue**, so the export of YTD Expenses leaves them out. Click the YTD Revenue figure, export the
+details as well, and import that file the same way: it has the same columns, and its lines join the queue like any
+others. Once settled they are in the `Ledger` tab and the balances like every other line, though they sit apart in
+Workday.
+
+A check for a rental is that event's payment, so link it to the event or its multi-bill when you settle it. Anything else
+gets a revenue source, such as *Cash Sale and Deposits* or *Donations*.
+
+.. note::
+    Workday counts Internal Service Delivery payments under YTD Expenses, as money off the total. So *Came in* on the
+    `Balances` tab can be more than Workday's YTD Revenue, and Workday's YTD Expenses can be less than *Spent*. Both are
+    right: Balances sorts money by whose it is, and Workday by ledger account.
+
 
 Import the File
 ---------------

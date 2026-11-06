@@ -35,26 +35,23 @@
     <div class="fin-panel">
         <div class="fin-panel-body">
             {% comment %}
-                Said first because every figure below rests on it: the newest
-                import is as current as any balance here can be. The rest of
-                what the page means is folded away under How to read this page,
-                so the key to the figures is all that stands between the reader
-                and the figures.
+                The page opens on the figures. What they mean, and how current
+                they are, is folded away under How to read this page.
             {% endcomment %}
             {% if year.books_start %}
-                <p class="fin-balance-intro">
-                    {% if year.latest_line_date %}Counted up to <strong>{{ year.latest_line_date|date:"M j, Y" }}</strong>, the newest imported line.{% endif %}
-                    The books start on {{ year.books_start|date:"M j, Y" }}.
-                </p>
-                <p class="fin-balance-intro">
-                    Money going out, and any balance below zero, is in <strong>(parentheses)</strong>.
-                    Each fund's row adds up across: Opening + Came in + Spent + Transfers = {% if year.year_over %}Closing{% else %}Now{% endif %}.
-                </p>
-                <p class="fin-balance-intro">
-                    $0 is nothing, <span class="fin-unknown">?</span> is not known yet, and <span class="fin-na">—</span> means the figure does not apply to that row.
-                </p>
                 <details class="fin-howto">
                     <summary>How to read this page</summary>
+                    <p class="fin-balance-intro fin-mt-8">
+                        {% if year.latest_line_date %}Counted up to <strong>{{ year.latest_line_date|date:"M j, Y" }}</strong>, the newest imported line.{% endif %}
+                        The books start on {{ year.books_start|date:"M j, Y" }}.
+                    </p>
+                    <p class="fin-balance-intro">
+                        Money going out, and any balance below zero, is in <strong>(parentheses)</strong>.
+                        Each fund's row adds up across: Opening + Came in + Spent + Transfers = {% if year.year_over %}Closing{% else %}Now{% endif %}.
+                    </p>
+                    <p class="fin-balance-intro">
+                        $0 is nothing, <span class="fin-unknown">?</span> is not known yet, and <span class="fin-na">—</span> means the figure does not apply to that row.
+                    </p>
                     <ul>
                         <li><strong>After encumbrances</strong> is {% if year.year_over %}Closing{% else %}Now{% endif %} + Encumbered: what is left once the purchases logged in advance are charged. For a fund SGA reimburses it is below zero by what SGA will owe.</li>
                         <li><strong>Event costs awaiting payment</strong>: an expense linked to an event is not taken from Legacy (or any fund that carries forward) until the event is paid for. Until then it waits in a row of its own, and moves into the fund under Transfers on the day the event's bill is marked paid.</li>
@@ -130,10 +127,9 @@
                     {{ account.code }}
                     {% if account.account.notes %}<span class="fin-muted">{{ account.account.notes }}</span>{% endif %}
                 </span>
-                {% if account.unpaid_bills or waiting.events or account.checkpoints %}
+                {% if account.unpaid_bills or account.checkpoints %}
                     <nav class="fin-jump" aria-label="{{ account.code }}">
                         {% if account.unpaid_bills %}<a href="#fin-unpaid-{{ slug }}">Bills not yet paid ({{ account.unpaid_bills|length }})</a>{% endif %}
-                        {% if waiting.events %}<a href="#fin-waiting-{{ slug }}">Awaiting payment ({{ waiting.events|length }})</a>{% endif %}
                         {% if account.checkpoints %}<a href="#fin-workday-{{ slug }}">Workday balances ({{ account.checkpoints|length }})</a>{% endif %}
                     </nav>
                 {% endif %}
@@ -179,13 +175,6 @@
                             <div class="fin-stat-label">SGA will owe LNL</div>
                             <div class="fin-stat-value">{{ account.owed_by_sga|figure }}</div>
                             <div class="fin-stat-sub">for funding request spending, once the encumbered purchases are charged</div>
-                        </div>
-                    {% endif %}
-                    {% if waiting.events %}
-                        <div class="fin-stat">
-                            <div class="fin-stat-label">Event costs awaiting payment</div>
-                            <div class="fin-stat-value"><a href="#fin-waiting-{{ slug }}">{{ waiting.after_encumbrances|figure }}</a></div>
-                            <div class="fin-stat-sub">{{ waiting.events|length }} event{{ waiting.events|length|pluralize }}, kept out of {% if own %}{{ own.name }}{% else %}the fund{% endif %} until paid for</div>
                         </div>
                     {% endif %}
                 </div>
@@ -239,7 +228,7 @@
                                     {% else %}{{ row.name }}{% endif %}
                                     <div class="fin-muted">
                                         {% if row.is_own %}{{ account.code }}'s own money &middot; {% endif %}{{ row.behaviour_label }}
-                                        {% if row.events %}&middot; <a href="#fin-waiting-{{ slug }}">{{ row.events|length }} event{{ row.events|length|pluralize }}</a>{% endif %}
+                                        {% if row.events %}&middot; <span title="{% for event, amount in row.events %}{{ event }}{% if not forloop.last %}, {% endif %}{% endfor %}">{{ row.events|length }} event{{ row.events|length|pluralize }}</span>{% endif %}
                                     </div>
                                 </td>
                                 <td class="fin-num">{% if row.has_opening %}{{ row.opening|figure }}{% else %}<span class="fin-na" title="This fund starts each year with nothing in it">—</span>{% endif %}</td>
@@ -329,39 +318,6 @@
                 </div>
             {% endif %}
 
-            {% if waiting.events %}
-                <div class="fin-panel-divider fin-anchor" id="fin-waiting-{{ slug }}">Event costs awaiting payment</div>
-                <div class="fin-table-wrap">
-                    <table class="table fin-table fin-balance-table">
-                        <thead>
-                            <tr>
-                                <th>Event</th>
-                                <th>Date</th>
-                                <th class="fin-num" title="What has been charged and encumbered for the event, kept out of the fund until the event is paid for">Costs and encumbrances</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for event, amount in waiting.events %}
-                                <tr>
-                                    <td><a href="{% url 'events:detail' event.pk %}">{{ event }}</a></td>
-                                    <td>{{ event.datetime_start|date:"M j, Y" }}</td>
-                                    <td class="fin-num">{{ amount|negate|figure }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="2">
-                                    In total
-                                    <div class="fin-muted">Each moves into the fund it was charged to on the day its event is paid for</div>
-                                </th>
-                                <th class="fin-num">{{ waiting.after_encumbrances|figure }}</th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            {% endif %}
-
             {% if account.checkpoints %}
                 <div class="fin-panel-divider fin-anchor" id="fin-workday-{{ slug }}">Workday balances</div>
                 <div class="fin-table-wrap">
@@ -392,7 +348,7 @@
                                         {% if row.is_anchor %}
                                             Everything is counted from this one.
                                         {% elif row.difference %}
-                                            Lines are missing from the ledger, or a balance was copied wrong.
+                                            Lines are missing from the ledger, a balance was copied wrong, or a line posted after the balance was read.
                                         {% else %}
                                             Agrees.
                                         {% endif %}

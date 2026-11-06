@@ -172,6 +172,62 @@ class ImportReportingTests(FinanceViewTestCase):
         self.assertContains(response, 'neither a CSV nor an .xlsx')
 
 
+class RevenueExportTests(FinanceViewTestCase):
+    """
+    The export of Workday's YTD Revenue column. It has the journal export's
+    columns, so it is the same import into the same queue.
+    """
+    HEADER = CSV_HEADER + ",Tracking"
+    CHECK = ('08/05/2026,0,400,400,Customer Transaction: WPI Student Activities - 08/05/2026,,,'
+             'Operational Journal: WPI - 08/05/2026,DB Studio Rental,DB Studio Rental,'
+             '810-FD Agency,1125-CC Student Clubs,59500:Other Income,,Other Income - General,,'
+             '226-AG Lens & Light Club,920 Agencies,')
+    GIFT = ('10/02/2026,0,25,25,,,,26100124-JE - WPI - 10/02/2026,CV_JRN_10_02_2026,,'
+            '810-FD Agency,1125-CC Student Clubs,56000:Contributions - Operating,,'
+            'Contributions - Operating,,226-AG Lens & Light Club,920 Agencies,')
+
+    def setUp(self):
+        super(RevenueExportTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'import_workdaytransaction')
+
+    def _import(self):
+        body = "\n".join((self.HEADER, self.CHECK, self.GIFT))
+        data = {'csv_file': SimpleUploadedFile('Details_View.csv', body.encode('utf-8'),
+                                               content_type='text/csv')}
+        self.client.post(reverse('finance:upload'), data)
+        return self.client.post(reverse('finance:upload-confirm'), {})
+
+    def test_it_reads_as_money_in_for_the_account(self):
+        self._import()
+        check, gift = WorkdayTransaction.objects.order_by('accounting_date')
+        self.assertEqual(check.net_amount, Decimal('400.00'))
+        self.assertTrue(check.is_revenue)
+        self.assertEqual(check.ledger_account, '59500:Other Income')
+        self.assertEqual(gift.reference, '26100124-JE')
+
+    def test_it_lands_in_the_queue_to_be_settled(self):
+        response = self._import()
+        self.assertRedirects(response, reverse('finance:queue'), fetch_redirect_response=False)
+        self.assertEqual(WorkdayTransaction.objects.unreconciled().count(), 2)
+        self.assertContains(self.client.get(reverse('finance:queue')), 'DB Studio Rental')
+
+    def test_importing_it_twice_adds_nothing(self):
+        self._import()
+        self._import()
+        self.assertEqual(WorkdayTransaction.objects.count(), 2)
+
+    def test_the_queue_leaves_what_a_check_was_for_to_the_treasurer(self):
+        self._import()
+        check = WorkdayTransaction.objects.order_by('accounting_date').first()
+        suggestions = suggest_all(check)
+        self.assertEqual(suggestions['kind'], 'revenue')
+        self.assertEqual(suggestions['description'], 'DB Studio Rental')
+        self.assertEqual(suggestions['fund_source'].value, fund('legacy').pk)
+        # Nothing here says which show it paid for, and the Treasurer decides.
+        self.assertIsNone(suggestions['linked_event'])
+        self.assertIsNone(suggestions['revenue_source'])
+
+
 class StagedImportTests(FinanceViewTestCase):
     """
     The file waiting between "choose" and "confirm".

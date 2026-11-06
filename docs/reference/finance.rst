@@ -1713,7 +1713,16 @@ entered is the anchor, and every other day is that figure plus or minus the
 lines in between, counting backwards as well as forwards. Today's balance is
 enough to work out what the account held when the books started. Each later
 Workday balance is a check, and a difference means lines are missing from the
-ledger or a figure was copied wrong.
+ledger, a figure was copied wrong, or a line posted after the balance was read.
+
+**Workday's revenue** is a separate export. Workday's report sorts lines into
+columns by ledger account, and the export behind a figure holds that column
+only: checks and cash sale forms (56000 Contributions, 59500 Other Income) are
+under *YTD Revenue*, and everything else, Internal Service Deliveries on 70050
+included, under *YTD Expenses*. The two exports have the same columns, so both
+go through the one importer into the queue, and nothing in lnldb tells their
+lines apart. A check that is in a Workday balance but not imported sits inside
+the derived opening, because the anchor holds it and no line says so.
 
 **A fund's balance** is everything settled to it since the books started:
 money in, less money out (net of refunds, which un-spend rather than earn),
@@ -1725,7 +1734,8 @@ to the cash, so a half-finished queue makes the split vague rather than wrong.
 **An event's costs wait for its payment.** An expense (or a refund of one) on a
 fund that carries forward and is linked to an event, whatever its spend category,
 is not taken from that fund until the event is paid for. Until then it sits in
-*Event costs awaiting payment*, a row of its own, so a big sub-rental for a show
+*Event costs awaiting payment*, a row of its own that counts the events it waits
+for, so a big sub-rental for a show
 the client has not paid yet doesn't make Legacy look short. An event is paid for
 on its bill's *Paid on* date: the bill that stands for it, as
 :func:`~finance.calculators.latest_bill` chooses, its own or its multi-bill's.

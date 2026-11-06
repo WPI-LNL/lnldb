@@ -920,11 +920,92 @@ class BilledUnpaidTests(LedgerFixture, TestCase):
 # The pages
 # ---------------------------------------------------------------------------
 
+#: How Workday's revenue export marks a check or cash sale form.
+CHECK = {'ledger_account': '59500:Other Income', 'revenue_category': 'Other Income - General'}
+
+
+def check_line(date=datetime.date(2025, 10, 20), amount='228.05', memo='Hill House Rental',
+               **worktags):
+    """ A line off the export of Workday's YTD Revenue column. """
+    return line(date, amount, memo, **dict(CHECK, **worktags))
+
+
+class RevenueExportLineTests(LedgerFixture, TestCase):
+    """
+    Workday's report puts checks and cash sale forms under YTD Revenue, and its
+    export of YTD Expenses leaves them out, so a line from that column can
+    arrive after the books were worked out without it. It is an ordinary line.
+    """
+
+    def setUp(self):
+        self.build_year()
+
+    def account_statement(self):
+        return balances.statement(FY26).account('226-AG')
+
+    def test_counted_back_from_a_later_balance_a_check_lowers_the_opening(self):
+        """
+        Workday's balance already holds the check, so the cash stays put and
+        the opening, which had been carrying the check, comes down by it.
+        """
+        check_line()
+        statement = self.account_statement()
+        self.assertEqual(statement.opening_cash, Decimal('9771.95'))
+        self.assertEqual(statement.closing_cash, Decimal('9500.00'))
+
+    def test_counted_on_from_the_opening_a_check_raises_the_cash(self):
+        self.year_end.delete()
+        checkpoint('226-AG', datetime.date(2025, 6, 30), '10000.00')
+        check_line()
+        statement = self.account_statement()
+        self.assertEqual(statement.opening_cash, Decimal('10000.00'))
+        self.assertEqual(statement.closing_cash, Decimal('9728.05'))
+
+    def test_an_unsettled_check_is_in_no_fund_and_a_settled_one_is(self):
+        check = check_line()
+        statement = self.account_statement()
+        self.assertEqual(statement.unfiled_closing, Decimal('28.05'))
+        self.assertEqual(statement.out_of_balance, Decimal('0.00'))
+
+        filed(check, 'legacy', non_event_revenue_type=revenue_source('cash_deposits'))
+        statement = self.account_statement()
+        self.assertEqual(statement.unfiled_closing, Decimal('-200.00'))
+        self.assertEqual(row_for(balances.statement(FY26), '226-AG', 'legacy').received,
+                         Decimal('1228.05'))
+        self.assertEqual(statement.out_of_balance, Decimal('0.00'))
+
+    def test_a_check_linked_to_an_event_pays_its_bill(self):
+        """ Why it comes in as a line: a typed total could not pay a bill. """
+        show = Event2019Factory.create(event_name='Hill House Wedding Rental')
+        Billing.objects.create(event=show, date_billed=datetime.date(2025, 10, 1),
+                               amount=Decimal('228.05'))
+        self.assertEqual(self.account_statement().billed, Decimal('228.05'))
+        filed(check_line(), 'legacy', linked_event=show)
+        self.assertEqual(self.account_statement().billed, Decimal('0.00'))
+
+
 class BalancePageTests(LedgerFixture, FinanceViewTestCase):
 
     def setUp(self):
         super(BalancePageTests, self).setUp()
         self.build_year()
+
+    def test_the_figures_come_first_and_the_key_is_folded_away(self):
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        page = response.content.decode()
+        key = page.split('<details class="fin-howto">')[1].split('</details>')[0]
+        for words in ('Counted up to', 'The books start on', '(parentheses)', 'is not known yet'):
+            self.assertIn(words, key)
+            self.assertEqual(page.count(words), key.count(words), words)
+
+    def test_revenue_lines_get_no_section_of_their_own(self):
+        check_line()
+        self.grant('view_subledger', 'import_workdaytransaction')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        self.assertNotContains(response, 'Hill House Rental')
+        self.assertNotContains(response, 'YTD Revenue')
+        self.assertNotContains(response, reverse('finance:upload'))
 
     def test_it_needs_the_ledger_permission(self):
         response = self.client.get(reverse('finance:balances'), {'fy': FY26})
@@ -946,14 +1027,17 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         for figure in ('$10,000.00', '$6,500.00', '$6,800.00', '$9,500.00'):
             self.assertIn(figure, footer)
 
-    def test_an_event_cost_waiting_for_payment_is_a_row_naming_the_event(self):
+    def test_an_event_cost_waiting_for_payment_is_one_row_with_no_tile_or_list(self):
         show = Event2019Factory.create(event_name='Spring Concert')
         filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
               linked_event=show, lnl_spend_category=category('event_subrental'))
         self.grant('view_subledger')
         response = self.client.get(reverse('finance:balances'), {'fy': FY26})
-        self.assertContains(response, 'Event costs awaiting payment')
-        self.assertContains(response, reverse('events:detail', args=[show.pk]))
+        page = response.content.decode()
+        self.assertContains(response, 'title="Spring Concert"')
+        self.assertNotIn('fin-waiting', page)
+        self.assertNotIn(reverse('events:detail', args=[show.pk]), page)
+        self.assertNotIn('Event costs awaiting payment</div>', page)
         self.assertNotContains(response, 'miss the cash')
 
     def test_a_bill_not_yet_paid_is_listed_with_free_once_paid(self):
@@ -1004,16 +1088,14 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         self.assertTrue(requests.has_opening)
         self.assertFalse(row_for(balances.statement(FY26), '226-AG', 'sga_fr').has_opening)
 
-    def test_an_event_waiting_for_payment_is_listed_with_its_costs_in_parentheses(self):
+    def test_the_waiting_row_has_its_costs_in_parentheses_and_takes_no_income(self):
         show = Event2019Factory.create(event_name='Spring Concert')
         filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
               linked_event=show, lnl_spend_category=category('event_subrental'))
         self.grant('view_subledger')
         response = self.client.get(reverse('finance:balances'), {'fy': FY26})
-        waiting = response.content.decode().split('id="fin-waiting-')[1].split('</table>')[0]
-        self.assertIn('Spring Concert', waiting)
-        self.assertIn('($1,500.00)', waiting)
         row = response.content.decode().split('Waits for each event')[1].split('</tr>')[0]
+        self.assertIn('($1,500.00)', row)
         self.assertIn('fin-na', row.split('</td>')[2], 'only costs wait, so Came in does not apply')
 
     def test_an_account_with_no_workday_balance_still_adds_up_what_moved(self):

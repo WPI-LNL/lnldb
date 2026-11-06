@@ -17,9 +17,9 @@ Workday's figure. At the end of June it is also where the fiscal year is closed.
 Reading the Balances Tab
 ------------------------
 
-Choose a fiscal year in the filter bar. The top of the page says the date of the newest imported line: nothing after
-that date is counted yet, so import the latest export before relying on today's figures. *How to read this page* opens
-a short key to the figures, and *On this page* jumps to each account.
+Choose a fiscal year in the filter bar. *How to read this page* opens a short key to the figures, and says the date of
+the newest imported line: nothing after that date is counted yet, so import the latest export before relying on today's
+figures. *On this page* jumps to each account.
 
 **Money going out, and any balance below zero, is always in parentheses**, like ($1,500.00). So every figure carries its
 sign, and you can add a row across or a column down. Every finance page follows the same rules (see *Reading the
@@ -39,7 +39,6 @@ Each account starts with a few figures that answer the usual questions:
 - **Legacy free to spend** (the account's own money) -- Legacy now, less its encumbrances.
 - **Billed, not paid** -- what events you have billed and haven't been paid for yet still owe. See below.
 - **SGA will owe LNL** -- what the funding request will be owed once its encumbered purchases are charged.
-- **Event costs awaiting payment** -- costs kept out of Legacy until their events are paid for. See below.
 
 A figure only shows when it applies. Underneath is a table with one row per fund:
 
@@ -63,9 +62,8 @@ The **Not settled yet** row is every line still in the queue. With it, the funds
 the queue is empty it is zero.
 
 The **Event costs awaiting payment** row holds every expense on Legacy (or another fund that carries forward) that is
-linked to an event the client hasn't paid for yet. The events are listed under the table, each with its costs, and the
-row links to them. A big sub-rental for a show doesn't make Legacy look short while you wait for the client to pay you
-back:
+linked to an event the client hasn't paid for yet. The row says how many events it is waiting for; hover over the count
+to see which. A big sub-rental for a show doesn't make Legacy look short while you wait for the client to pay you back:
 
 - On the day the event's bill is marked paid, the cost moves into Legacy, shown under **Transfers**. The bill is marked
   paid on the day the last of its payment reached Workday, so the cost and the payment land in Legacy together.
@@ -112,10 +110,17 @@ The first balance you ever record is the starting point: every other day's cash 
 backwards. Each later one is a check, listed under **Workday balances** with what the ledger says for the same day:
 
 - **Agrees** -- all is well.
-- **A difference** -- lines are missing from the ledger (import a wider export) or the balance was copied wrong.
+- **A difference** -- lines are missing from the ledger (import a wider export, and the YTD Revenue export; see :doc:`import-and-settle`), the
+  balance was copied wrong, or a line posted after you read the balance. Workday dates a supplier invoice by the invoice,
+  so it can land weeks after that date.
 
 If an account has no Workday balance yet, the page says its cash isn't known and shows only what moved. Any balance
 will do -- today's is fine.
+
+.. tip::
+    The steadiest starting point is the account's **Beginning Year Balance** from Workday, entered under
+    `Opening balances`. Lines are counted forwards from it, so one that posts late changes the cash but not the opening.
+    Counted backwards from a later balance, a missing line shifts the opening instead.
 
 
 Opening Balances
