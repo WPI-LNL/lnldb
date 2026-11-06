@@ -29,7 +29,7 @@
             <input type="number" name="page" id="fin-pager-page" class="form-control input-sm"
                    min="1" max="{{ page.paginator.num_pages }}" value="{{ page.number }}" required>
             <span class="fin-muted">of {{ page.paginator.num_pages }}</span>
-            <button type="submit" class="btn btn-default btn-sm">Go</button>
+            <button type="submit" class="btn btn-default">Go</button>
         </form>
     </nav>
 {% endif %}

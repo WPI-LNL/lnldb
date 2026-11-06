@@ -70,8 +70,9 @@ Billed                      The event's latest bill. A corrected bill replaces t
 Received                    Payments linked to the event, and where the bill stands: not billed, no bill needed
                             (you decided it is not billed), billed with nothing received, part received, received
                             in full, or received with no bill.
-Direct costs                Costs linked to the event. Costs paid from a funding request or the SGA budget are
-                            shown as *paid by SGA*. Purchases logged in advance are shown as *encumbered*.
+Direct costs                Costs linked to the event, in parentheses as money going out. Costs paid from a funding
+                            request or the SGA budget are shown as *paid by SGA*. Purchases logged in advance are
+                            shown as *encumbered*.
 Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and encumbrances,
                             are left out.
 Rentals billed / cost       What the client was billed for hired-in gear plus LNL's rental fee, against what the
@@ -132,4 +133,4 @@ see them all in the `Ledger`.
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
 
-`Last Modified: October 28, 2026`
+`Last Modified: November 5, 2026`

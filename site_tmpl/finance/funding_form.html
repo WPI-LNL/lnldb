@@ -1,12 +1,13 @@
 {# Edit a funding request or a budget: the header, a budget's categories, and the lines nested under them. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
 {% load static %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% if instance %}{% url 'finance:fr-detail' instance.pk %}{% else %}{% url 'finance:fr-list' %}{% endif %}">&larr; {% if instance %}{{ instance.name }}{% else %}SGA Funding{% endif %}</a>{% endblock %}
+
 {% block fin_content %}
     <div class="fin-panel">
-        <div class="fin-panel-head">{{ h2 }}</div>
         <div class="fin-panel-body">
             {% comment %}
                 is-budget / is-request decides which boxes and columns are on
@@ -20,7 +21,7 @@
                 {% csrf_token %}
 
                 {% if existing_budget %}
-                    <div class="alert alert-warning" style="font-size:13px;">
+                    <div class="alert alert-warning">
                         FY{{ existing_budget.fiscal_year|stringformat:"s"|slice:"2:" }} already has a budget:
                         <a href="{% url 'finance:fr-edit' existing_budget.pk %}">{{ existing_budget.name }}</a>.
                         A year has one budget, so add these lines to that one.
@@ -29,7 +30,7 @@
 
                 {% crispy form %}
 
-                <h4>Lines</h4>
+                <div class="fin-panel-subhead">Lines</div>
                 <p class="fin-muted">
                     Each line burns down independently. Refunds charged against a line
                     restore its balance automatically. Add as many lines as it needs.
@@ -82,7 +83,7 @@
                                         <td colspan="10">
                                             <span class="fin-cat-caret" aria-hidden="true">&#9662;</span>
                                             <span class="fin-muted">No category</span>
-                                            <button type="button" class="btn btn-xs btn-default fin-cat-add-line">
+                                            <button type="button" class="btn btn-default fin-cat-add-line">
                                                 <span class="glyphicon glyphicon-plus"></span> Line
                                             </button>
                                         </td>
@@ -109,17 +110,17 @@
                     </tbody>
                 </template>
 
-                <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
-                    <button type="button" class="btn btn-default btn-sm fin-request-only" id="fin-fr-add">
+                <div class="fin-form-row">
+                    <button type="button" class="btn btn-default fin-request-only" id="fin-fr-add">
                         <span class="glyphicon glyphicon-plus"></span> Add another line
                     </button>
-                    <button type="button" class="btn btn-default btn-sm fin-budget-only" id="fin-category-add">
+                    <button type="button" class="btn btn-default fin-budget-only" id="fin-category-add">
                         <span class="glyphicon glyphicon-plus"></span> Add category
                     </button>
-                    <span class="fin-muted" style="font-size:12px;">
+                    <span class="fin-muted fin-small">
                         Blank lines are ignored when you save.
                     </span>
-                    <span style="margin-left:auto;">
+                    <span class="fin-push">
                         <a href="{% if instance %}{% url 'finance:fr-detail' instance.pk %}{% else %}{% url 'finance:fr-list' %}{% endif %}" class="btn btn-default">Cancel</a>
                         <button type="submit" class="btn btn-primary">Save</button>
                     </span>

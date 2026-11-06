@@ -118,7 +118,7 @@ def queue(request):
         })
 
     context = {
-        'h2': "Ingestion Queue",
+        'h2': "Queue",
         'fin_page': 'queue',
         'upload_form': upload_form,
         'rows': rows,
@@ -626,7 +626,7 @@ def encumbrance(request, pk=None):
         return HttpResponseRedirect(reverse('finance:ledger'))
 
     context = {
-        'h2': "Add Encumbrance" if instance is None else "Edit Encumbrance",
+        'h2': "Add encumbrance" if instance is None else "Edit encumbrance",
         'form': form,
         'formset': formset,
         'instance': instance,

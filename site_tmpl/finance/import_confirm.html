@@ -1,5 +1,5 @@
 {# Page 3 -- "you are about to add N lines" step, shown between upload and commit. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 
 {% comment %}
@@ -9,11 +9,12 @@
     the queue is the count and the dates.
 {% endcomment %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:queue' %}">&larr; Queue</a>{% endblock %}
+
 {% block fin_content %}
     <div class="row">
         <div class="col-md-8">
             <div class="fin-panel">
-                <div class="fin-panel-head">Confirm import</div>
                 <div class="fin-panel-body">
 
                     <div class="alert alert-warning fin-import-confirm-lede">
@@ -28,11 +29,11 @@
                             <strong>{{ new_books_start|date:"M j, Y" }}</strong> instead of
                             {{ books_start|date:"M j, Y" }}. Every one of its lines joins the queue to be settled.
                             {% if opening_splits or owed_at_start %}
-                                <div style="margin-top:8px;">
+                                <div class="fin-mt-8">
                                     These were entered for {{ books_start|date:"M j, Y" }} and will need another
                                     look once the older lines are settled. Nothing is changed for you:
                                 </div>
-                                <ul style="margin:6px 0 0;">
+                                <ul class="fin-m-0 fin-mt-8">
                                     {% if opening_splits %}
                                         <li>
                                             The <a href="{% url 'finance:opening-balances' %}">opening balances</a>

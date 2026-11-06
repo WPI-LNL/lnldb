@@ -176,8 +176,8 @@ class DashboardTests(FinanceViewTestCase):
         for canvas in ('fin-cashflow', 'fin-chart-categories',
                        'fin-chart-clienttypes', 'fin-chart-services'):
             self.assertContains(response, canvas)
-        self.assertContains(response, 'Revenue by Client')
-        self.assertContains(response, 'Project Spending')
+        self.assertContains(response, 'Revenue by client')
+        self.assertContains(response, 'Project spending')
         self.assertContains(response, 'Student Group')      # client bar
         self.assertContains(response, 'Student Organization')  # client-type slice
         self.assertContains(response, 'NEL26')              # project stack
@@ -742,7 +742,7 @@ class SplitViewTests(FinanceViewTestCase):
 
     def test_detail_renders_immutable_pane(self):
         response = self.client.get(reverse('finance:txn-detail', args=[self.txn.pk]))
-        self.assertContains(response, "Workday Record")
+        self.assertContains(response, "Workday record")
         self.assertContains(response, "OT-S1")
         self.assertContains(response, "read-only")
 
@@ -795,7 +795,7 @@ class EntryDetailTests(FinanceViewTestCase):
     def test_renders(self):
         response = self.client.get(reverse('finance:entry-detail', args=[self.entry.pk]))
         self.assertContains(response, "Gaff tape")
-        self.assertContains(response, "Audit Trail")
+        self.assertContains(response, "Audit trail")
 
     def test_inherited_event_metadata_shown(self):
         org = OrgFactory.create(name='Student Group', workday_fund=810)
@@ -806,7 +806,7 @@ class EntryDetailTests(FinanceViewTestCase):
             effective_date=revenue_parent.accounting_date)
         response = self.client.get(reverse('finance:entry-detail', args=[entry.pk]))
         self.assertContains(response, "Student Organization")
-        self.assertContains(response, "Inherited from the Event")
+        self.assertContains(response, "Inherited from the event")
 
     def test_history_from_an_older_schema_still_renders(self):
         """

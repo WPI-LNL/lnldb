@@ -877,7 +877,7 @@ class DashboardTests(CacheResetMixin, FinanceViewTestCase):
         spend(request, '100.00', datetime.date(2025, 9, 1))
         reimburse(request, '60.00', date=datetime.date(2025, 12, 1))
         response = self.client.get(reverse('finance:dashboard'), {'fy': 2026})
-        self.assertContains(response, 'Revenue by Source')
+        self.assertContains(response, 'Revenue by source')
         self.assertContains(response, 'SGA Funding Request Reimbursement')
         self.assertContains(response, 'LNL kept')
         self.assertContains(response, 'Owed to LNL')

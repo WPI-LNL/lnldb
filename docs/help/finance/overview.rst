@@ -165,6 +165,9 @@ Reports        Print or download reports for the board, for SGA and for budget r
 or both. Every page follows it, except where the page says it is about today (what each fund holds now, and what is
 owed).
 
+**Every page** opens the same way: its title and what it is for on the left, and what you can do from it on the right.
+A page you reach from another has a link above the title to take you back.
+
 **Long lists** (the queue, the ledger and the multi-bills) are split into pages. The links under the list go to the
 first page, the last page or the pages around the one you are on. To jump straight to a page, type its number in the
 **Go to page** box and click `Go`. Any search, sort or filter stays as it is.
@@ -196,4 +199,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-settle`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 30, 2026`
+`Last Modified: November 5, 2026`

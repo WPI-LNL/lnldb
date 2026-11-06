@@ -1,0 +1,21 @@
+{# A finance page with a header of its own: where it is, what it is, and what can be done from here. #}
+{% extends 'finance/base_finance.html' %}
+
+{% comment %}
+    The same header on every tab and every record, built here once so it cannot
+    drift. A page fills in fin_title, a one-line fin_sub and any fin_actions;
+    fin_back is the way back from a record to the list it came from.
+
+    A page that prints its own heading (see fin-print-header) sets
+    fin_head_class to hidden-print, so a sheet does not carry the title twice.
+{% endcomment %}
+{% block fin_head %}
+    <div class="fin-page-head {% block fin_head_class %}{% endblock %}">
+        <div class="fin-page-heading">
+            {% block fin_back %}{% endblock %}
+            <h3 class="fin-page-title">{% block fin_title %}{{ h2 }}{% endblock %}</h3>
+            <div class="fin-page-sub">{% block fin_sub %}{% endblock %}</div>
+        </div>
+        <div class="fin-page-actions hidden-print">{% block fin_actions %}{% endblock %}</div>
+    </div>
+{% endblock %}

@@ -1,30 +1,30 @@
 {# One SGA budget: its figures, what SGA has deposited, and its lines grouped by category. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">&larr; SGA Funding</a>{% endblock %}
+{% block fin_title %}
+    {{ fr.name }}
+    {% if fr.closed %}<span class="fin-tag">Closed</span>{% endif %}
+{% endblock %}
+{% block fin_sub %}SGA budget{% endblock %}
+{% block fin_actions %}
+    {% permission request.user has 'finance.view_subledger' %}
+        <a href="{% url 'finance:report' 'budget-report-form' %}?budget={{ fr.pk }}" class="btn btn-default"
+           title="SGA's proof of spending: a payment request for each line item, with its receipts">
+            <span class="glyphicon glyphicon-file"></span> Budget Report Form
+        </a>
+    {% endpermission %}
+    {% permission request.user has 'finance.manage_fundingrequest' %}
+        <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
+    {% endpermission %}
+{% endblock %}
+
 {% block fin_content %}
     <div class="fin-panel">
-        <div class="fin-panel-head">
-            <span>
-                {{ fr.name }}
-                <span class="fin-muted" style="font-weight:400;font-size:12px;">SGA budget</span>
-                {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
-            </span>
-            <span>
-                {% permission request.user has 'finance.view_subledger' %}
-                    <a href="{% url 'finance:report' 'budget-report-form' %}?budget={{ fr.pk }}" class="btn btn-xs btn-default"
-                       title="SGA's proof of spending: a payment request for each line item, with its receipts">
-                        <span class="glyphicon glyphicon-file"></span> Budget Report Form
-                    </a>
-                {% endpermission %}
-                {% permission request.user has 'finance.manage_fundingrequest' %}
-                    <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-xs btn-default">Edit</a>
-                {% endpermission %}
-            </span>
-        </div>
         <div class="fin-panel-body">
-            <div class="fin-stats" style="margin-bottom:12px;">
+            <div class="fin-stats fin-mb-12">
                 <div class="fin-stat">
                     <div class="fin-stat-label">Requested</div>
                     <div class="fin-stat-value">{% requested totals %}</div>
@@ -35,11 +35,11 @@
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Spent</div>
-                    <div class="fin-stat-value text-danger">{{ totals.total_spent|negate|money }}</div>
+                    <div class="fin-stat-value {{ totals.total_spent|negate|money_class }}">{{ totals.total_spent|negate|money }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Remaining</div>
-                    <div class="fin-stat-value {% if totals.is_overspent %}text-danger{% else %}text-success{% endif %}">
+                    <div class="fin-stat-value {{ totals.total_remaining|money_class }}">
                         {{ totals.total_remaining|money }}
                     </div>
                 </div>
@@ -55,7 +55,7 @@
                     Each line is Event Production or Projection on its own, so
                     the budget's figures are split by side as well.
                 {% endcomment %}
-                <table class="table fin-table" style="margin:12px 0 0;max-width:720px;">
+                <table class="table fin-table fin-m-0 fin-mt-12 fin-side-table">
                     <thead>
                         <tr>
                             <th>Side</th><th class="fin-num">Lines</th>
@@ -71,7 +71,7 @@
                                 {% if side.line_count %}
                                     <td class="fin-num">{% requested side %}</td>
                                     <td class="fin-num">{% approved side %}</td>
-                                    <td class="fin-num text-danger">{{ side.total_spent|negate|money }}</td>
+                                    <td class="fin-num {{ side.total_spent|negate|money_class }}">{{ side.total_spent|negate|money }}</td>
                                     <td class="fin-num {% if side.is_overspent %}text-danger{% endif %}">{{ side.total_remaining|money }}</td>
                                 {% else %}
                                     <td class="fin-num" colspan="4"><span class="fin-na" title="No lines on this side">—</span></td>
@@ -87,7 +87,7 @@
                     A Workday memo names a budget line by its Request ID, so a
                     line without one can't be matched from the queue.
                 {% endcomment %}
-                <div class="alert alert-warning" style="font-size:13px;margin:12px 0 0;">
+                <div class="alert alert-warning fin-m-0 fin-mt-12">
                     {% if unnumbered|length == 1 %}One line has{% else %}{{ unnumbered|length }} lines have{% endif %}
                     no Request ID yet, so a Workday memo can't name {% if unnumbered|length == 1 %}it{% else %}them{% endif %}:
                     {% for line in unnumbered|slice:":8" %}{{ line.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if unnumbered|length > 8 %} and {{ unnumbered|length|add:"-8" }} more{% endif %}.
@@ -96,7 +96,7 @@
                     {% endpermission %}
                 </div>
             {% endif %}
-            {% if fr.notes %}<p class="fin-muted" style="margin-top:10px;">{{ fr.notes|linebreaksbr }}</p>{% endif %}
+            {% if fr.notes %}<p class="fin-muted fin-mt-12">{{ fr.notes|linebreaksbr }}</p>{% endif %}
         </div>
     </div>
 
@@ -109,18 +109,18 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>SGA deposit</span>
-            <span class="fin-muted" style="font-weight:400;font-size:13px;">{{ fr.budget_status }}</span>
+            <span class="fin-muted fin-panel-note">{{ fr.budget_status }}</span>
         </div>
         <div class="fin-panel-body">
-            <div class="fin-stats" style="margin-bottom:0;">
+            <div class="fin-stats fin-mb-0">
                 <div class="fin-stat">
                     <div class="fin-stat-label">Deposited</div>
-                    <div class="fin-stat-value text-success">{{ fr.total_deposited|money }}</div>
+                    <div class="fin-stat-value {{ fr.total_deposited|money_class }}">{{ fr.total_deposited|money }}</div>
                     <div class="fin-stat-sub">{{ fr.deposit_status }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Spent in Workday</div>
-                    <div class="fin-stat-value text-danger">{{ fr.total_charged|negate|money }}</div>
+                    <div class="fin-stat-value {{ fr.total_charged|negate|money_class }}">{{ fr.total_charged|negate|money }}</div>
                     {% if fr.total_spent != fr.total_charged %}
                         <div class="fin-stat-sub">{{ fr.total_spent|negate|money }} with what is still encumbered</div>
                     {% endif %}
@@ -149,7 +149,7 @@
                                 <td class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
                                 <td>
                                     <a href="{% url 'finance:entry-detail' entry.pk %}">{{ entry.description|default:"(untitled)" }}</a>
-                                    {% if entry.amount < 0 %}<span class="label label-default">Returned to SGA</span>{% endif %}
+                                    {% if entry.amount < 0 %}<span class="fin-tag">Returned to SGA</span>{% endif %}
                                 </td>
                                 <td>
                                     {% if entry.parent_transaction %}
@@ -163,7 +163,7 @@
                 </table>
             </div>
         {% else %}
-            <div class="fin-panel-body" style="padding-top:0;">
+            <div class="fin-panel-body fin-pt-0">
                 <span class="fin-muted">SGA hasn't deposited anything for this budget yet.</span>
             </div>
         {% endif %}
@@ -179,7 +179,7 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Lines</span>
-            <span class="fin-muted" style="font-weight:400;font-size:13px;">
+            <span class="fin-muted fin-panel-note">
                 {{ totals.line_count }} line{{ totals.line_count|pluralize }}{% if groups|length > 1 or groups.0.category %} in {{ groups|length }} group{{ groups|length|pluralize }}{% endif %}
             </span>
         </div>
@@ -200,11 +200,11 @@
                                 <td colspan="2">
                                     <span class="fin-muted" aria-hidden="true">&#9662;</span>
                                     {% if group.category %}{{ group.category.name }}{% else %}<span class="fin-muted">No category</span>{% endif %}
-                                    <span class="fin-muted" style="font-weight:400;">&middot; {% if group.totals.line_count %}{{ group.totals.line_count }} line{{ group.totals.line_count|pluralize }}{% else %}no lines yet{% endif %}</span>
+                                    <span class="fin-muted fin-regular">&middot; {% if group.totals.line_count %}{{ group.totals.line_count }} line{{ group.totals.line_count|pluralize }}{% else %}no lines yet{% endif %}</span>
                                 </td>
                                 <td class="fin-num">{% requested group.totals %}</td>
                                 <td class="fin-num">{% approved group.totals %}</td>
-                                <td class="fin-num text-danger">{{ group.totals.total_spent|negate|money }}</td>
+                                <td class="fin-num {{ group.totals.total_spent|negate|money_class }}">{{ group.totals.total_spent|negate|money }}</td>
                                 <td class="fin-num {% if group.totals.is_overspent %}text-danger{% endif %}">{{ group.totals.total_remaining|money }}</td>
                                 <td></td>
                             </tr>
@@ -214,11 +214,11 @@
                                     <td>
                                         <span class="fin-line-caret" aria-hidden="true">&#9656;</span>{{ line.name }}
                                         {% if line.is_projection %}<span class="fin-tag is-projection">P</span>{% endif %}
-                                        {% if line.description %}<div class="fin-muted" style="font-size:12px;">{{ line.description|truncatechars:120 }}</div>{% endif %}
+                                        {% if line.description %}<div class="fin-muted fin-small">{{ line.description|truncatechars:120 }}</div>{% endif %}
                                     </td>
                                     <td class="fin-num">{% requested line %}</td>
                                     <td class="fin-num">{% approved line %}</td>
-                                    <td class="fin-num text-danger">{{ line.spent|negate|money }}</td>
+                                    <td class="fin-num {{ line.spent|negate|money_class }}">{{ line.spent|negate|money }}</td>
                                     <td class="fin-num {% if line.is_overspent %}text-danger{% endif %}">{{ line.remaining|figure }}</td>
                                     <td>{% if line.amount_awarded %}{% burndown_bar line.spent line.amount_awarded %}{% endif %}</td>
                                 </tr>
@@ -238,11 +238,11 @@
                                                             <td class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
                                                             <td>
                                                                 <a href="{% url 'finance:entry-detail' entry.pk %}">{{ entry.description|default:"(untitled)" }}</a>
-                                                                {% if entry.refund_of_id %}<span class="label label-info">Refund</span>{% endif %}
+                                                                {% if entry.refund_of_id %}<span class="fin-tag is-info">Refund</span>{% endif %}
                                                             </td>
-                                                            <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
+                                                            <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|or_dash }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
                                                             <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
-                                                            <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}—{% endif %}</td>
+                                                            <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}<span class="fin-na">—</span>{% endif %}</td>
                                                             <td>{{ entry|status_badge }}</td>
                                                         </tr>
                                                     {% endfor %}
@@ -260,7 +260,7 @@
             </div>
         {% else %}
             <div class="fin-empty">
-                <span class="glyphicon glyphicon-list"></span>
+                <span class="glyphicon glyphicon-inbox"></span>
                 This budget has no lines yet.
                 {% permission request.user has 'finance.manage_fundingrequest' %}
                     <br><a href="{% url 'finance:fr-edit' fr.pk %}">Add some</a>

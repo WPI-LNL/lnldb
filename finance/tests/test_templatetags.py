@@ -19,7 +19,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
 from finance.templatetags.finance_extras import (abs_value, asset, autocomplete_media,
                                                  burndown_bar, entry_badge, filter_url,
-                                                 get_item, indent_px, money, money_class,
+                                                 get_item, indent_px, money, money_class, or_dash,
                                                  pager, percent_of, sort_indicator, sort_url,
                                                  status_badge)
 from finance.tests.util import category, fund
@@ -157,11 +157,11 @@ class BadgeTests(TestCase):
     def test_each_entry_type_gets_its_own_word_and_colour(self):
         expense = self._entry()
         self.assertIn('Expense', entry_badge(expense))
-        self.assertIn('label-default', entry_badge(expense))
+        self.assertIn('label-default fin-tag', entry_badge(expense))
 
         encumbrance = self._entry(parent_transaction=None)
         self.assertIn('Encumbrance', entry_badge(encumbrance))
-        self.assertIn('label-warning', entry_badge(encumbrance))
+        self.assertIn('is-warn', entry_badge(encumbrance))
 
         credit_txn = WorkdayTransaction.objects.create(
             operational_transaction='OT-T2', accounting_date=datetime.date(2025, 9, 20),
@@ -169,7 +169,7 @@ class BadgeTests(TestCase):
         refund = self._entry(parent_transaction=credit_txn, amount=Decimal('40.00'),
                              refund_of=expense)
         self.assertIn('Refund', entry_badge(refund))
-        self.assertIn('label-info', entry_badge(refund))
+        self.assertIn('is-info', entry_badge(refund))
 
     def test_revenue_is_green(self):
         from finance.models import RevenueSource
@@ -181,13 +181,22 @@ class BadgeTests(TestCase):
             effective_date=income_txn.accounting_date,
             non_event_revenue_type=RevenueSource.objects.active().first())
         self.assertIn('Revenue', entry_badge(income))
-        self.assertIn('label-success', entry_badge(income))
+        self.assertIn('is-ok', entry_badge(income))
 
     def test_the_status_badge_distinguishes_settled_from_pending(self):
         entry = self._entry()
         self.assertIn('Pending', status_badge(entry))
         entry.status = TransactionStatus.SETTLED
         self.assertIn('Settled', status_badge(entry))
+
+
+class OrDashTests(TestCase):
+    def test_a_value_is_left_alone(self):
+        self.assertEqual(or_dash('Legacy'), 'Legacy')
+
+    def test_a_blank_is_the_grey_dash(self):
+        for blank in ('', None):
+            self.assertEqual(or_dash(blank), '<span class="fin-na">—</span>')
 
 
 class SmallHelperTests(TestCase):

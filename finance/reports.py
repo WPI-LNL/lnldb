@@ -134,14 +134,14 @@ class Section(object):
 
 
 class Stat(object):
-    """ A headline figure above the tables. """
+    """ A headline figure above the tables. $0 is nothing, so it never takes a colour. """
 
     def __init__(self, label, value, sub='', kind=Column.MONEY, tone=''):
         self.label = label
         self.value = value
         self.sub = sub
         self.kind = kind
-        self.tone = tone
+        self.tone = 'text-muted' if tone and kind == Column.MONEY and value == 0 else tone
 
 
 class Report(object):
@@ -448,6 +448,11 @@ def _money_in(entries):
     return out, taken
 
 
+def _outgoing(amount):
+    """ Money going out as a report shows it: below zero, so it reads in parentheses. """
+    return -amount if amount else amount
+
+
 def _money_out(entries):
     """
     ``{line key: amount}`` spent, by spend category, net of refunds. SGA's
@@ -457,7 +462,7 @@ def _money_out(entries):
     for row in (entries.filter(Q(amount__lt=0) | Q(refund_of__isnull=False),
                                funding_request__isnull=True)
                 .values('lnl_spend_category').annotate(t=Sum('amount'))):
-        out[('category', row['lnl_spend_category'])] -= money(row['t'])
+        out[('category', row['lnl_spend_category'])] += money(row['t'])
     return out
 
 
@@ -566,7 +571,7 @@ def income_and_spending(period, is_projection=None, fund=None):
     money_out = section('Money out', _spending_lines(), 1, 'Total money out')
     net = {'line': 'Money in less money out'}
     for key in [k for k, _ in periods] + (['change'] if earlier is not None else []):
-        net[key] = money_in.total.cells[key] - money_out.total.cells[key]
+        net[key] = money_in.total.cells[key] + money_out.total.cells[key]
     sections = [money_in, money_out, Section('Net', [], Row(net))]
 
     def compared(cells):
@@ -824,8 +829,8 @@ def _event_cells(row):
     return {
         'billed': row['billed'],
         'received': row['received'],
-        'costs': row['costs'],
-        'sga': row['sga_funded'],
+        'costs': _outgoing(row['costs']),
+        'sga': _outgoing(row['sga_funded']),
         'margin': row['margin'],
         'margin_percent': row['margin_percent'],
     }
@@ -891,7 +896,7 @@ def event_report(period, is_projection=None, today=None):
         count = totals['events']
         total = {'event': 'Total, %s event%s' % (count, '' if count == 1 else 's'),
                  'billed': totals['billed'], 'received': totals['received'],
-                 'costs': totals['costs'], 'sga': totals['sga_funded'],
+                 'costs': _outgoing(totals['costs']), 'sga': _outgoing(totals['sga_funded']),
                  'margin': totals['margin'],
                  'margin_percent': (_percent(totals['margin'], totals['received'])
                                     if totals['received'] > 0 else None)}
@@ -906,7 +911,7 @@ def event_report(period, is_projection=None, today=None):
         Stat('Events', totals['events'], '%s billed' % len(billed_rows), kind=Column.NUMBER),
         Stat('Received', totals['received'], 'of %s billed' % _dollars(totals['billed']),
              tone='text-success'),
-        Stat("LNL's costs", totals['lnl_costs'],
+        Stat("LNL's costs", _outgoing(totals['lnl_costs']),
              '%s more paid by SGA' % _dollars(totals['sga_funded']) if totals['sga_funded']
              else 'none paid by SGA', tone='text-danger'),
         Stat('Margin', totals['margin'],
@@ -918,7 +923,7 @@ def event_report(period, is_projection=None, today=None):
                           'of what billed events brought in', kind=Column.PERCENT))
     if hired:
         under = sum(1 for r in hired if 'rental_under_billed' in r['flag_keys'])
-        stats.append(Stat('Hired-in gear', sum((r['passthrough_cost'] for r in hired), ZERO),
+        stats.append(Stat('Hired-in gear', _outgoing(sum((r['passthrough_cost'] for r in hired), ZERO)),
                           'cost LNL, against %s billed for it%s'
                           % (_dollars(sum((r['rentals_recovered'] for r in hired), ZERO)),
                              '; %s under-billed' % under if under else '')))
@@ -1517,8 +1522,7 @@ def fr_report_form(fr):
         Stat('Date approved', _day(fr.date_approved) if fr.date_approved else None,
              kind=Column.TEXT),
         Stat('Amount approved', fr.total_awarded),
-        Stat('Total spent', form.total_spent, tone='text-danger',
-             sub='what SGA is asked to pay back'),
+        Stat('Total spent', form.total_spent, sub='what SGA is asked to pay back'),
         Stat('Receipts', len(form.receipts), kind=Column.NUMBER,
              sub='%s of %s with one' % (len(purchases) - len(form.missing),
                                         _plural(len(purchases), 'purchase', 'purchases')),
@@ -1663,7 +1667,7 @@ def budget_report_form(budget, form=None):
     approved_lines = [item for item in form.lines if item.line.amount_awarded]
     stats = [
         Stat('Approved', budget.total_awarded if budget.approved_known else UNKNOWN),
-        Stat('SGA money spent', form.sga, tone='text-danger'),
+        Stat('SGA money spent', form.sga),
         Stat('Group funds spent', form.group),
         Stat('Line items', len(form.spent_lines), kind=Column.NUMBER,
              sub='%s of %s approved with spending' % (

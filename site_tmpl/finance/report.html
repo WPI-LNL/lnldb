@@ -1,6 +1,29 @@
 {# One report from finance.reports: headline figures, its tables and its notes. Prints as it reads. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_head_class %}hidden-print{% endblock %}
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">&larr; Reports</a>{% endblock %}
+{% block fin_title %}{{ report.title }} <span class="fin-page-note">{{ report.period }}{% if report.dates and report.dates != report.period %} &middot; {{ report.dates }}{% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}</span>{% endblock %}
+{% block fin_sub %}{{ summary }}{% endblock %}
+{% block fin_actions %}
+    {% if pdf_url and can_view_receipts %}
+        <a href="{{ pdf_url }}" class="btn btn-primary" target="_blank">
+            <span class="glyphicon glyphicon-file"></span> PDF for SGA
+        </a>
+    {% endif %}
+    {% if budget_form and budget_form.spent_lines and can_view_receipts %}
+        <a href="?{{ budget_query }}&amp;format=zip" class="btn btn-primary">
+            <span class="glyphicon glyphicon-download-alt"></span> Every line's PDF (zip)
+        </a>
+    {% endif %}
+    <a href="{{ csv_url }}" class="btn btn-default">
+        <span class="glyphicon glyphicon-download-alt"></span> Download CSV
+    </a>
+    <button type="button" class="btn btn-default" onclick="window.print();">
+        <span class="glyphicon glyphicon-print"></span> Print
+    </button>
+{% endblock %}
 
 {% block fin_content %}
     {% comment %}
@@ -9,7 +32,7 @@
         what it covers and when it was printed.
     {% endcomment %}
     <div class="fin-print-header">
-        <h3 style="margin:0 0 2px;">Lens and Lights &middot; {{ report.title }}</h3>
+        <h3>Lens and Lights &middot; {{ report.title }}</h3>
         <div>
             {{ report.period }}{% if report.dates and report.dates != report.period %} ({{ report.dates }}){% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}{% if fund %} &middot; {{ fund.name }} only{% endif %}
         </div>
@@ -19,45 +42,17 @@
     </div>
 
     <div class="fin-panel fin-no-print">
-        <div class="fin-panel-head">
-            <span>
-                <a href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">Reports</a>
-                &rsaquo; {{ report.title }}
-                <span class="fin-muted">
-                    {{ report.period }}{% if report.dates and report.dates != report.period %} &middot; {{ report.dates }}{% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}
-                </span>
-            </span>
-            <span>
-                {% if pdf_url and can_view_receipts %}
-                    <a href="{{ pdf_url }}" class="btn btn-xs btn-primary" target="_blank">
-                        <span class="glyphicon glyphicon-file"></span> PDF for SGA
-                    </a>
-                {% endif %}
-                {% if budget_form and budget_form.spent_lines and can_view_receipts %}
-                    <a href="?{{ budget_query }}&amp;format=zip" class="btn btn-xs btn-primary">
-                        <span class="glyphicon glyphicon-compressed"></span> Every line's PDF (zip)
-                    </a>
-                {% endif %}
-                <a href="{{ csv_url }}" class="btn btn-xs btn-default">
-                    <span class="glyphicon glyphicon-download-alt"></span> Download CSV
-                </a>
-                <button type="button" class="btn btn-xs btn-default" onclick="window.print();">
-                    <span class="glyphicon glyphicon-print"></span> Print
-                </button>
-            </span>
-        </div>
         <div class="fin-panel-body">
-            <p class="fin-muted" style="margin:0 0 8px;">{{ summary }}</p>
             {% if takes == 'range' %}
                 <form method="get" class="form-inline">
                     <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
                     <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
                     <div class="form-group">
-                        <label for="fin-report-from" style="font-weight:normal;">From</label>
+                        <label class="fin-regular" for="fin-report-from">From</label>
                         <input type="date" id="fin-report-from" name="from" value="{{ range_from }}" class="form-control input-sm">
                     </div>
                     <div class="form-group">
-                        <label for="fin-report-to" style="font-weight:normal;">to</label>
+                        <label class="fin-regular" for="fin-report-to">to</label>
                         <input type="date" id="fin-report-to" name="to" value="{{ range_to }}" class="form-control input-sm">
                     </div>
                     {% if fund_choices %}
@@ -70,12 +65,12 @@
                             </select>
                         </div>
                     {% endif %}
-                    <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                    <button type="submit" class="btn btn-default">Apply</button>
                     {% if range_from or range_to %}
-                        <a href="?{{ filter_state.querystring }}{% if fund %}&amp;fund={{ fund.slug }}{% endif %}" class="btn btn-link btn-sm">Back to the fiscal year</a>
+                        <a href="?{{ filter_state.querystring }}{% if fund %}&amp;fund={{ fund.slug }}{% endif %}" class="btn btn-link">Back to the fiscal year</a>
                     {% endif %}
                 </form>
-                <div class="fin-muted" style="margin-top:6px;">
+                <div class="fin-muted fin-mt-8">
                     With no dates, the report covers the fiscal year chosen above.
                 </div>
             {% elif takes == 'trend' %}
@@ -96,9 +91,9 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                    <button type="submit" class="btn btn-default">Apply</button>
                 </form>
-                <div class="fin-muted" style="margin-top:6px;">
+                <div class="fin-muted fin-mt-8">
                     Ends with the fiscal year chosen above. The Event Production / Projection switch does not apply.
                 </div>
             {% elif takes == 'request' %}
@@ -113,13 +108,13 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                        <button type="submit" class="btn btn-default">Apply</button>
                         {% if fr %}
-                            <a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-link btn-sm">Open the request</a>
+                            <a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-link">Open the request</a>
                         {% endif %}
                     </form>
                 {% endif %}
-                <div class="fin-muted" style="margin-top:6px;">
+                <div class="fin-muted fin-mt-8">
                     The fiscal year chosen above decides which requests are offered. The form covers all of
                     the request's spending, whenever it was.
                     {% if fr and not can_view_receipts %}
@@ -138,13 +133,13 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                        <button type="submit" class="btn btn-default">Apply</button>
                         {% if budget %}
-                            <a href="{% url 'finance:fr-detail' budget.pk %}" class="btn btn-link btn-sm">Open the budget</a>
+                            <a href="{% url 'finance:fr-detail' budget.pk %}" class="btn btn-link">Open the budget</a>
                         {% endif %}
                     </form>
                 {% endif %}
-                <div class="fin-muted" style="margin-top:6px;">
+                <div class="fin-muted fin-mt-8">
                     One payment request a line item, with every purchase under it. Each line has its own PDF
                     for SGA, with its receipts in it.
                     {% if budget and not can_view_receipts %}
@@ -152,24 +147,24 @@
                     {% endif %}
                 </div>
             {% elif takes == 'year' %}
-                <p class="fin-muted" style="margin:0;">
+                <p class="fin-muted fin-m-0">
                     For the fiscal year chosen above. The Event Production / Projection switch does not
                     apply: a fund's money is the account's, whatever it was spent on.
                 </p>
             {% else %}
-                <p class="fin-muted" style="margin:0;">
+                <p class="fin-muted fin-m-0">
                     Always as of today, whichever year is chosen above.
                 </p>
             {% endif %}
             {% if period_error %}
-                <div class="alert alert-warning" style="margin:10px 0 0;">{{ period_error }} Showing the fiscal year instead.</div>
+                <div class="alert alert-warning fin-m-0 fin-mt-12">{{ period_error }} Showing the fiscal year instead.</div>
             {% endif %}
         </div>
     </div>
 
     {% if report.warnings %}
         <div class="alert alert-warning">
-            <ul style="margin:0; padding-left:18px;">
+            <ul class="fin-list-tight">
                 {% for warning in report.warnings %}<li>{{ warning }}</li>{% endfor %}
             </ul>
         </div>

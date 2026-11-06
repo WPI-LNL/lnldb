@@ -2843,7 +2843,7 @@ class Encumbrance(models.Model):
     logged until its Workday line is matched, so its open lines are dated the
     day it was logged (:attr:`logged_on`) and count on every balance from then.
     """
-    glyphicon = 'lock'
+    glyphicon = 'bookmark'
 
     description = models.CharField(max_length=255, help_text="What the purchase is.")
     receipt_file = models.FileField(upload_to='finance/receipts/%Y/%m/', null=True, blank=True,

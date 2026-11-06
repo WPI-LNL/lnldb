@@ -1,10 +1,11 @@
 {# Add one of a multi-bill's own charges, or change one. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; {{ bill.display_name }}</a>{% endblock %}
+
 {% block fin_content %}
-    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back to {{ bill.display_name }}</a></p>
     {% if bill.isd_number %}
         <div class="alert alert-warning">
             ISD {{ bill.isd_number }} was created for {{ bill.isd_amount|money }}. If this changes what the bill comes to,
@@ -14,7 +15,6 @@
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <form method="post">
                         {% csrf_token %}
@@ -31,15 +31,15 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">Kinds of charge</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         <strong>One-off:</strong> something the whole bill pays for once, such as an extra crew call.
                         A negative price is a credit.
                     </p>
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         <strong>Rental:</strong> gear hired in for the whole run. LNL's rental fee is added on top, as
                         it would be on an event, unless you untick it.
                     </p>
-                    <p class="fin-muted" style="font-size:13px;margin:0;">
+                    <p class="fin-muted fin-m-0">
                         <strong>Percentage:</strong> a fee or discount on what the events come to, such as 10 for a
                         10% fee or -10 for a 10% discount. It is rounded down to the cent, as an event's own fees and
                         discounts are.

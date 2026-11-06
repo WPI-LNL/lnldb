@@ -1,32 +1,32 @@
 {# One funding request, line by line, with the entries charged against each line. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">&larr; SGA Funding</a>{% endblock %}
+{% block fin_title %}
+    {{ fr.name }}
+    {% if fr.reference %}<code>{{ fr.reference }}</code>{% endif %}
+    {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
+    {% if fr.closed %}<span class="fin-tag">Closed</span>{% endif %}
+{% endblock %}
+{% block fin_sub %}{% if fr.approving_body %}Approved by the {{ fr.approving_body }}{% else %}SGA funding request{% endif %}{% endblock %}
+{% block fin_actions %}
+    {% permission request.user has 'finance.view_subledger' %}
+        <a href="{% url 'finance:report' 'fr-report-form' %}?request={{ fr.pk }}" class="btn btn-default"
+           title="The breakdown and receipts SGA asks for before it pays the request back">
+            <span class="glyphicon glyphicon-file"></span> Report form
+        </a>
+    {% endpermission %}
+    {% permission request.user has 'finance.manage_fundingrequest' %}
+        <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
+    {% endpermission %}
+{% endblock %}
+
 {% block fin_content %}
     <div class="fin-panel">
-        <div class="fin-panel-head">
-            <span>
-                {{ fr.name }}
-                {% if fr.reference %}<code class="fin-muted">{{ fr.reference }}</code>{% endif %}
-                {% if fr.approving_body %}<span class="fin-muted" style="font-weight:400;font-size:12px;">approved by the {{ fr.approving_body }}</span>{% endif %}
-                {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
-                {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
-            </span>
-            <span>
-                {% permission request.user has 'finance.view_subledger' %}
-                    <a href="{% url 'finance:report' 'fr-report-form' %}?request={{ fr.pk }}" class="btn btn-xs btn-default"
-                       title="The breakdown and receipts SGA asks for before it pays the request back">
-                        <span class="glyphicon glyphicon-file"></span> Report form
-                    </a>
-                {% endpermission %}
-                {% permission request.user has 'finance.manage_fundingrequest' %}
-                    <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-xs btn-default">Edit</a>
-                {% endpermission %}
-            </span>
-        </div>
         <div class="fin-panel-body">
-            <div class="fin-stats" style="margin-bottom:12px;">
+            <div class="fin-stats fin-mb-12">
                 <div class="fin-stat">
                     <div class="fin-stat-label">Requested</div>
                     <div class="fin-stat-value">{% requested fr %}</div>
@@ -37,11 +37,11 @@
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Spent</div>
-                    <div class="fin-stat-value text-danger">{{ fr.total_spent|negate|money }}</div>
+                    <div class="fin-stat-value {{ fr.total_spent|negate|money_class }}">{{ fr.total_spent|negate|money }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Remaining</div>
-                    <div class="fin-stat-value {% if fr.is_overspent %}text-danger{% else %}text-success{% endif %}">
+                    <div class="fin-stat-value {{ fr.total_remaining|money_class }}">
                         {{ fr.total_remaining|money }}
                     </div>
                 </div>
@@ -51,7 +51,7 @@
                 </div>
             </div>
             {% if fr.approved_known %}{% burndown_bar fr.total_spent fr.total_awarded %}{% endif %}
-            {% if fr.notes %}<p class="fin-muted" style="margin-top:10px;">{{ fr.notes|linebreaksbr }}</p>{% endif %}
+            {% if fr.notes %}<p class="fin-muted fin-mt-12">{{ fr.notes|linebreaksbr }}</p>{% endif %}
         </div>
     </div>
 
@@ -65,10 +65,10 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Reimbursement</span>
-            <span class="fin-muted" style="font-weight:400;font-size:13px;">{{ fr.reimbursement_status }}</span>
+            <span class="fin-muted fin-panel-note">{{ fr.reimbursement_status }}</span>
         </div>
         <div class="fin-panel-body">
-            <div class="fin-stats" style="margin-bottom:0;">
+            <div class="fin-stats fin-mb-0">
                 {% if fr.owed_at_books_start %}
                     <div class="fin-stat">
                         <div class="fin-stat-label">Owed when the books started</div>
@@ -84,7 +84,7 @@
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Reimbursed by SGA</div>
-                    <div class="fin-stat-value text-success">{{ fr.total_received|money }}</div>
+                    <div class="fin-stat-value {{ fr.total_received|money_class }}">{{ fr.total_received|money }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Still owed</div>
@@ -112,7 +112,7 @@
                                 <td class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
                                 <td>
                                     <a href="{% url 'finance:entry-detail' entry.pk %}">{{ entry.description|default:"(untitled)" }}</a>
-                                    {% if entry.is_sga_return %}<span class="label label-danger">Taken back</span>{% endif %}
+                                    {% if entry.is_sga_return %}<span class="fin-tag is-alert">Taken back</span>{% endif %}
                                 </td>
                                 <td>
                                     {% if entry.parent_transaction %}
@@ -126,7 +126,7 @@
                 </table>
             </div>
         {% else %}
-            <div class="fin-panel-body" style="padding-top:0;">
+            <div class="fin-panel-body fin-pt-0">
                 <span class="fin-muted">No reimbursement from SGA has been received for this request yet.</span>
             </div>
         {% endif %}
@@ -136,8 +136,7 @@
         <div class="fin-panel">
             <div class="fin-panel-head">
                 <span>{{ line.obj.name }}</span>
-                <span class="{% if line.overspent %}text-danger{% else %}fin-muted{% endif %}"
-                      style="font-weight:400;font-size:13px;">
+                <span class="{% if line.overspent %}text-danger{% else %}fin-muted{% endif %} fin-panel-note">
                     requested {% requested line.obj %} &middot;
                     {% if line.obj.is_waiting or line.obj.is_turned_down %}
                         approved {% approved line.obj %}
@@ -151,9 +150,9 @@
                     {% endif %}
                 </span>
             </div>
-            <div class="fin-panel-body" style="padding-bottom:8px;">
+            <div class="fin-panel-body fin-pb-8">
                 {% if line.obj.description %}
-                    <p class="fin-muted" style="font-size:13px;margin-bottom:10px;">
+                    <p class="fin-muted fin-mb-12">
                         {{ line.obj.description|linebreaksbr }}
                     </p>
                 {% endif %}
@@ -175,11 +174,11 @@
                                     <td>
                                         <a href="{% url 'finance:entry-detail' entry.pk %}">
                                             {{ entry.description|default:"(untitled)" }}</a>
-                                        {% if entry.refund_of %}<span class="label label-info">Refund</span>{% endif %}
+                                        {% if entry.refund_of %}<span class="fin-tag is-info">Refund</span>{% endif %}
                                     </td>
-                                    <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
+                                    <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|or_dash }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
                                     <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
-                                    <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}—{% endif %}</td>
+                                    <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}<span class="fin-na">—</span>{% endif %}</td>
                                     <td>{{ entry|status_badge }}</td>
                                 </tr>
                             {% endfor %}
@@ -187,7 +186,7 @@
                     </table>
                 </div>
             {% else %}
-                <div class="fin-panel-body" style="padding-top:0;">
+                <div class="fin-panel-body fin-pt-0">
                     <span class="fin-muted">Nothing charged to this line yet.</span>
                 </div>
             {% endif %}
@@ -195,7 +194,7 @@
     {% empty %}
         <div class="fin-panel">
             <div class="fin-empty">
-                <span class="glyphicon glyphicon-list"></span>
+                <span class="glyphicon glyphicon-inbox"></span>
                 This request has no line items.
                 {% permission request.user has 'finance.manage_fundingrequest' %}
                     <br><a href="{% url 'finance:fr-edit' fr.pk %}">Add some</a>

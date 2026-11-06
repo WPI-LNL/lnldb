@@ -1,14 +1,14 @@
 {# Mark a bill or a multi-bill paid: on the day the money arrived, and how, when not through Workday. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Back</a>{% endblock %}
+
 {% block fin_content %}
-    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <p>
                         {{ received|money }} of the {{ owed|money }} billed has been received for

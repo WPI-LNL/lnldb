@@ -27,7 +27,7 @@ from events.tests.generators import Event2019Factory, OrgFactory
 from finance import balances
 from finance.calculators import event_billing_kept, event_financials, event_pnl_rows
 from finance.models import Billing, FiscalYearClose, FRLineItem, FundingRequest, ParsedTransaction
-from finance.reports import (AGE_BANDS, UNKNOWN, Column, Period, Report, Row, Section,
+from finance.reports import (AGE_BANDS, UNKNOWN, Column, Period, Report, Row, Section, Stat,
                              age_band, as_csv, event_report, fund_balances,
                              income_and_spending, owed_to_lnl, parse_period)
 from finance.tests.test_balances import LedgerFixture, checkpoint, filed, line
@@ -313,21 +313,21 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
 
     def test_spending_is_net_of_refunds_and_leaves_out_what_sga_took_back(self):
         money_out = section(self.report(), 'Money out')
-        self.assertEqual(cells(money_out, 'Consumables')['full'], Decimal('350.00'))
+        self.assertEqual(cells(money_out, 'Consumables')['full'], Decimal('-350.00'))
         self.assertEqual(cells(money_out, 'Films Expenses')['full'],
-                         Decimal('500.00'))
-        self.assertEqual(money_out.total.cells['full'], Decimal('850.00'))
+                         Decimal('-500.00'))
+        self.assertEqual(money_out.total.cells['full'], Decimal('-850.00'))
 
     def test_a_reservation_is_not_spending(self):
         self.assertEqual(cells(section(self.report(), 'Money out'), 'Food')['current'],
-                         Decimal('700.00'))
+                         Decimal('-700.00'))
 
     def test_the_same_dates_a_year_earlier(self):
         """ Jul 1 - Oct 1, 2025 holds the consumables, but not their Oct 10 refund. """
         money_out = section(self.report(), 'Money out')
         consumables = cells(money_out, 'Consumables')
         self.assertEqual((consumables['current'], consumables['earlier'], consumables['change']),
-                         (Decimal('0.00'), Decimal('400.00'), Decimal('-400.00')))
+                         (Decimal('0.00'), Decimal('-400.00'), Decimal('400.00')))
 
     def test_the_net_is_money_in_less_money_out_in_every_column(self):
         net = section(self.report(), 'Net').total.cells
@@ -348,7 +348,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
         money_in = section(report, 'Money in')
         self.assertEqual([row.cells['line'] for row in money_in.rows],
                          ['SGA Funding Request Reimbursement'])
-        self.assertEqual(section(report, 'Money out').total.cells['full'], Decimal('500.00'))
+        self.assertEqual(section(report, 'Money out').total.cells['full'], Decimal('-500.00'))
         self.assertTrue(report.filename.endswith('-sga_fr.csv'))
 
     def test_one_side_of_the_partition_only(self):
@@ -378,7 +378,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
         money_in = section(report, 'Money in')
         self.assertEqual(money_in.total.cells['current'], Decimal('1000.00'))
         self.assertEqual(cells(section(report, 'Money out'), 'Consumables')['current'],
-                         Decimal('-50.00'))
+                         Decimal('50.00'))
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +481,17 @@ class FundBalanceReportTests(LedgerFixture, TestCase):
         self.assertNotIn('?', as_csv(self.report))
 
 
+class StatToneTests(TestCase):
+    def test_zero_is_never_coloured(self):
+        self.assertEqual(Stat('Money out', Decimal('0.00'), tone='text-danger').tone, 'text-muted')
+
+    def test_a_figure_keeps_its_colour(self):
+        self.assertEqual(Stat('Money out', Decimal('-5.00'), tone='text-danger').tone, 'text-danger')
+
+    def test_a_figure_not_known_keeps_its_colour(self):
+        self.assertEqual(Stat('Margin', UNKNOWN, tone='text-danger').tone, 'text-danger')
+
+
 class ReportCellTests(TestCase):
     """ How one cell of a report is drawn: the rule every finance page follows. """
 
@@ -533,24 +544,24 @@ class EventReportTests(TestCase):
         gala = cells(section(self.report, 'Departments'), 'Gala', 'event')
         self.assertEqual((gala['billed'], gala['received'], gala['costs'], gala['margin'],
                           gala['margin_percent']),
-                         (Decimal('1000.00'), Decimal('1000.00'), Decimal('300.00'),
+                         (Decimal('1000.00'), Decimal('1000.00'), Decimal('-300.00'),
                           Decimal('700.00'), Decimal('70.0')))
 
     def test_a_show_sga_paid_for_is_not_a_loss(self):
         fling = cells(section(self.report, 'Student organizations'), 'Fling', 'event')
         self.assertEqual((fling['billed'], fling['sga'], fling['margin']),
-                         (None, Decimal('2000.00'), Decimal('0.00')))
+                         (None, Decimal('-2000.00'), Decimal('0.00')))
         self.assertEqual(fling['flags'], '')
 
     def test_each_group_has_a_total(self):
         total = section(self.report, 'Student organizations').total.cells
         self.assertEqual((total['event'], total['costs'], total['sga']),
-                         ('Total, 1 event', Decimal('2000.00'), Decimal('2000.00')))
+                         ('Total, 1 event', Decimal('-2000.00'), Decimal('-2000.00')))
 
     def test_pricing_is_judged_on_billed_events_only(self):
         stats = {stat.label: stat.value for stat in self.report.stats}
         self.assertEqual(stats['Margin on billed events'], Decimal('70.0'))
-        self.assertEqual(stats["LNL's costs"], Decimal('300.00'))
+        self.assertEqual(stats["LNL's costs"], Decimal('-300.00'))
 
     def test_shows_before_the_books_start_are_left_out(self):
         old = show('Old Gala', when(2025, 3, 1), self.gala.billing_org)

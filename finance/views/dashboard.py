@@ -121,7 +121,7 @@ def dashboard(request):
         })
 
     context = {
-        'h2': "Financial Dashboard",
+        'h2': "Dashboard",
         'fin_page': 'dashboard',
         'unreconciled_count': len(unreconciled),
         # Gross, not net: a $350 deposit and a $475 invoice are two pieces of

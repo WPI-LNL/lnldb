@@ -1,13 +1,13 @@
 {# Mark a bill or a multi-bill sent: the day it reached the client some other way than its email, and how. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Back</a>{% endblock %}
+
 {% block fin_content %}
-    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <p>
                         For a bill that reached the client without its email from lnldb, such as one handed over at a

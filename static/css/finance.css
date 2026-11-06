@@ -5,10 +5,156 @@
    colour is reserved for things that need a decision.
    --------------------------------------------------------------------------- */
 
+/* ---- Colour ---------------------------------------------------------------
+   Every colour in the module comes from here, and every one that carries text
+   clears 4.5:1 against the backgrounds it sits on. --fin-faint is the exception
+   and is for marks that say nothing on their own -- a caret, a separator, the
+   grey dash -- never for words. */
+:root {
+    --fin-text: #323f4b;
+    --fin-text-soft: #52606d;
+    --fin-muted: #616e7c;
+    --fin-faint: #9aa5b1;
+
+    --fin-surface-faint: #fafbfc;
+    --fin-surface-soft: #f5f7fa;
+    --fin-surface-tint: #eef1f4;
+
+    --fin-border-soft: #eceff1;
+    --fin-border: #dfe3e8;
+    --fin-border-strong: #cbd2d9;
+
+    --fin-accent: #31708f;
+    --fin-accent-dark: #23527c;
+    --fin-accent-soft: #e8f2f8;
+    --fin-accent-border: #d7e5ee;
+
+    --fin-ok: #3c763d;
+    --fin-ok-strong: #5cb85c;
+    --fin-ok-bg: #e9f5e9;
+    --fin-ok-border: #cfe8cf;
+
+    --fin-warn: #7d6330;
+    --fin-warn-strong: #d9a441;
+    --fin-warn-bg: #fcf3d9;
+    --fin-warn-border: #f0e0b8;
+
+    --fin-alert: #a94442;
+    --fin-alert-strong: #d9534f;
+    --fin-alert-bg: #fdeceb;
+    --fin-alert-border: #f5cfcd;
+
+    --fin-projection: #6f42c1;
+    --fin-projection-bg: #f3effa;
+    --fin-projection-border: #e3d9f5;
+}
+
+/* ---- Type -----------------------------------------------------------------
+   One scale, so a size says what a thing is:
+
+     11   small capitals: table heads, tile and field labels; tight captions
+     12   captions, notes and buttons
+     13   the body of the page: tables, forms, sentences
+     14   panel titles and row titles
+     20   the page title
+     19, 22   a tile's figure, inside a panel and on the page
+
+   The queue's 17px amount is the one exception, and the large decorative icons
+   of an empty state and the drop zone are not text. An icon takes the size of
+   the text beside it. */
+.fin-page { font-size: 13px; }
+.fin-page .form-control { font-size: 13px; }
+.fin-page .dropdown-menu,
+.fin-topbar .dropdown-menu { font-size: 13px; }
+.fin-page .help-block { font-size: 12px; color: var(--fin-muted); }
+
+.fin-topbar-label,
+.fin-stat-label,
+.fin-jump-label,
+.fin-panel-divider,
+.fin-panel-subhead,
+.fin-field > label,
+.fin-brf-facts dt,
+.fin-table > thead > tr > th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--fin-muted);
+}
+
+/* Bootstrap's own muted and warning text, brought into line with ours: both
+   are written out by templates and filters that cannot say fin-muted. */
+.fin-page .text-muted { color: var(--fin-muted); }
+.fin-page .text-warning { color: var(--fin-warn); }
+
+/* A reference number, an account code: quiet, and not Bootstrap's pink, which
+   reads as an error on a page where colour is meant to mean something. */
+.fin-page code {
+    padding: 1px 4px;
+    color: var(--fin-text-soft);
+    background: var(--fin-surface-tint);
+    border-radius: 3px;
+}
+
+/* ---- Buttons --------------------------------------------------------------
+   A button's size follows from where it sits, not from a class chosen button
+   by button, so a new page and a form library's own submit button come out
+   right without being told.
+
+     Standard, 30px: page actions, form footers, filter bars, banners. The same
+     height as the queue's fields, so a button and a box line up.
+     Compact, 22px: inside running content -- a table row, a panel heading, a
+     line of an alert -- where a taller button would push the line apart. */
+.fin-topbar .btn,
+.fin-page .btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+.fin-panel-head .btn,
+.fin-page .fin-table .btn,
+.fin-page .alert .btn {
+    padding: 1px 5px;
+}
+
+/* Bootstrap defines .btn-link after .text-danger, so without this every red
+   Remove and Delete link comes out the same blue as a safe one. */
+.btn-link.text-danger,
+.btn-link.text-danger:hover,
+.btn-link.text-danger:focus { color: var(--fin-alert); }
+
+/* ---- Alerts ---------------------------------------------------------------
+   Bootstrap's theme gives each alert a gradient and an inner shadow. Flat here,
+   to match the panels around it. Not scoped to the page: Django's messages sit
+   above it, and this stylesheet is loaded on finance pages only. */
+.alert {
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    border-radius: 3px;
+}
+
+.alert-success,
+.alert-info,
+.alert-warning,
+.alert-danger {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.alert-success { color: var(--fin-ok); background-color: var(--fin-ok-bg); border-color: var(--fin-ok-border); }
+.alert-info { color: var(--fin-accent); background-color: var(--fin-accent-soft); border-color: var(--fin-accent-border); }
+.alert-warning { color: var(--fin-warn); background-color: var(--fin-warn-bg); border-color: var(--fin-warn-border); }
+.alert-danger { color: var(--fin-alert); background-color: var(--fin-alert-bg); border-color: var(--fin-alert-border); }
+
 /* ---- Persistent top bar --------------------------------------------------- */
 .fin-topbar {
-    background: #f5f7fa;
-    border: 1px solid #dfe3e8;
+    background: var(--fin-surface-soft);
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     padding: 8px 12px;
     margin-bottom: 16px;
@@ -30,14 +176,6 @@
     gap: 8px;
 }
 
-.fin-topbar-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #7b8794;
-}
-
 .fin-topbar-nav { margin-left: auto; }
 .fin-topbar-nav .nav-pills > li > a {
     padding: 4px 12px;
@@ -52,27 +190,27 @@
 .fin-topbar .dropdown-menu > li > a { flex: 1 1 auto; }
 
 .fin-partition .btn.active.fin-partition-projection {
-    background: #6f42c1;
-    border-color: #6f42c1;
+    background: var(--fin-projection);
+    border-color: var(--fin-projection);
     color: #fff;
 }
 
 .fin-partition .btn.active.fin-partition-event {
-    background: #31708f;
-    border-color: #31708f;
+    background: var(--fin-accent);
+    border-color: var(--fin-accent);
     color: #fff;
 }
 
 .fin-firewall-note {
     font-size: 12px;
-    color: #6f42c1;
+    color: var(--fin-projection);
     font-weight: 600;
 }
 
 .fin-readonly-banner {
-    background: #eef4f8;
-    border-left: 3px solid #31708f;
-    color: #31708f;
+    background: var(--fin-accent-soft);
+    border-left: 3px solid var(--fin-accent);
+    color: var(--fin-accent);
     padding: 6px 12px;
     font-size: 13px;
     margin-bottom: 14px;
@@ -81,9 +219,9 @@
 
 /* ---- Action banner -------------------------------------------------------- */
 .fin-action-banner {
-    background: #fcf3d9;
-    border: 1px solid #f0d9a0;
-    border-left: 4px solid #e0a800;
+    background: var(--fin-warn-bg);
+    border: 1px solid var(--fin-warn-border);
+    border-left: 4px solid var(--fin-warn-strong);
     border-radius: 3px;
     padding: 12px 16px;
     margin-bottom: 18px;
@@ -94,8 +232,7 @@
     gap: 10px;
 }
 
-.fin-action-banner .fin-banner-text { color: #7a5c00; font-size: 14px; }
-.fin-action-banner strong { font-size: 16px; }
+.fin-action-banner .fin-banner-text { color: var(--fin-warn); font-size: 14px; }
 
 /* ---- Stat tiles ----------------------------------------------------------- */
 .fin-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
@@ -103,47 +240,52 @@
 .fin-stat {
     flex: 1 1 160px;
     background: #fff;
-    border: 1px solid #dfe3e8;
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     padding: 12px 14px;
 }
 
-.fin-stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #7b8794;
-    margin-bottom: 4px;
-}
+.fin-stat-label { margin-bottom: 4px; }
 
-.fin-stat-value { font-size: 22px; font-weight: 600; line-height: 1.2; }
-.fin-stat-sub { font-size: 12px; color: #9aa5b1; margin-top: 2px; }
+.fin-stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+.fin-stat-sub { font-size: 12px; color: var(--fin-muted); margin-top: 2px; }
+
+/* A lone tile holds its size rather than stretching across the whole row with
+   nothing in it. */
+.fin-stat:only-child { flex: 0 1 320px; }
 
 /* Tiles inside a panel, above the table they sum up: smaller, and no gap
    below since the panel's own padding gives one. */
-.fin-stats-compact { margin-bottom: 0; }
-.fin-stats-compact .fin-stat { padding: 10px 12px; background: #fafbfc; }
-.fin-stats-compact .fin-stat-value { font-size: 19px; font-variant-numeric: tabular-nums; }
-.fin-stats-compact .fin-stat-value a { color: inherit; }
-.fin-stats-compact .fin-stat-sub { color: #7b8794; }
+.fin-panel-body .fin-stats { margin-bottom: 0; }
+.fin-panel-body .fin-stat { padding: 10px 12px; background: var(--fin-surface-faint); }
+.fin-panel-body .fin-stat-value { font-size: 19px; }
+.fin-panel-body .fin-stat-value a { color: inherit; }
+/* Words in a tile rather than a figure: who a bill went to, the day it did. */
+.fin-stat-value.is-text { font-size: 14px; line-height: 1.6; }
 
 /* ---- Balances ------------------------------------------------------------- */
 /* An anchor clears the sticky filter bar when jumped to, rather than landing
    underneath it. */
 .fin-anchor { scroll-margin-top: 70px; }
 
-.fin-balance-intro { margin: 0 0 4px; font-size: 13px; color: #52606d; }
+.fin-balance-intro { margin: 0 0 4px; font-size: 13px; color: var(--fin-text-soft); }
 
 /* A figure that does not apply to its row (a grey dash), set apart from $0
    (nothing) and a question mark (not known yet). */
-.fin-na { color: #b0b9c3; cursor: help; }
+.fin-na { color: var(--fin-faint); }
+.fin-na[title] { cursor: help; }
 .fin-unknown { font-weight: 600; cursor: help; }
 
-.fin-howto { margin-top: 6px; font-size: 12.5px; }
+.fin-howto { margin-top: 6px; font-size: 13px; }
 /* Bootstrap's normalize makes summary a block, which hides the arrow that
    says it opens. */
-.fin-howto > summary { display: list-item; cursor: pointer; color: #31708f; }
-.fin-howto > ul { margin: 6px 0 0; padding-left: 18px; color: #52606d; }
+.fin-howto > summary { display: list-item; cursor: pointer; color: var(--fin-accent); }
+.fin-howto > ul { margin: 6px 0 0; padding-left: 18px; color: var(--fin-text-soft); }
 .fin-howto > ul > li { margin-bottom: 4px; }
 
 .fin-jump {
@@ -151,17 +293,10 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 4px 16px;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 400;
 }
-.fin-panel-body > .fin-jump { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eceff1; }
-.fin-jump-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #7b8794;
-}
+.fin-panel-body > .fin-jump { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--fin-border-soft); }
 
 /* Roomier than the ledger's rows: a handful of funds read across, not
    scanned down. The balance column is the one to find at a glance. */
@@ -171,38 +306,85 @@
 .fin-balance-table > thead > tr > th { padding: 7px 10px; vertical-align: bottom; }
 .fin-balance-table > thead > tr > th > small {
     display: block;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: none;
     letter-spacing: 0;
-    color: #9aa5b1;
+    color: var(--fin-muted);
 }
-.fin-balance-table > tfoot > tr > th { border-top: 2px solid #dfe3e8; background: #fafbfc; }
-.fin-balance-table > tfoot > tr > th .fin-muted { font-weight: 400; font-size: 11.5px; }
-.fin-balance-table .fin-col-key { font-weight: 600; background: #f3f7fa; }
-.fin-balance-table > thead > tr > th.fin-col-key { background: #e9eff4; }
-.fin-balance-table .fin-col-sep { border-left: 1px solid #dfe3e8; }
+.fin-balance-table > tfoot > tr > th { border-top: 2px solid var(--fin-border); background: var(--fin-surface-faint); }
+.fin-balance-table > tfoot > tr > th .fin-muted { font-weight: 400; font-size: 12px; }
+.fin-balance-table .fin-col-key { font-weight: 600; background: var(--fin-surface-soft); }
+.fin-balance-table > thead > tr > th.fin-col-key { background: var(--fin-surface-tint); }
+.fin-balance-table .fin-col-sep { border-left: 1px solid var(--fin-border); }
 .fin-balance-table .fin-row-idle > td,
-.fin-balance-table .fin-row-idle > td a { color: #9aa5b1; }
+.fin-balance-table .fin-row-idle > td a { color: var(--fin-muted); }
+
+/* ---- Page header ----------------------------------------------------------
+   The top of every tab and record: where you came from, what this is, and what
+   can be done from here. See finance/base_titled.html. */
+.fin-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin: 0 0 14px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--fin-border);
+}
+.fin-page-heading { flex: 1 1 320px; min-width: 0; }
+.fin-page-back { display: inline-block; margin-bottom: 2px; font-size: 12px; }
+.fin-page-title { margin: 0 0 2px; font-size: 20px; font-weight: 600; color: var(--fin-text); }
+.fin-page-title code { font-size: 12px; font-weight: 400; vertical-align: 3px; }
+.fin-page-title .fin-tag { vertical-align: 3px; }
+.fin-page-note { font-size: 13px; font-weight: 400; color: var(--fin-muted); }
+.fin-page-sub { color: var(--fin-muted); }
+.fin-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+.fin-page-actions .dropdown-menu { min-width: 170px; }
+
+/* As in the top bar: local_styles.css makes each menu item a flex row, which
+   would shrink the link to its own text. */
+.fin-page-actions .dropdown-menu > li > a { flex: 1 1 auto; }
 
 /* ---- Panels --------------------------------------------------------------- */
 .fin-panel {
     background: #fff;
-    border: 1px solid #dfe3e8;
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     margin-bottom: 18px;
 }
 
 .fin-panel-head {
     padding: 10px 14px;
-    border-bottom: 1px solid #eceff1;
+    border-bottom: 1px solid var(--fin-border-soft);
+    font-size: 14px;
     font-weight: 600;
+    gap: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
 .fin-panel-body { padding: 14px; }
+
+/* What follows a panel's title, and any note at its right: a quiet caption
+   whichever markup wrote it, so a heading never carries it in bold. */
+.fin-panel-head .fin-muted,
+.fin-panel-note,
+.fin-locked-note {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--fin-muted);
+    text-transform: none;
+    letter-spacing: 0;
+}
+.fin-panel-head code { font-weight: 400; }
 
 /* The page links under a long list, with the box to jump straight to a page
    beside them. Wraps under them on a narrow screen. */
@@ -223,27 +405,22 @@
 /* Separates logically-related sections inside one panel, instead of splitting
    them into two boxes that imply they are unrelated. */
 .fin-panel-divider {
-    border-top: 1px solid #dfe3e8;
-    background: #f7f8fa;
+    border-top: 1px solid var(--fin-border);
+    background: var(--fin-surface-soft);
     padding: 6px 14px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #7b8794;
 }
 
 /* ---- Burndown bars -------------------------------------------------------- */
 .fin-burndown {
     height: 16px;
     margin-bottom: 0;
-    background: #eceff1;
+    background: var(--fin-border-soft);
     border-radius: 2px;
     box-shadow: none;
 }
 
 .fin-burndown .progress-bar {
-    font-size: 10px;
+    font-size: 11px;
     line-height: 16px;
     box-shadow: none;
 }
@@ -253,7 +430,7 @@
 .fin-fr-list > .fin-fr + .fin-fr { margin-top: 12px; }
 
 .fin-fr {
-    border: 1px solid #dfe3e8;
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     background: #fff;
     overflow: hidden;
@@ -269,14 +446,14 @@
     user-select: none;
 }
 
-.fin-fr-head:hover { background: #f7fafc; }
-.fin-fr-head:focus { outline: 2px solid #9ec5e0; outline-offset: -2px; }
+.fin-fr-head:hover { background: var(--fin-surface-faint); }
+.fin-fr-head:focus { outline: 2px solid var(--fin-accent); outline-offset: -2px; }
 .fin-fr-title { font-size: 14px; }
 .fin-fr-figures { font-size: 13px; white-space: nowrap; }
 
 .fin-fr-caret {
-    font-size: 10px;
-    color: #7b8794;
+    font-size: 11px;
+    color: var(--fin-muted);
     margin-right: 5px;
     display: inline-block;
     transition: transform 0.15s ease;
@@ -292,28 +469,28 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 12px 9px;
-    font-size: 11.5px;
-    color: #7b8794;
+    font-size: 12px;
+    color: var(--fin-muted);
 }
 
 .fin-fr-count { cursor: pointer; }
-.fin-fr-count:hover { color: #23527c; text-decoration: underline; }
+.fin-fr-count:hover { color: var(--fin-accent-dark); text-decoration: underline; }
 
 /* Line items sit inside a rule that visually ties them to their parent. */
 .fin-fr-lines {
     margin: 0 12px 10px 26px;
     padding-left: 12px;
-    border-left: 2px solid #dfe3e8;
+    border-left: 2px solid var(--fin-border);
 }
 
-.fin-fr-line { padding: 8px 0; border-bottom: 1px solid #f2f4f6; }
+.fin-fr-line { padding: 8px 0; border-bottom: 1px solid var(--fin-border-soft); }
 .fin-fr-line:first-child { padding-top: 2px; }
 .fin-fr-line:last-child { border-bottom: none; padding-bottom: 2px; }
 .fin-fr-line-head {
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    font-size: 12.5px;
+    font-size: 13px;
     margin-bottom: 4px;
 }
 
@@ -322,14 +499,14 @@
    have to be reported next to the row rather than in a banner at the top. */
 .fin-queue-note {
     margin-top: 8px;
-    font-size: 12.5px;
+    font-size: 13px;
     padding: 5px 8px;
     border-radius: 3px;
 }
-.fin-queue-note-success { background: #dff0d8; color: #3c763d; }
-.fin-queue-note-warning { background: #fcf8e3; color: #8a6d3b; }
-.fin-queue-note-error { background: #f2dede; color: #a94442; }
-.fin-field-error { color: #a94442; font-size: 11.5px; margin-top: 3px; max-width: 240px; }
+.fin-queue-note-success { background: var(--fin-ok-bg); color: var(--fin-ok); }
+.fin-queue-note-warning { background: var(--fin-warn-bg); color: var(--fin-warn); }
+.fin-queue-note-error { background: var(--fin-alert-bg); color: var(--fin-alert); }
+.fin-field-error { color: var(--fin-alert); font-size: 12px; margin-top: 3px; max-width: 240px; }
 /* A finished row recedes, but its confirmation does not.
    ``opacity`` on the row faded everything inside it, the success message
    included -- and a child cannot be more opaque than its parent, so no rule on
@@ -360,27 +537,21 @@
 .fin-queue-row:not(.fin-queue-done) .fin-queue-undo { display: none; }
 
 /* Import confirmation ------------------------------------------------------ */
-.fin-import-confirm-lede { font-size: 15px; }
+.fin-import-confirm-lede { font-size: 14px; }
 .fin-import-errors {
     margin: 0 0 14px 0;
     padding-left: 18px;
-    font-size: 12.5px;
-    color: #a94442;
+    font-size: 13px;
+    color: var(--fin-alert);
 }
-.fin-panel-subhead {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #888;
-    margin: 14px 0 6px;
-}
-.fin-panel-actions { border-top: 1px solid #eee; }
+.fin-panel-subhead { margin: 14px 0 6px; }
+.fin-panel-actions { border-top: 1px solid var(--fin-border-soft); }
 .fin-panel-actions .fin-muted { margin-left: 8px; font-size: 12px; }
 
 /* A box filled in from the funding request line, briefly, so it is visible
    that something was decided for you rather than left blank. */
 .fin-inherited-flash select {
-    background-color: #fcf8e3;
+    background-color: var(--fin-warn-bg);
     transition: background-color 0.4s ease;
 }
 
@@ -392,7 +563,7 @@
 
 /* The request SGA took money back for, folded under the line picker: rare,
    and unlabelled it read as a second copy of the line picker. */
-.fin-sga-return > summary { cursor: pointer; font-size: 11px; color: #9aa5b1; white-space: nowrap; }
+.fin-sga-return > summary { cursor: pointer; font-size: 11px; color: var(--fin-muted); white-space: nowrap; }
 .fin-sga-return[open] > summary { margin-bottom: 4px; }
 
 /* ---- Funding request line editor ------------------------------------------ */
@@ -401,41 +572,37 @@
    takes effect on save -- so the row stays visible and struck through until
    then, and the X becomes an undo. */
 .fin-fr-delete-flag { display: none; }
-.fin-fr-drop { font-size: 15px; line-height: 1; padding: 0 4px; text-decoration: none; }
+.fin-page .fin-table .btn.fin-fr-drop { font-size: 14px; line-height: 1; padding: 0 4px; text-decoration: none; }
 .fin-fr-deleted > td { opacity: 0.45; }
 .fin-fr-deleted > td:not(.fin-fr-remove) { text-decoration: line-through; }
-.fin-fr-deleted .fin-fr-drop { color: #31708f; }
+.fin-fr-deleted .fin-fr-drop { color: var(--fin-accent); }
 
 /* ---- Dense data table ----------------------------------------------------- */
-.fin-table { font-size: 12.5px; margin-bottom: 0; }
+.fin-table { font-size: 13px; margin-bottom: 0; }
 .fin-table > thead > tr > th {
-    background: #f5f7fa;
-    border-bottom: 2px solid #dfe3e8;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: #52606d;
+    background: var(--fin-surface-soft);
+    border-bottom: 2px solid var(--fin-border);
+    color: var(--fin-text-soft);
     white-space: nowrap;
     padding: 6px 8px;
 }
 
 .fin-table > tbody > tr > td { padding: 5px 8px; vertical-align: middle; }
-.fin-table > tbody > tr:hover { background: #f7fafc; }
+.fin-table > tbody > tr:hover { background: var(--fin-surface-faint); }
 .fin-table .fin-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fin-table th a { color: inherit; text-decoration: none; }
-.fin-table th a:hover { color: #23527c; }
-.fin-sort-arrow { font-size: 9px; margin-left: 3px; color: #9aa5b1; }
+.fin-table th a:hover { color: var(--fin-accent-dark); }
+.fin-sort-arrow { margin-left: 3px; color: var(--fin-faint); }
 .fin-table-wrap { overflow-x: auto; }
-.fin-row-selected { background: #eef6fc !important; }
-.fin-row-projection td:first-child { border-left: 3px solid #6f42c1; }
+.fin-row-selected { background: var(--fin-accent-soft) !important; }
+.fin-row-projection td:first-child { border-left: 3px solid var(--fin-projection); }
 
 /*
  * An entry filed on the opposite side from the account that paid for it. Not
  * an error -- SGA reimburses one account for the other's spending -- so it is
  * marked rather than flagged.
  */
-.fin-cross-badge { color: #8a6d3b; margin-left: 4px; cursor: help; }
-.fin-cross-badge .glyphicon { font-size: 10px; }
+.fin-cross-badge { color: var(--fin-warn); font-size: 11px; margin-left: 4px; cursor: help; }
 
 /* ---- Bulk action bar ------------------------------------------------------ */
 .fin-bulk-bar {
@@ -443,7 +610,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #323f4b;
+    background: var(--fin-text);
     color: #fff;
     padding: 12px 20px;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
@@ -473,6 +640,7 @@
     padding-left: 12px;
 }
 .fin-bulk-bar .form-control { display: inline-block; width: auto; }
+.fin-bulk-bar .btn-link { color: var(--fin-border-strong); }
 
 /* The funding request and line pickers and their "other year" tick box, which
    routing.js shows only once a fund that draws on a request is chosen. The
@@ -504,11 +672,11 @@
 .fin-bulk-bar select,
 .fin-bulk-bar input,
 .fin-bulk-bar textarea {
-    color: #323f4b;
+    color: var(--fin-text);
     background-color: #fff;
 }
 .fin-bulk-bar select optgroup,
-.fin-bulk-bar select option { color: #323f4b; background-color: #fff; }
+.fin-bulk-bar select option { color: var(--fin-text); background-color: #fff; }
 
 /* ---- Ingestion queue ------------------------------------------------------
    Worked top to bottom, twenty-five rows at a time, so the layout is built for
@@ -517,44 +685,30 @@
    than beside, which is what used to make rows wrap to different heights.
    --------------------------------------------------------------------------- */
 
-/* ---- Toolbar -------------------------------------------------------------- */
-.fin-queue-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex-wrap: wrap;
-    background: #fff;
-    border: 1px solid #dfe3e8;
-    border-radius: 3px;
-    padding: 12px 16px;
-    margin-bottom: 14px;
-}
-
-.fin-queue-counts { min-width: 150px; }
-.fin-queue-toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
-
 /* ---- Import ---------------------------------------------------------------
    Folded away behind a button: importing happens once a month, reconciling is
    the whole point of the page. */
 .fin-import-panel.is-folded { display: none; }
 
 .fin-dropzone {
-    border: 2px dashed #b8c2cc;
+    border: 2px dashed var(--fin-border-strong);
     border-radius: 4px;
     padding: 20px;
     text-align: center;
-    color: #7b8794;
-    background: #fbfcfd;
+    color: var(--fin-muted);
+    background: var(--fin-surface-faint);
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
 }
 
-.fin-dropzone:hover { border-color: #31708f; background: #f4f9fc; }
-.fin-dropzone.is-dragover { border-color: #31708f; background: #e8f2f8; color: #31708f; }
+.fin-dropzone:hover { border-color: var(--fin-accent); background: var(--fin-accent-soft); }
+.fin-dropzone.is-dragover { border-color: var(--fin-accent); background: var(--fin-accent-soft); color: var(--fin-accent); }
 .fin-dropzone .glyphicon { font-size: 24px; display: block; margin-bottom: 6px; }
 .fin-dropzone-hint { font-size: 12px; margin-top: 3px; }
-.fin-dropzone-file { margin-top: 8px; font-weight: 600; color: #323f4b; }
-.hidden-file-input { display: none; }
+.fin-dropzone-file { margin-top: 8px; font-weight: 600; color: var(--fin-text); }
+/* Named with its element: Bootstrap shows every input[type="file"], and that
+   selector outranks a bare class. */
+input.hidden-file-input { display: none; }
 
 .fin-import-actions {
     display: flex;
@@ -566,7 +720,7 @@
 
 /* ---- One row -------------------------------------------------------------- */
 .fin-queue-row {
-    border: 1px solid #dfe3e8;
+    border: 1px solid var(--fin-border);
     border-left-width: 3px;
     border-radius: 3px;
     margin-bottom: 10px;
@@ -575,15 +729,15 @@
 }
 
 .fin-queue-row:hover { box-shadow: 0 1px 4px rgba(50, 63, 75, 0.08); }
-.fin-queue-row.is-revenue { border-left-color: #5cb85c; }
-.fin-queue-row.is-expense { border-left-color: #d9534f; }
+.fin-queue-row.is-revenue { border-left-color: var(--fin-ok-strong); }
+.fin-queue-row.is-expense { border-left-color: var(--fin-alert-strong); }
 
 .fin-queue-head {
     padding: 9px 14px;
     display: flex;
     align-items: center;
     gap: 14px;
-    border-bottom: 1px solid #f0f2f4;
+    border-bottom: 1px solid var(--fin-border-soft);
 }
 
 /* The bulk-reconcile checkbox. Fixed width whether or not a row has one, so
@@ -599,7 +753,7 @@
 }
 .fin-queue-select.is-empty { cursor: default; }
 .fin-queue-select input { margin: 0; cursor: pointer; }
-.fin-queue-selected { box-shadow: inset 3px 0 0 #4E79A7; }
+.fin-queue-selected { box-shadow: inset 3px 0 0 var(--fin-accent); }
 
 /* Fixed width and tabular figures, so the amounts form a column the eye can
    run down instead of jittering with the length of each number. */
@@ -617,7 +771,7 @@
 .fin-queue-payee {
     font-weight: 600;
     font-size: 14px;
-    color: #1f2933;
+    color: var(--fin-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -625,13 +779,13 @@
 
 .fin-queue-meta {
     font-size: 12px;
-    color: #7b8794;
+    color: var(--fin-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.fin-queue-sep { margin: 0 5px; color: #cbd2d9; }
+.fin-queue-sep { margin: 0 5px; color: var(--fin-faint); }
 .fin-queue-tags { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* One badge style with modifiers, replacing four Bootstrap label colours that
@@ -642,33 +796,34 @@
     gap: 4px;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1.45;
     letter-spacing: 0.2px;
     padding: 2px 8px;
     border-radius: 3px;
-    background: #f0f2f4;
-    color: #52606d;
-    border: 1px solid #e1e5ea;
+    background: var(--fin-surface-tint);
+    color: var(--fin-text-soft);
+    border: 1px solid var(--fin-border);
     white-space: nowrap;
 }
 
 .fin-tag[title] { cursor: help; }
-.fin-tag.is-projection { background: #f3effa; color: #6f42c1; border-color: #e3d9f5; }
-.fin-tag.is-warn { background: #fcf3d9; color: #8a6d3b; border-color: #f0e0b8; }
-.fin-tag.is-alert { background: #fdeceb; color: #a94442; border-color: #f5cfcd; }
-.fin-tag.is-ok { background: #e9f5e9; color: #3c763d; border-color: #cfe8cf; }
-.fin-tag .glyphicon { font-size: 10px; }
+.fin-tag.is-projection { background: var(--fin-projection-bg); color: var(--fin-projection); border-color: var(--fin-projection-border); }
+.fin-tag.is-warn { background: var(--fin-warn-bg); color: var(--fin-warn); border-color: var(--fin-warn-border); }
+.fin-tag.is-alert { background: var(--fin-alert-bg); color: var(--fin-alert); border-color: var(--fin-alert-border); }
+.fin-tag.is-ok { background: var(--fin-ok-bg); color: var(--fin-ok); border-color: var(--fin-ok-border); }
+.fin-tag.is-info { background: var(--fin-accent-soft); color: var(--fin-accent); border-color: var(--fin-accent-border); }
 
 .fin-queue-open {
     flex-shrink: 0;
     font-size: 12px;
-    color: #7b8794;
+    color: var(--fin-muted);
     text-decoration: none;
     padding: 4px 8px;
     border-radius: 3px;
 }
 
-.fin-queue-open:hover { color: #31708f; background: #f4f9fc; text-decoration: none; }
-.fin-queue-open .glyphicon { font-size: 10px; margin-right: 3px; }
+.fin-queue-open:hover { color: var(--fin-accent); background: var(--fin-accent-soft); text-decoration: none; }
+.fin-queue-open .glyphicon { margin-right: 3px; }
 
 .fin-queue-body { padding: 12px 14px; }
 
@@ -685,21 +840,21 @@
     flex-wrap: wrap;
     margin-bottom: 12px;
     padding: 8px 10px;
-    border: 1px solid #f0e0b8;
-    border-left: 3px solid #d9a441;
+    border: 1px solid var(--fin-warn-border);
+    border-left: 3px solid var(--fin-warn-strong);
     border-radius: 3px;
-    background: #fdf8ec;
+    background: var(--fin-warn-bg);
 }
 
 .fin-encumbrance-lede {
     margin: 0;
     font-size: 12px;
     font-weight: 600;
-    color: #8a6d3b;
+    color: var(--fin-warn);
     white-space: nowrap;
 }
 
-.fin-encumbrance-lede .glyphicon { font-size: 10px; margin-right: 4px; }
+.fin-encumbrance-lede .glyphicon { margin-right: 4px; }
 
 /* Grows to eat the strip: the labels carry a description, an amount, a date
    and the gap against the bank line, and truncating any of those is what
@@ -727,7 +882,7 @@
 .fin-fields-more {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px dashed #e6e9ed;
+    border-top: 1px dashed var(--fin-border-soft);
 }
 
 .fin-fields-more.is-folded { display: none; }
@@ -740,11 +895,6 @@
 
 .fin-field > label {
     display: block;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    color: #7b8794;
     margin-bottom: 4px;
     white-space: nowrap;
 }
@@ -759,14 +909,14 @@
     height: 30px;
     padding: 3px 8px;
     font-size: 13px;
-    border: 1px solid #cbd2d9;
+    border: 1px solid var(--fin-border-strong);
     border-radius: 3px;
     background: #fff;
     box-shadow: none;
 }
 
 .fin-field textarea { height: 30px; resize: vertical; min-height: 30px; }
-.fin-field .form-control:focus { border-color: #31708f; box-shadow: 0 0 0 2px rgba(49,112,143,0.12); }
+.fin-field .form-control:focus { border-color: var(--fin-accent); box-shadow: 0 0 0 2px rgba(49,112,143,0.12); }
 
 .fin-inline-check {
     display: flex;
@@ -776,7 +926,7 @@
     margin: 0;
     font-weight: 400;
     font-size: 13px;
-    color: #52606d;
+    color: var(--fin-text-soft);
     white-space: nowrap;
     cursor: pointer;
 }
@@ -797,15 +947,15 @@
 .fin-more-toggle {
     border: 1px solid transparent;
     background: none;
-    color: #7b8794;
+    color: var(--fin-muted);
     font-size: 12px;
     padding: 5px 9px;
     border-radius: 3px;
 }
 
-.fin-more-toggle:hover { background: #f0f2f4; color: #52606d; }
-.fin-more-toggle[aria-expanded="true"] { background: #eef4f8; color: #31708f; border-color: #d7e5ee; }
-.fin-more-toggle .glyphicon { font-size: 10px; margin-right: 3px; }
+.fin-more-toggle:hover { background: var(--fin-surface-tint); color: var(--fin-text-soft); }
+.fin-more-toggle[aria-expanded="true"] { background: var(--fin-accent-soft); color: var(--fin-accent); border-color: var(--fin-accent-border); }
+.fin-more-toggle .glyphicon { margin-right: 3px; }
 
 /* ---- Captions under a control ---------------------------------------------
    Two kinds, one geometry: what the export already answered, and what we are
@@ -824,13 +974,13 @@
     white-space: nowrap;
 }
 
-.fin-note .glyphicon { font-size: 9px; margin-right: 4px; }
+.fin-note .glyphicon { margin-right: 4px; }
 
 /* Already filled in: a caption, not an offer. Quiet, dashed, not clickable. */
 .fin-note-auto {
-    background: #f7fafc;
-    color: #6b7b8c;
-    border-color: #e6ecf1;
+    background: var(--fin-surface-faint);
+    color: var(--fin-muted);
+    border-color: var(--fin-border-soft);
     border-style: dashed;
     cursor: help;
 }
@@ -840,16 +990,16 @@
    warm rather than grey, because this is the one autofilled answer nobody
    actually asserted and therefore the one worth a second look. */
 .fin-note-default {
-    background: #fdf6e7;
-    color: #8a6d3b;
-    border-color: #f5e2b8;
+    background: var(--fin-warn-bg);
+    color: var(--fin-warn);
+    border-color: var(--fin-warn-border);
 }
 
 /* Offered: clearly a button, because clicking it is the whole point. */
 .fin-suggest { cursor: pointer; }
-.fin-suggest-success { background: #dff0d8; color: #3c763d; border-color: #c6e0b4; }
-.fin-suggest-info    { background: #d9edf7; color: #31708f; border-color: #bce8f1; }
-.fin-suggest-default { background: #f0f2f4; color: #52606d; border-color: #dfe3e8; }
+.fin-suggest-success { background: var(--fin-ok-bg); color: var(--fin-ok); border-color: var(--fin-ok-border); }
+.fin-suggest-info    { background: var(--fin-accent-soft); color: var(--fin-accent); border-color: var(--fin-accent-border); }
+.fin-suggest-default { background: var(--fin-surface-tint); color: var(--fin-text-soft); border-color: var(--fin-border); }
 .fin-suggest:hover { filter: brightness(0.96); }
 .fin-suggest-applied { opacity: 0.5; text-decoration: line-through; }
 
@@ -861,12 +1011,12 @@
     margin: 4px 0 0;
     font-size: 11px;
     line-height: 1.35;
-    color: #9aa5b1;
+    color: var(--fin-muted);
 }
 
 .fin-field .results_on_deck { margin-top: 4px; }
 .fin-field .results_on_deck:empty { margin-top: 0; }
-.fin-field .results_on_deck div { font-size: 11.5px; }
+.fin-field .results_on_deck div { font-size: 12px; }
 .fin-field .results_on_deck .ui-helper-hidden-accessible { display: none; }
 
 /* Revealed by routing.js only when the answer leaves the account's own side. */
@@ -875,8 +1025,8 @@
 
 /* ---- Split modal ---------------------------------------------------------- */
 .fin-split-summary {
-    background: #f5f7fa;
-    border: 1px solid #dfe3e8;
+    background: var(--fin-surface-soft);
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     padding: 10px 14px;
     display: flex;
@@ -887,29 +1037,21 @@
 }
 
 .fin-remainder { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.fin-remainder.is-balanced { color: #3c763d; }
-.fin-remainder.is-unbalanced { color: #a94442; }
+.fin-remainder.is-balanced { color: var(--fin-ok); }
+.fin-remainder.is-unbalanced { color: var(--fin-alert); }
 .fin-split-row td { padding: 6px 4px; vertical-align: top; }
-.fin-split-row .form-control { font-size: 12.5px; height: 30px; padding: 4px 8px; }
+.fin-split-row .form-control { height: 30px; padding: 4px 8px; }
 
 /* ---- Immutable / editable detail panes ------------------------------------ */
 .fin-immutable {
-    background: #f7f8fa;
-    border: 1px solid #dfe3e8;
+    background: var(--fin-surface-soft);
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
 }
 
 .fin-immutable .fin-panel-head {
-    background: #eef1f4;
-    color: #52606d;
-}
-
-.fin-locked-note {
-    font-size: 11px;
-    color: #7b8794;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: 0;
+    background: var(--fin-surface-tint);
+    color: var(--fin-text-soft);
 }
 
 .fin-kv { margin: 0; font-size: 13px; }
@@ -917,7 +1059,7 @@
     float: left;
     clear: left;
     width: 42%;
-    color: #7b8794;
+    color: var(--fin-muted);
     font-weight: 500;
     padding: 4px 0;
 }
@@ -927,7 +1069,7 @@
 .fin-audit { list-style: none; padding: 0; margin: 0; font-size: 13px; }
 .fin-audit li {
     padding: 8px 0 8px 18px;
-    border-left: 2px solid #dfe3e8;
+    border-left: 2px solid var(--fin-border);
     position: relative;
 }
 .fin-audit li:before {
@@ -938,19 +1080,19 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #b8c2cc;
+    background: var(--fin-border-strong);
 }
-.fin-audit-meta { color: #7b8794; font-size: 12px; }
+.fin-audit-meta { color: var(--fin-muted); font-size: 12px; }
 .fin-audit-change { font-size: 12px; }
-.fin-audit-old { color: #a94442; text-decoration: line-through; }
-.fin-audit-new { color: #3c763d; }
+.fin-audit-old { color: var(--fin-alert); text-decoration: line-through; }
+.fin-audit-new { color: var(--fin-ok); }
 
 /* ---- Project explorer ----------------------------------------------------- */
 .fin-explorer { display: flex; gap: 16px; align-items: flex-start; }
 .fin-tree {
     flex: 0 0 280px;
     background: #fff;
-    border: 1px solid #dfe3e8;
+    border: 1px solid var(--fin-border);
     border-radius: 3px;
     max-height: 75vh;
     overflow-y: auto;
@@ -960,14 +1102,14 @@
     justify-content: space-between;
     padding: 6px 10px;
     font-size: 13px;
-    border-bottom: 1px solid #f5f7fa;
+    border-bottom: 1px solid var(--fin-surface-soft);
     text-decoration: none;
-    color: #323f4b;
+    color: var(--fin-text);
 }
-.fin-tree-node:hover { background: #f5f7fa; text-decoration: none; color: #323f4b; }
-.fin-tree-node.is-selected { background: #e8f2f8; font-weight: 600; color: #23527c; }
+.fin-tree-node:hover { background: var(--fin-surface-soft); text-decoration: none; color: var(--fin-text); }
+.fin-tree-node.is-selected { background: var(--fin-accent-soft); font-weight: 600; color: var(--fin-accent-dark); }
 .fin-tree-node.is-ancestor { font-weight: 600; }
-.fin-tree-cost { color: #7b8794; font-variant-numeric: tabular-nums; font-size: 12px; }
+.fin-tree-cost { color: var(--fin-muted); font-variant-numeric: tabular-nums; font-size: 12px; }
 .fin-explorer-main { flex: 1 1 auto; min-width: 0; }
 
 /* ---- Doughnut + legend ---------------------------------------------------- */
@@ -1013,11 +1155,11 @@
 .fin-legend-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
 .fin-legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 10px; }
 .fin-legend-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.fin-legend-value { font-variant-numeric: tabular-nums; color: #52606d; white-space: nowrap; }
+.fin-legend-value { font-variant-numeric: tabular-nums; color: var(--fin-text-soft); white-space: nowrap; }
 
 .fin-chart-note {
-    font-size: 11px;
-    color: #9aa5b1;
+    font-size: 12px;
+    color: var(--fin-muted);
     margin: 10px 0 0;
     line-height: 1.4;
 }
@@ -1031,7 +1173,7 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 10px;
-    font-size: 12.5px;
+    font-size: 13px;
     margin-bottom: 3px;
 }
 
@@ -1039,7 +1181,7 @@
 .fin-rank-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .fin-rank-track {
-    background: #eceff1;
+    background: var(--fin-border-soft);
     border-radius: 2px;
     height: 10px;
     overflow: hidden;
@@ -1058,7 +1200,7 @@
     height: 14px;
     border-radius: 2px;
     overflow: hidden;
-    background: #eceff1;
+    background: var(--fin-border-soft);
     min-width: 12px;
 }
 
@@ -1070,8 +1212,8 @@
     flex-wrap: wrap;
     gap: 4px 12px;
     margin-top: 5px;
-    font-size: 11.5px;
-    color: #52606d;
+    font-size: 12px;
+    color: var(--fin-text-soft);
 }
 
 .fin-project-chip { display: inline-flex; align-items: center; gap: 5px; }
@@ -1081,11 +1223,11 @@
 .fin-report-table td:first-child { white-space: normal; min-width: 180px; }
 .fin-report-total td {
     font-weight: 600;
-    border-top: 2px solid #cbd2d9 !important;
-    background: #f8f9fa;
+    border-top: 2px solid var(--fin-border-strong) !important;
+    background: var(--fin-surface-soft);
 }
-.fin-report-muted td { color: #7b8794; font-style: italic; }
-.fin-report-notes { margin: 0; padding-left: 18px; color: #52606d; font-size: 12.5px; }
+.fin-report-muted td { color: var(--fin-muted); font-style: italic; }
+.fin-report-notes { margin: 0; padding-left: 18px; color: var(--fin-text-soft); font-size: 13px; }
 .fin-report-notes li { margin-bottom: 4px; }
 
 /* ---- Print mode ----------------------------------------------------------- */
@@ -1106,38 +1248,54 @@
 .fin-print-header { display: none; }
 
 /* ---- Utility -------------------------------------------------------------- */
-.fin-muted { color: #9aa5b1; }
+.fin-muted { color: var(--fin-muted); }
 .fin-nowrap { white-space: nowrap; }
 .fin-subnav { margin-bottom: 16px; }
 .fin-empty {
     text-align: center;
-    padding: 40px 20px;
-    color: #9aa5b1;
+    padding: 24px 20px;
+    color: var(--fin-muted);
 }
-.fin-empty .glyphicon { font-size: 34px; display: block; margin-bottom: 10px; opacity: 0.5; }
+.fin-empty .glyphicon { font-size: 24px; display: block; margin-bottom: 8px; opacity: 0.5; }
+.fin-tree .fin-empty { padding: 20px 10px; }
+
+/* A panel's strip of filters, above the table they drive. */
+.fin-filter-bar { padding: 10px 14px; }
+.fin-filter-bar .checkbox { margin-left: 12px; }
+
+/* A row of a form's controls, with its save button pushed to the far end. */
+.fin-form-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.fin-print-header h3 { margin: 0 0 2px; }
+.fin-side-table { max-width: 720px; }
+.fin-list-tight { margin: 0; padding-left: 18px; }
+
+/* Small adjustments, on one scale. Named on .fin-page so they outrank what they adjust. */
+.fin-small { font-size: 12px; }
+.fin-regular { font-weight: 400; }
+.fin-inline { display: inline; }
+.fin-block-inline { display: inline-block; }
+.fin-push { margin-left: auto; }
+.fin-page .fin-m-0 { margin: 0; }
+.fin-page .fin-my-8 { margin-top: 8px; margin-bottom: 8px; }
+.fin-page .fin-mt-4 { margin-top: 4px; }
+.fin-page .fin-mt-8 { margin-top: 8px; }
+.fin-page .fin-mt-12 { margin-top: 12px; }
+.fin-page .fin-mb-0 { margin-bottom: 0; }
+.fin-page .fin-mb-4 { margin-bottom: 4px; }
+.fin-page .fin-mb-12 { margin-bottom: 12px; }
+.fin-page .fin-mb-20 { margin-bottom: 20px; }
+.fin-page .fin-ml-8 { margin-left: 8px; }
+.fin-page .fin-ml-12 { margin-left: 12px; }
+.fin-page .fin-pt-0 { padding-top: 0; }
+.fin-page .fin-pb-8 { padding-bottom: 8px; }
 
 /* ---- SGA Funding: requests and budgets ------------------------------------ */
-/* A page's own header: its title on the left, its actions on the right. */
-.fin-page-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin: 0 0 14px;
-    padding: 0 2px 12px;
-    border-bottom: 1px solid #dfe3e8;
-}
-.fin-page-title { margin: 0 0 2px; font-size: 20px; font-weight: 600; color: #323f4b; }
-.fin-page-head .fin-muted { font-size: 13px; }
-.fin-page-actions { flex: 0 0 auto; }
-.fin-page-actions .dropdown-menu { min-width: 170px; }
 
 /* Approved: a blank is SGA not having decided, $0 is SGA saying no. The two
    labels are told apart by colour as well as by word. */
 .fin-approval {
     display: inline-block;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     padding: 0 5px;
     border-radius: 2px;
@@ -1145,9 +1303,9 @@
     white-space: nowrap;
     vertical-align: 1px;
 }
-.fin-approval.is-waiting { background: #fcf3d9; color: #8a6d3b; border-color: #f0e0b8; }
-.fin-approval.is-turned-down { background: #eef1f4; color: #52606d; border-color: #dfe3e8; cursor: help; }
-.fin-approval-note { font-size: 11px; color: #9aa5b1; font-weight: 400; }
+.fin-approval.is-waiting { background: var(--fin-warn-bg); color: var(--fin-warn); border-color: var(--fin-warn-border); }
+.fin-approval.is-turned-down { background: var(--fin-surface-tint); color: var(--fin-text-soft); border-color: var(--fin-border); cursor: help; }
+.fin-approval-note { font-size: 11px; color: var(--fin-muted); font-weight: 400; }
 
 /* One form for both types: whichever does not apply is put away. */
 #fin-fr-form.is-request .fin-budget-only,
@@ -1164,7 +1322,7 @@
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
-    color: #7b8794;
+    color: var(--fin-muted);
     font-size: 12px;
     pointer-events: none;
 }
@@ -1183,19 +1341,19 @@
 
 /* A budget's form: each category a heading row, its lines nested under it. */
 #fin-fr-lines tr.fin-cat-row > td {
-    background: #f5f7fa;
-    border-top: 2px solid #dfe3e8;
+    background: var(--fin-surface-soft);
+    border-top: 2px solid var(--fin-border);
     padding: 6px 8px;
 }
 #fin-fr-lines tr.fin-cat-row input.fin-category-name { font-weight: 600; min-width: 260px; margin-right: 6px; }
-#fin-fr-lines .fin-cat-caret { color: #9aa5b1; margin-right: 4px; }
+#fin-fr-lines .fin-cat-caret { color: var(--fin-faint); margin-right: 4px; }
 #fin-fr-lines .fin-cat-delete { display: none; }
 #fin-fr-lines select.fin-line-move { max-width: 170px; }
 #fin-fr-form.is-budget #fin-fr-lines td.fin-line-indent { position: relative; padding-left: 28px; white-space: nowrap; }
 #fin-fr-form.is-budget #fin-fr-lines td.fin-line-indent::before,
 .fin-budget-line td.fin-line-indent::before {
     content: '\2514';
-    color: #b0b9c3;
+    color: var(--fin-faint);
     position: absolute;
     left: 12px;
     top: 9px;
@@ -1203,17 +1361,17 @@
 
 /* A budget's lines, grouped under their categories. */
 .fin-budget-group > td {
-    background: #f5f7fa;
+    background: var(--fin-surface-soft);
     font-weight: 600;
-    border-top: 2px solid #dfe3e8 !important;
+    border-top: 2px solid var(--fin-border) !important;
 }
 .fin-budget-line { cursor: pointer; }
 .fin-budget-line td.fin-line-indent { position: relative; padding-left: 30px !important; white-space: nowrap; }
-.fin-budget-line:hover > td { background: #fafbfc; }
-.fin-budget-line .fin-line-caret { display: inline-block; font-size: 11px; color: #9aa5b1; margin-right: 5px; transition: transform .15s; }
+.fin-budget-line:hover > td { background: var(--fin-surface-faint); }
+.fin-budget-line .fin-line-caret { display: inline-block; font-size: 11px; color: var(--fin-faint); margin-right: 5px; transition: transform .15s; }
 .fin-budget-line.is-open .fin-line-caret { transform: rotate(90deg); }
 .fin-budget-entries.is-folded { display: none; }
-.fin-budget-entries > td { background: #fbfcfd; padding: 4px 12px 10px 36px !important; }
+.fin-budget-entries > td { background: var(--fin-surface-faint); padding: 4px 12px 10px 36px !important; }
 .fin-budget-entries .fin-table { margin: 0; background: #fff; }
 .fin-budget-line .fin-burndown { margin: 3px 0 0; min-width: 90px; }
 
@@ -1221,7 +1379,6 @@
    above its purchases, and the answers that can be typed in on the page. */
 .fin-brf-facts { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0; }
 .fin-brf-facts > div { min-width: 140px; }
-.fin-brf-facts dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: #7b8794; font-weight: 600; }
 .fin-brf-facts dd { margin: 2px 0 0; }
 .fin-brf-facts input.fin-brf-count { width: 90px; }
 .fin-brf-save { margin: 0 0 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

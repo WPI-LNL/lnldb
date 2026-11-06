@@ -232,7 +232,7 @@ def ledger(request):
             choice for choice in bulk_form.fields['action'].choices if choice[0] != 'status']
 
     context = {
-        'h2': "Subledger",
+        'h2': "Ledger",
         'fin_page': 'ledger',
         'page_obj': page,
         # A receipt is only for those allowed to see receipts, so its column

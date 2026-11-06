@@ -1033,7 +1033,7 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
     def test_the_dashboard_shows_todays_balances(self):
         self.grant('view_subledger')
         response = self.client.get(reverse('finance:dashboard'), {'fy': FY26})
-        self.assertContains(response, 'What Each Fund Holds Today')
+        self.assertContains(response, 'What each fund holds today')
 
 
 class BalanceInputTests(LedgerFixture, FinanceViewTestCase):

@@ -1,13 +1,86 @@
 {# Page 2 -- spreadsheet ledger, column picker and bulk action bar. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 {% load static %}
 
+{% block fin_title %}Ledger{% endblock %}
+{% block fin_sub %}Every entry in the books, with the Workday line behind it.{% endblock %}
+{% block fin_actions %}
+    {% comment %}
+        Every row the filters select, not only this page of
+        them, with every column whether it is showing or not.
+    {% endcomment %}
+    <a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}format=csv" class="btn btn-default"
+       title="Download every row these filters select, with every column, as CSV">
+        <span class="glyphicon glyphicon-download-alt"></span> Download CSV
+    </a>
+    {# ---- Column visibility ---- #}
+    <div class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <span class="glyphicon glyphicon-th-list"></span> Columns <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right" id="fin-column-picker">
+            {% for key, label, default in columns %}
+                <li>
+                    <a href="#" class="fin-col-toggle" data-col="{{ key }}">
+                        <input type="checkbox" class="fin-col-check" data-col="{{ key }}"
+                               {% if default %}checked{% endif %}> {{ label }}
+                    </a>
+                </li>
+            {% endfor %}
+            <li role="separator" class="divider"></li>
+            <li><a href="#" id="fin-col-reset">Reset to defaults</a></li>
+        </ul>
+    </div>
+{% endblock %}
+
 {% block fin_content %}
-    {# ---- Toolbar: search, facets, column picker ---- #}
+    {% comment %}
+        One event's entries. Said out loud, because it is the one filter that
+        sets the fiscal year aside -- see the event filter in views/ledger.py.
+    {% endcomment %}
+    {% if event_filter %}
+        <div class="alert alert-info">
+            Showing entries for
+            <a href="{% url 'events:detail' event_filter.pk %}"><strong>{{ event_filter.event_name }}</strong></a>
+            ({{ event_filter.datetime_start|date:"M j, Y" }}), across every fiscal year,
+            with any payment for a multi-bill it is on.
+            <a href="{% url 'finance:ledger' %}?{{ event_clear_querystring }}" class="alert-link">Clear</a>
+        </div>
+    {% endif %}
+    {% if multibill_filter %}
+        <div class="alert alert-info">
+            Showing entries for the multi-bill
+            <a href="{% url 'finance:multibill-detail' multibill_filter.pk %}"><strong>{{ multibill_filter.display_name }}</strong></a>
+            and its {{ multibill_filter.events.all|length }} event{{ multibill_filter.events.all|length|pluralize }}, across every fiscal year.
+            <a href="{% url 'finance:ledger' %}?{{ multibill_clear_querystring }}" class="alert-link">Clear</a>
+        </div>
+    {% endif %}
+
+    {# ---- Totals ---- #}
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">Rows</div>
+            <div class="fin-stat-value">{{ result_count }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Revenue</div>
+            <div class="fin-stat-value {{ revenue_total|money_class }}">{{ revenue_total|money }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Expenses</div>
+            <div class="fin-stat-value {{ expense_total|negate|money_class }}">{{ expense_total|negate|money }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Net</div>
+            <div class="fin-stat-value {{ net_total|money_class }}">{{ net_total|money }}</div>
+        </div>
+    </div>
+
+    {# ---- The spreadsheet, with the search and filters that drive it ---- #}
     <div class="fin-panel">
-        <div class="fin-panel-body" style="padding:10px 14px;">
+        <div class="fin-panel-body fin-filter-bar">
             <form method="get" class="form-inline" id="fin-ledger-filters">
                 {% comment %}
                     Written out explicitly so submitting the filter form keeps
@@ -72,83 +145,11 @@
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-link btn-sm">Reset</a>
-                {% comment %}
-                    Every row the filters above select, not only this page of
-                    them, with every column whether it is showing or not.
-                {% endcomment %}
-                <a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}format=csv" class="btn btn-default btn-sm"
-                   title="Download every row these filters select, with every column, as CSV">
-                    <span class="glyphicon glyphicon-download-alt"></span> CSV
-                </a>
+                <button type="submit" class="btn btn-default">Apply</button>
+                <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-link">Reset</a>
 
-                {# ---- Column visibility ---- #}
-                <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
-                        <span class="glyphicon glyphicon-th-list"></span> Columns <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-right" id="fin-column-picker">
-                        {% for key, label, default in columns %}
-                            <li>
-                                <a href="#" class="fin-col-toggle" data-col="{{ key }}">
-                                    <input type="checkbox" class="fin-col-check" data-col="{{ key }}"
-                                           {% if default %}checked{% endif %}> {{ label }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                        <li role="separator" class="divider"></li>
-                        <li><a href="#" id="fin-col-reset">Reset to defaults</a></li>
-                    </ul>
-                </div>
             </form>
         </div>
-    </div>
-
-    {% comment %}
-        One event's entries. Said out loud, because it is the one filter that
-        sets the fiscal year aside -- see the event filter in views/ledger.py.
-    {% endcomment %}
-    {% if event_filter %}
-        <div class="alert alert-info" style="padding:8px 14px;">
-            Showing entries for
-            <a href="{% url 'events:detail' event_filter.pk %}"><strong>{{ event_filter.event_name }}</strong></a>
-            ({{ event_filter.datetime_start|date:"M j, Y" }}), across every fiscal year,
-            with any payment for a multi-bill it is on.
-            <a href="{% url 'finance:ledger' %}?{{ event_clear_querystring }}" class="alert-link">Clear</a>
-        </div>
-    {% endif %}
-    {% if multibill_filter %}
-        <div class="alert alert-info" style="padding:8px 14px;">
-            Showing entries for the multi-bill
-            <a href="{% url 'finance:multibill-detail' multibill_filter.pk %}"><strong>{{ multibill_filter.display_name }}</strong></a>
-            and its {{ multibill_filter.events.all|length }} event{{ multibill_filter.events.all|length|pluralize }}, across every fiscal year.
-            <a href="{% url 'finance:ledger' %}?{{ multibill_clear_querystring }}" class="alert-link">Clear</a>
-        </div>
-    {% endif %}
-
-    {# ---- Totals ---- #}
-    <div class="fin-stats">
-        <div class="fin-stat">
-            <div class="fin-stat-label">Rows</div>
-            <div class="fin-stat-value">{{ result_count }}</div>
-        </div>
-        <div class="fin-stat">
-            <div class="fin-stat-label">Revenue</div>
-            <div class="fin-stat-value text-success">{{ revenue_total|money }}</div>
-        </div>
-        <div class="fin-stat">
-            <div class="fin-stat-label">Expenses</div>
-            <div class="fin-stat-value text-danger">{{ expense_total|negate|money }}</div>
-        </div>
-        <div class="fin-stat">
-            <div class="fin-stat-label">Net</div>
-            <div class="fin-stat-value {{ net_total|money_class }}">{{ net_total|money }}</div>
-        </div>
-    </div>
-
-    {# ---- The spreadsheet ---- #}
-    <div class="fin-panel">
         <div class="fin-table-wrap">
             <table class="table fin-table" id="fin-ledger-table">
                 <thead>
@@ -191,7 +192,7 @@
                                 </a>
                             </td>
                             <td data-col="payee">
-                                {% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}
+                                {% if entry.parent_transaction %}{{ entry.parent_transaction.payee|or_dash }}
                                 {% else %}<span class="fin-muted">encumbrance</span>{% endif %}
                             </td>
                             <td data-col="amount" class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
@@ -220,16 +221,16 @@
                                     <span class="fin-tag" title="A payment for a multi-bill: each of its events is credited with its share">Multi-bill</span>
                                 {% elif entry.non_event_revenue_type %}
                                     {{ entry.non_event_revenue_type }}
-                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             <td data-col="client_type">
-                                {% if entry.linked_event or entry.linked_multibill %}{{ entry.client_type_display }}{% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% if entry.linked_event or entry.linked_multibill %}{{ entry.client_type_display }}{% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             <td data-col="services">
-                                {{ entry.event_services_display|default:"—" }}
+                                {{ entry.event_services_display|or_dash }}
                             </td>
-                            <td data-col="fund_source">{{ entry.fund_source|default:"—" }}</td>
-                            <td data-col="spend_category">{{ entry.lnl_spend_category|default:"—" }}</td>
+                            <td data-col="fund_source">{{ entry.fund_source|or_dash }}</td>
+                            <td data-col="spend_category">{{ entry.lnl_spend_category|or_dash }}</td>
                             <td data-col="fr_line">
                                 {% if entry.fr_line_target %}
                                     <a href="{% url 'finance:fr-detail' entry.fr_line_target.funding_request.pk %}">
@@ -240,32 +241,32 @@
                                        title="{% if entry.funding_request.is_budget %}{% if entry.is_sga_return %}Money returned to SGA from this budget{% else %}SGA depositing this budget{% endif %}{% elif entry.is_sga_return %}Money SGA took back for this request{% else %}SGA reimbursing this request{% endif %}">
                                         {% if entry.funding_request.is_budget %}{% if entry.is_sga_return %}returned:{% else %}deposit for{% endif %}{% elif entry.is_sga_return %}taken back:{% else %}repays{% endif %}
                                         {{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
-                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             <td data-col="project">
                                 {% if entry.project_tag %}
                                     <a href="{% url 'finance:projects-detail' entry.project_tag.pk %}">{{ entry.project_tag.name }}</a>
-                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             <td data-col="workday_ref" class="fin-nowrap">
                                 {% if entry.parent_transaction %}
                                     <a href="{% url 'finance:txn-detail' entry.parent_transaction.pk %}">
                                         {{ entry.parent_transaction.reference }}</a>
-                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             <td data-col="ledger_account">
-                                {% if entry.parent_transaction %}{{ entry.parent_transaction.ledger_account|default:"—" }}{% else %}—{% endif %}
+                                {% if entry.parent_transaction %}{{ entry.parent_transaction.ledger_account|or_dash }}{% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             {% if perms.finance.view_subledger_receipts %}
                             <td data-col="receipt">
                                 {% if entry.receipt_file %}
                                     <a href="{{ entry.receipt_file.url }}" target="_blank" title="View receipt">
                                         <span class="glyphicon glyphicon-paperclip"></span></a>
-                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% else %}<span class="fin-na">—</span>{% endif %}
                             </td>
                             {% endif %}
                             <td>
-                                <a href="{% url 'finance:entry-detail' entry.pk %}" class="btn btn-xs btn-default"
+                                <a href="{% url 'finance:entry-detail' entry.pk %}" class="btn btn-default"
                                    title="Open">&rsaquo;</a>
                             </td>
                         </tr>
@@ -316,9 +317,8 @@
                         {{ bulk_form.status }}
                     </span>
 
-                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                    <button type="button" class="btn btn-link btn-sm" id="fin-bulk-cancel"
-                            style="color:#cbd2d9;">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                    <button type="button" class="btn btn-link" id="fin-bulk-cancel">Cancel</button>
                 </div>
             </div>
         </form>

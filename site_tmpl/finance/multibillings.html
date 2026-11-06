@@ -1,13 +1,18 @@
 {# Every multi-bill, newest first: what each covers, what it comes to, and where it stands. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:billing' %}">&larr; Billing</a>{% endblock %}
+{% block fin_title %}Multi-bills{% endblock %}
+{% block fin_sub %}Bills that cover several events with one invoice, newest first.{% endblock %}
+{% block fin_actions %}
+    <a href="{% url 'finance:multibill-new' %}" class="btn btn-primary">
+        <span class="glyphicon glyphicon-plus"></span> New multi-bill
+    </a>
+{% endblock %}
 
 {% block fin_content %}
     <div class="fin-panel">
-        <div class="fin-panel-head">
-            <span>Multi-bills</span>
-            <a href="{% url 'finance:multibill-new' %}" class="btn btn-xs btn-primary">New multi-bill</a>
-        </div>
         {% if page.object_list %}
             <div class="fin-table-wrap">
                 <table class="table fin-table">
@@ -41,13 +46,13 @@
                                 {% if bill.date_paid %}{{ bill.date_paid|date:"M j, Y" }}
                                 {% else %}<span class="fin-muted">Unpaid</span>{% endif %}
                             </td>
-                            <td class="text-right" style="white-space:nowrap;">
-                                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
+                            <td class="text-right fin-nowrap">
+                                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
                                 {% if not bill.date_paid and not bill.closed_events %}
                                     <a href="{% url 'finance:multibill-paid' bill.pk %}?next={{ request.get_full_path|urlencode }}"
-                                       class="btn btn-xs btn-default">Mark paid…</a>
+                                       class="btn btn-default">Mark paid…</a>
                                 {% endif %}
-                                <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-xs btn-link">PDF</a>
+                                <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-link"><span class="glyphicon glyphicon-file"></span> PDF</a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -58,7 +63,8 @@
                 <div class="fin-panel-body">{% pager page %}</div>
             {% endif %}
         {% else %}
-            <div class="fin-panel-body fin-muted">
+            <div class="fin-empty">
+                <span class="glyphicon glyphicon-inbox"></span>
                 No multi-bills yet. A multi-bill covers several events with one invoice, such as a term of films.
             </div>
         {% endif %}

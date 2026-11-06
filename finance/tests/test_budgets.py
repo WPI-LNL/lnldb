@@ -455,7 +455,7 @@ class FundingPageTests(FinanceViewTestCase):
     def test_new_button_only_for_those_who_can_add(self):
         self.revoke('manage_fundingrequest')
         response = self.client.get(reverse('finance:fr-list'))
-        self.assertNotContains(response, 'fin-page-actions')
+        self.assertNotContains(response, '?kind=request')
 
     def test_new_button_only_on_the_sga_funding_page(self):
         budget = make_budget()
@@ -485,7 +485,7 @@ class FundingPageTests(FinanceViewTestCase):
 
     def test_new_budget_starts_named_for_its_year(self):
         response = self.client.get(reverse('finance:fr-new') + '?kind=budget')
-        self.assertContains(response, 'New Budget')
+        self.assertContains(response, 'New budget')
         self.assertContains(response, 'value="FY%s SGA Budget"' % YY)
         self.assertContains(response, 'is-budget')
 
@@ -959,7 +959,7 @@ class BudgetPagesTests(BudgetWorld, FinanceViewTestCase):
 
     def test_the_dashboard_burndown_has_the_budget(self):
         response = self.client.get(reverse('finance:dashboard') + '?fy=%s' % YEAR)
-        self.assertContains(response, 'SGA Funding Burndown')
+        self.assertContains(response, 'SGA funding burndown')
         self.assertContains(response, self.budget.name)
         self.assertContains(response, '4521 Gaff tape')
         self.assertContains(response, 'Open budget')

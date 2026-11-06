@@ -1,12 +1,13 @@
 {# Page 5 -- create or rename a project tag. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:projects' %}">&larr; Projects</a>{% endblock %}
 
 {% block fin_content %}
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <form method="post">
                         {% csrf_token %}
@@ -23,7 +24,7 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">Project tags</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         Tags nest: a top-level project like <em>New Equipment List 2026</em> holds the
                         individual assets bought under it, such as <em>D60 Lustrs</em>. Costs roll up the
                         tree, so a parent shows the fully-loaded cost of everything beneath it

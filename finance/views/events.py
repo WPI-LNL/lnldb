@@ -42,7 +42,7 @@ def event_pnl(request):
         rows = [r for r in rows if flag in r['flag_keys']]
 
     context = {
-        'h2': "Event P&L",
+        'h2': "Events",
         'fin_page': 'events',
         'rows': rows,
         'totals': totals,

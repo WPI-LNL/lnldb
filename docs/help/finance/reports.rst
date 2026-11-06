@@ -153,7 +153,10 @@ Reading a Report
 - **$0, ? and the dash mean different things.** $0 is nothing, **?** is not known yet -- an account's cash with no
   Workday balance, say -- and a grey dash is a figure that doesn't apply to that row. Below zero is in parentheses. See
   *Reading the Figures* in :doc:`overview`.
+- **Money going out is in parentheses.** On *Income and spending*, *Money in* plus *Money out* is the Net, and on the
+  *Events* report a cost is in parentheses wherever it is shown. The CSV files carry the same signs, as a minus. The
+  two forms for SGA keep the figures SGA asks for, as their PDFs do.
 - **Fund balances adds up across.** As on the *Balances* tab, *Money out* and *Encumbrances* are in parentheses, so
   Opening + Money in + Money out + Transfers is the Closing, and Closing + Encumbrances is what is Available.
 
-`Last Modified: October 29, 2026`
+`Last Modified: November 5, 2026`

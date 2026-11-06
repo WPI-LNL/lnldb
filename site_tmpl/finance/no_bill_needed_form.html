@@ -1,14 +1,14 @@
 {# Decide an event reviewed for billing will not be billed, and why. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Back</a>{% endblock %}
+
 {% block fin_content %}
-    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     {% if decided %}
                         <p class="fin-muted">
@@ -36,7 +36,7 @@
                         <dt>Event</dt>
                         <dd><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></dd>
                         <dt>Client</dt>
-                        <dd>{{ item.client.retname|default:"—" }}</dd>
+                        <dd>{{ item.client.retname|or_dash }}</dd>
                         <dt>Date</dt>
                         <dd>{{ item.date|date:"M j, Y" }}</dd>
                         <dt>Price</dt>
@@ -44,7 +44,7 @@
                         <dt>SGA-funded</dt>
                         <dd>{% if event.is_sga_funded %}Yes{% else %}No{% endif %}</dd>
                     </dl>
-                    <p class="fin-muted" style="font-size:13px;margin:8px 0 0;">
+                    <p class="fin-muted fin-m-0 fin-mt-8">
                         The event leaves <em>Ready to bill</em> and waits under <em>No bill needed</em> until you close
                         it. Undo it there if it should be billed after all.
                     </p>

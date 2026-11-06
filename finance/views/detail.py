@@ -347,7 +347,7 @@ def entry_detail(request, pk):
         form = AllocationForm(instance=entry, parent_transaction=entry.parent_transaction)
 
     context = {
-        'h2': "Subledger Entry #%s" % entry.pk,
+        'h2': "Entry #%s" % entry.pk,
         'entry': entry,
         'txn': entry.parent_transaction,
         'form': form,
@@ -468,7 +468,7 @@ def entry_delete(request, pk):
             parent.get_absolute_url() if parent else reverse('finance:ledger'))
 
     context = {
-        'h2': "Remove entry?",
+        'h2': "Remove this entry?",
         'entry': entry,
         'txn': parent,
         'blocked': blocked,

@@ -12,14 +12,14 @@ booked for a show, an invoice on its way.
 .. caution::
     **Permission Required:** Edit subledger
 
-    Officers can add encumbrances. If you do not see `Add Encumbrance` on the `Queue` tab, your role does not allow it.
+    Officers can add encumbrances. If you do not see `Add encumbrance` on the `Queue` tab, your role does not allow it.
 
 -----
 
 Add an Encumbrance
 ------------------
 
-#. On the `Queue` tab click `Add Encumbrance`, or choose `Finance` > `Add Encumbrance` in the navigation bar.
+#. On the `Queue` tab click `Add encumbrance`, or choose `Finance` > `Add Encumbrance` in the navigation bar.
 #. Fill in the top of the form:
 
    - **Description** -- what the purchase is. Nobody else will know later.
@@ -112,4 +112,4 @@ it, at what was encumbered rather than what was charged. A warning says that bot
 still wanted. Removing one matched entry, with `Remove` on its page or the `Del` box on the split page, puts its money
 back the same way.
 
-`Last Modified: November 2, 2026`
+`Last Modified: November 5, 2026`

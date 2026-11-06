@@ -1,12 +1,13 @@
 {# One small input on the balance page: a Workday balance, or a transfer between funds. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Balances</a>{% endblock %}
 
 {% block fin_content %}
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <form method="post">
                         {% csrf_token %}
@@ -23,7 +24,7 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">What this is for</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;margin:0;">{{ intro }}</p>
+                    <p class="fin-muted fin-m-0">{{ intro }}</p>
                 </div>
             </div>
         </div>

@@ -1,6 +1,8 @@
 {# Closing a finished fiscal year: what is still open, what needs squaring, and the record. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Balances</a>{% endblock %}
 
 {% block fin_content %}
     {% with short=year.fiscal_year|stringformat:"s"|slice:"2:" %}
@@ -15,16 +17,16 @@
                 <div class="fin-panel">
                     <div class="fin-panel-head">1. Still open in FY{{ short }}</div>
                     <div class="fin-panel-body">
-                        <ul class="list-unstyled" style="margin:0;">
+                        <ul class="list-unstyled fin-m-0">
                             {% for ok, text, link in checklist %}
-                                <li style="margin-bottom:6px;">
+                                <li class="fin-mb-4">
                                     <span class="glyphicon {% if ok %}glyphicon-ok text-success{% else %}glyphicon-alert text-warning{% endif %}"></span>
                                     {{ text }}
                                     {% if link %}<a href="{{ link }}">Look</a>{% endif %}
                                 </li>
                             {% endfor %}
                         </ul>
-                        <p class="fin-muted" style="font-size:12px;margin:8px 0 0;">
+                        <p class="fin-muted fin-small fin-m-0 fin-mt-8">
                             None of these stops the close. Workday keeps posting into a year for weeks
                             after it ends; if something changes afterwards, the balance page says so.
                         </p>
@@ -54,14 +56,14 @@
                             {% with field=proposal.bound_field row=proposal.row %}
                                 <div class="form-group{% if field.errors %} has-error{% endif %}">
                                     {% if proposal.kind == 'cover' %}
-                                        <p style="margin-bottom:4px;">
+                                        <p class="fin-mb-4">
                                             <strong>{{ row.name }}</strong> ({{ proposal.account.code }}) was overspent by
                                             {{ proposal.amount|money }}. SGA does not cover that, so it comes out of money
                                             that carries forward.
                                         </p>
                                         <label class="fin-inline-check">{{ field }} {{ field.label }}</label>
                                     {% else %}
-                                        <p style="margin-bottom:4px;">
+                                        <p class="fin-mb-4">
                                             <strong>{{ row.name }}</strong> ({{ proposal.account.code }}) is still awaiting
                                             {{ proposal.amount|money }} from SGA. That carries into next year and stays
                                             owed to LNL. If SGA has refused some of it, write that much off to
@@ -75,14 +77,14 @@
                                 </div>
                             {% endwith %}
                         {% empty %}
-                            <p class="fin-muted" style="margin:0;">
+                            <p class="fin-muted fin-m-0">
                                 Nothing to square. No budget is overspent and SGA owes nothing.
                             </p>
                         {% endfor %}
                         {% for account in year.accounts %}
                             {% for row in account.rows %}
                                 {% if row.fund.returns_to_sga and row.closing > 0 %}
-                                    <p class="fin-muted" style="font-size:13px;">
+                                    <p class="fin-muted">
                                         {{ row.name }} has {{ row.closing|money }} unspent, which goes back to SGA.
                                         No transfer is needed: when SGA's Workday line taking it back arrives, settle
                                         it with the fund set to {{ row.name }} and the balance comes to zero.
@@ -136,8 +138,8 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="fin-panel-body" style="font-size:13px;">
-                    <p class="fin-muted" style="margin:0;">
+                <div class="fin-panel-body">
+                    <p class="fin-muted fin-m-0">
                         Closing locks nothing. It records these figures, makes the transfers you choose
                         above on {{ year.last|date:"M j, Y" }}, and from then on the balance page warns if
                         anything in FY{{ short }} changes. Reopening takes the transfers back.

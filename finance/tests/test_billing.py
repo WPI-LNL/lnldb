@@ -62,7 +62,11 @@ class BillingViewTests(ViewTestCase):
         permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
-        self.assertOk(self.client.get(reverse("finance:bill-new", args=[self.e.pk])))
+        response = self.client.get(reverse("finance:bill-new", args=[self.e.pk]))
+        self.assertOk(response)
+        # A finance page: the filter bar, the Billing tab lit, and a way back.
+        self.assertContains(response, 'fin-topbar-inner')
+        self.assertContains(response, reverse('finance:billing'))
 
         # If event is closed redirect to detail page
         self.e.closed = True

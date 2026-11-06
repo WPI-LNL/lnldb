@@ -54,6 +54,7 @@
     <noscript>
         <style>
             .fin-import-panel.is-folded { display: block; }
+            input.hidden-file-input { display: block; }
             .fin-fields-more.is-folded { display: flex; }
             .fin-more-toggle, #fin-import-toggle { display: none; }
             .fin-budget-entries.is-folded { display: table-row; }
@@ -78,7 +79,7 @@
             <div class="fin-topbar-group">
                 <span class="fin-topbar-label">Fiscal Year</span>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-default btn-sm dropdown-toggle"
+                    <button type="button" class="btn btn-default dropdown-toggle"
                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}All years{% endif %}
                         <span class="caret"></span>
@@ -99,7 +100,7 @@
 
             <div class="fin-topbar-group">
                 <span class="fin-topbar-label">Partition</span>
-                <div class="btn-group btn-group-sm fin-partition" role="group">
+                <div class="btn-group fin-partition" role="group">
                     {% for value, label in partition_options %}
                         <a href="{% filter_url partition=value %}"
                            class="btn btn-default {% if filter_state.partition == value %}active fin-partition-{{ value }}{% endif %}">
@@ -154,6 +155,7 @@
     {% endif %}
 
     <div class="fin-page">
+        {% block fin_head %}{% endblock %}
         {% block fin_content %}{% endblock %}
     </div>
 {% endblock %}

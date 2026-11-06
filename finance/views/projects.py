@@ -99,7 +99,7 @@ def project_explorer(request, pk=None):
                              'cost': rollup_costs.get(child.pk, Decimal('0.00'))})
 
     context = {
-        'h2': "Project Explorer",
+        'h2': "Projects",
         'fin_page': 'projects',
         'tree': _tree_context(state, selected, rollup_costs),
         'selected': selected,
@@ -139,7 +139,7 @@ def project_edit(request, pk=None):
         form = ProjectTagForm(instance=instance)
 
     context = {
-        'h2': "New Project Tag" if instance is None else "Edit %s" % instance,
+        'h2': "New project" if instance is None else "Edit %s" % instance,
         'form': form,
         'instance': instance,
     }
@@ -483,7 +483,7 @@ def funding_edit(request, pk=None):
     if instance is not None:
         h2 = "Edit %s" % instance.name
     else:
-        h2 = "New Budget" if kind == FundingKind.BUDGET else "New Funding Request"
+        h2 = "New budget" if kind == FundingKind.BUDGET else "New funding request"
     context = {
         'h2': h2,
         'form': form,

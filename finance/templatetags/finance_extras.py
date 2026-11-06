@@ -372,6 +372,15 @@ def sort_indicator(context, column):
     return mark_safe('<span class="fin-sort-arrow">%s</span>' % arrow)
 
 
+# fin-tag on a finance page. The event page draws these badges too and does not
+# load finance.css, so Bootstrap's own classes stay as what it falls back on;
+# finance.css comes later and overrides them.
+BADGE_PLAIN = 'label label-default fin-tag'
+BADGE_OK = 'label label-success fin-tag is-ok'
+BADGE_WARN = 'label label-warning fin-tag is-warn'
+BADGE_INFO = 'label label-info fin-tag is-info'
+
+
 @register.filter
 def entry_badge(entry):
     """
@@ -381,19 +390,26 @@ def entry_badge(entry):
     reserved should not sit in a column of settled spending looking exactly
     like it.
     """
-    mapping = {'revenue': 'success', 'expense': 'default',
-               'refund': 'info', 'encumbrance': 'warning'}
-    kind = entry.entry_type
-    return format_html('<span class="label label-{}">{}</span>',
-                       mapping.get(kind, 'default'), entry.get_entry_type_display())
+    mapping = {'revenue': BADGE_OK, 'expense': BADGE_PLAIN, 'refund': BADGE_INFO, 'encumbrance': BADGE_WARN}
+    return format_html('<span class="{}">{}</span>',
+                       mapping.get(entry.entry_type, BADGE_PLAIN), entry.get_entry_type_display())
+
+
+@register.filter
+def or_dash(value):
+    """
+    The value, or the grey dash of something that does not apply to this row:
+    the same mark a figure gets, so a blank reads the same across a table.
+    """
+    return value if value else mark_safe('<span class="fin-na">—</span>')
 
 
 @register.filter
 def status_badge(entry):
     """ Settled / pending pill for an entry. """
     if entry.status == 'settled':
-        return mark_safe('<span class="label label-success">Settled</span>')
-    return mark_safe('<span class="label label-warning">Pending</span>')
+        return format_html('<span class="{}">Settled</span>', BADGE_OK)
+    return format_html('<span class="{}">Pending</span>', BADGE_WARN)
 
 
 @register.filter

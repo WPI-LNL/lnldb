@@ -59,11 +59,25 @@ from helpers.revision import set_revision_comment
 from pdfs.views import generate_event_bill_pdf_standalone, write_weasyprint_pdf
 
 
-class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+class BillingPageMixin(object):
+    """ Puts a generic bill view in the finance pages: the top bar, the Billing tab and a way back. """
+    back_label = "Billing"
+
+    def get_back_url(self):
+        return reverse('finance:billing')
+
+    def get_context_data(self, **kwargs):
+        context = super(BillingPageMixin, self).get_context_data(**kwargs)
+        context.update(_billing_context(self.request, h2=self.msg, cancel_url=self.get_back_url(),
+                                        back_label=self.back_label))
+        return context
+
+
+class BillingCreate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = Billing
     form_class = BillingForm
-    template_name = "form_crispy_cbv.html"
-    msg = "New Bill"
+    template_name = "finance/bill_form.html"
+    msg = "New bill"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -117,11 +131,11 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
             return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
+class BillingUpdate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
     model = Billing
     form_class = BillingUpdateForm
-    template_name = "form_crispy_cbv.html"
-    msg = "Update Bill"
+    template_name = "finance/bill_form.html"
+    msg = "Update bill"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -161,10 +175,10 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
+class BillingDelete(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
-    template_name = "form_delete_cbv.html"
-    msg = "Delete Bill"
+    template_name = "finance/bill_confirm_delete.html"
+    msg = "Delete bill"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -188,11 +202,15 @@ class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteVie
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
+class MultiBillingDelete(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = MultiBilling
-    template_name = "form_delete_cbv.html"
-    msg = "Delete MultiBill"
+    template_name = "finance/bill_confirm_delete.html"
+    msg = "Delete multi-bill"
     perms = 'events.bill_event'
+    back_label = "Back to the multi-bill"
+
+    def get_back_url(self):
+        return reverse('finance:multibill-detail', args=(self.kwargs['pk'],))
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -221,11 +239,11 @@ class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Dele
         return reverse("finance:multibill-list")
 
 
-class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+class BillingEmailCreate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = BillingEmail
     form_class = BillingEmailForm
-    template_name = "form_crispy.html"
-    msg = "New Billing Email"
+    template_name = "finance/bill_form.html"
+    msg = "New billing email"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -263,12 +281,16 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         return reverse("events:detail", args=(self.billing.event_id,)) + "#billing"
 
 
-class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+class MultiBillingEmailCreate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = MultiBillingEmail
     form_class = MultiBillingEmailForm
-    template_name = "form_crispy.html"
-    msg = "New Billing Email"
+    template_name = "finance/bill_form.html"
+    msg = "New billing email"
     perms = 'events.bill_event'
+    back_label = "Back to the multi-bill"
+
+    def get_back_url(self):
+        return reverse('finance:multibill-detail', args=(self.kwargs['multibilling'],))
 
     def dispatch(self, request, *args, **kwargs):
         self.multibilling = get_object_or_404(MultiBilling, pk=self.kwargs['multibilling'])

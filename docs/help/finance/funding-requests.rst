@@ -180,7 +180,7 @@ Event Production and Projection. Under it:
 
 On the `SGA Funding` tab, the **Budget** box sits under **Funding Requests**. With the finance bar's **Partition** set
 to Event Production or Projection, its figures count only that side's lines; what SGA deposited is always the whole
-budget's. The dashboard's **SGA Funding Burndown** lists the budget after the requests, narrowed to that side's lines
+budget's. The dashboard's **SGA funding burndown** lists the budget after the requests, narrowed to that side's lines
 the same way.
 
 
@@ -235,4 +235,4 @@ saved, so **Projection request** locks once a request has money charged to it or
 line's **Projection** box locks once anything is charged to the line, encumbrances included. To correct one, move the
 entries to another line first.
 
-`Last Modified: November 4, 2026`
+`Last Modified: November 5, 2026`

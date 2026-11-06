@@ -811,7 +811,7 @@ class EncumbranceTypeTests(TestCase):
 
     def test_the_badge_is_its_own_colour(self):
         self.assertIn('Encumbrance', entry_badge(self._encumbrance()))
-        self.assertIn('label-warning', entry_badge(self._encumbrance()))
+        self.assertIn('is-warn', entry_badge(self._encumbrance()))
 
 
 class RefundPickerLabelTests(TestCase):

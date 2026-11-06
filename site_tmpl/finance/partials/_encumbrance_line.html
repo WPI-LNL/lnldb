@@ -9,7 +9,7 @@
         {# The request box narrows the line picker under it, as on a queue row; the line is what is saved. #}
         <div class="form-group fin-cell-group">{{ line.fr_request }}</div>
         <div class="form-group fin-cell-group">{{ line.fr_line_target }}</div>
-        <div class="checkbox fin-cell-group" style="margin:0;font-size:12px;">
+        <div class="checkbox fin-cell-group fin-small fin-m-0">
             <label title="{{ line.allow_cross_year_fr.help_text }}">{{ line.allow_cross_year_fr }} Other year</label>
         </div>
     </td>
@@ -20,7 +20,7 @@
 </tr>
 {% if line.errors %}
     <tr><td colspan="9">
-        <div class="text-danger" style="font-size:12px;">
+        <div class="text-danger fin-small">
             {% for field, errors in line.errors.items %}
                 {% for error in errors %}
                     <div>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</div>

@@ -271,6 +271,37 @@ Where                                        What it holds
 ``fixtures/groups.json``                     Who holds the finance permissions
 ===========================================  ===========================================================
 
+Page layout
+~~~~~~~~~~~
+
+``finance/base_finance.html`` draws the filter bar. Every page extends
+``finance/base_titled.html`` on top of it, which draws the one page header:
+``fin_back`` is the way back from a record or a form, ``fin_title`` the title
+(``h2`` unless the page says otherwise), ``fin_sub`` a line under it, and
+``fin_actions`` the buttons on the right. A page with its own printed heading
+sets ``fin_head_class`` to ``hidden-print``.
+
+A button's size comes from where it sits, in ``finance.css``, not from a class:
+30px by default, and 22px in a table row, a panel heading or an alert. So
+``btn-xs`` and ``btn-sm`` have no place in these templates, with one exception:
+``partials/_billing_next_step.html`` also draws on the event page, which does
+not load ``finance.css``, and keeps its ``btn-sm``.
+
+Blue (``btn-primary``) is the one main action of a group, white (``btn-default``)
+any other action, a link the quiet ones, a red link removes something, and solid
+red is the last step of a delete. Each meaning has one icon: ``plus`` to add,
+``pencil`` to edit, ``download-alt`` to download, ``file`` for a PDF or form,
+``bookmark`` for an encumbrance, ``scissors`` to split, and ``lock`` for anything
+locked, closed or read-only. An empty state is ``inbox``, ``search`` or
+``ok-circle``.
+
+The top of ``finance.css`` holds the colours and the type scale. Any colour that
+carries words clears 4.5:1 against what it sits on, and ``--fin-faint`` is for
+marks, never words. Status badges are ``fin-tag``. Spacing that a component does
+not set itself uses the small ``fin-m*`` classes at the end of the file; inline
+styles are left only for table column widths and for what a script toggles or a
+value decides.
+
 How it was built
 ~~~~~~~~~~~~~~~~
 
@@ -2410,8 +2441,8 @@ it; ``charts.js``, ``split.js`` and ``encumbrance.js`` follow the same rule in t
 browser. A message never writes ``"$%s" % amount``, which prints ``$-50.00`` and
 ``$0.00``. Where figures sit together and add up -- Revenue, Expenses and Net on
 the dashboard and the ledger, Billed and received, Passed through and LNL kept,
-Awarded, Spent and Remaining on a funding request, and the Fund balances report
--- money going out is turned over (the ``negate`` filter, or ``ZERO - spent`` in
+Awarded, Spent and Remaining on a funding request, and the Fund balances,
+Income and spending and Events reports -- money going out is turned over (the ``negate`` filter, or ``ZERO - spent`` in
 a report, which keeps a zero from becoming ``-0.00`` in the CSV) so it shows in
 parentheses. Bills, invoices and the Funding Request Report Form go to clients
 and SGA, so they keep ``invoice_money`` and ``frrf``'s own ``-$25.00``.

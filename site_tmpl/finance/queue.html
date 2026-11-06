@@ -1,14 +1,30 @@
 {# Page 3 -- ingestion queue: upload, reconcile one line, or reconcile a batch. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 {% load static %}
 {% load bootstrap3 %}
 
+{% block fin_title %}Queue{% endblock %}
+{% block fin_sub %}Imported Workday lines waiting to be settled.{% endblock %}
+{% block fin_actions %}
+    {% permission request.user has 'finance.edit_subledger' %}
+        <a href="{% url 'finance:encumbrance-new' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-plus"></span> Add encumbrance
+        </a>
+    {% endpermission %}
+    {% if can_import %}
+        <button type="button" class="btn btn-default" id="fin-import-toggle"
+                aria-expanded="false" aria-controls="fin-import-panel">
+            <span class="glyphicon glyphicon-cloud-upload"></span> Import an export
+        </button>
+    {% endif %}
+{% endblock %}
+
 {% block fin_content %}
-    {# ---- Import + summary, one strip ---- #}
-    <div class="fin-queue-toolbar">
-        <div class="fin-queue-counts">
+    {# ---- Summary ---- #}
+    <div class="fin-stats">
+        <div class="fin-stat">
             <div class="fin-stat-label">Waiting to be settled</div>
             <div class="fin-stat-value {% if queue_count %}text-warning{% else %}text-success{% endif %}">
                 {{ queue_count }}
@@ -17,7 +33,7 @@
         </div>
 
         {% if can_edit %}
-            <div class="fin-queue-counts">
+            <div class="fin-stat">
                 <div class="fin-stat-label">Filled in for you</div>
                 <div class="fin-stat-value {% if autofilled_count %}text-success{% endif %}">
                     {{ autofilled_count }}
@@ -25,20 +41,6 @@
                 <div class="fin-stat-sub">boxes on this page &mdash; read rather than type</div>
             </div>
         {% endif %}
-
-        <div class="fin-queue-toolbar-actions">
-            {% permission request.user has 'finance.edit_subledger' %}
-                <a href="{% url 'finance:encumbrance-new' %}" class="btn btn-default btn-sm">
-                    <span class="glyphicon glyphicon-plus"></span> Add Encumbrance
-                </a>
-            {% endpermission %}
-            {% if can_import %}
-                <button type="button" class="btn btn-default btn-sm" id="fin-import-toggle"
-                        aria-expanded="false" aria-controls="fin-import-panel">
-                    <span class="glyphicon glyphicon-cloud-upload"></span> Import an export
-                </button>
-            {% endif %}
-        </div>
     </div>
 
     {% comment %}
@@ -69,7 +71,7 @@
                         <label class="fin-inline-check">
                             {{ upload_form.dry_run }} Preview only, don&rsquo;t save
                         </label>
-                        <button type="submit" class="btn btn-primary btn-sm" id="fin-upload-btn" disabled>
+                        <button type="submit" class="btn btn-primary" id="fin-upload-btn" disabled>
                             Import
                         </button>
                     </div>
@@ -193,7 +195,7 @@
                         {% with mb=row.suggestions.multibill %}
                             <a class="fin-tag" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
                                title="{{ mb.reason }}. Linking it to the multi-bill credits each event with its share; split it instead to give each event an entry of its own.">
-                                <span class="glyphicon glyphicon-th-list"></span>
+                                <span class="glyphicon glyphicon-scissors"></span>
                                 Or split across its {{ mb.multibill.events.all|length }} events
                             </a>
                         {% endwith %}
@@ -208,7 +210,7 @@
                     {% if row.close_encumbrance %}
                         <span class="fin-tag is-warn"
                               title="A pending encumbrance of about this amount is open. Match it below rather than settling the line the ordinary way, or the budget line is charged twice.">
-                            <span class="glyphicon glyphicon-lock"></span> Maybe encumbered
+                            <span class="glyphicon glyphicon-bookmark"></span> Maybe encumbered
                         </span>
                     {% endif %}
 
@@ -229,7 +231,7 @@
 
                 <a href="{% url 'finance:txn-detail' row.txn.pk %}" class="fin-queue-open"
                    title="Split this line, or see everything Workday sent">
-                    <span class="glyphicon glyphicon-resize-full"></span> Split
+                    <span class="glyphicon glyphicon-scissors"></span> Split
                 </a>
             </div>
 
@@ -251,7 +253,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ request.get_full_path }}">
                             <label class="fin-encumbrance-lede" for="fin-enc-{{ row.txn.pk }}">
-                                <span class="glyphicon glyphicon-lock"></span>
+                                <span class="glyphicon glyphicon-bookmark"></span>
                                 Already encumbered?
                             </label>
                             <select name="encumbrance" id="fin-enc-{{ row.txn.pk }}"
@@ -272,7 +274,7 @@
                                     <option value="{{ option.value }}">{{ option.label }}</option>
                                 {% endfor %}
                             </select>
-                            <button type="submit" class="btn btn-default btn-sm">
+                            <button type="submit" class="btn btn-default">
                                 Match &amp; settle
                             </button>
                         </form>
@@ -361,11 +363,11 @@
                                 {% endcomment %}
                                 {% if row.partially_allocated and row.txn.is_fully_allocated %}
                                     {# Nothing left to allocate: it only needs settling, which its page does. #}
-                                    <a href="{{ row.txn.get_absolute_url }}" class="btn btn-success btn-sm">
+                                    <a href="{{ row.txn.get_absolute_url }}" class="btn btn-primary">
                                         Review &amp; settle
                                     </a>
                                 {% else %}
-                                    <button type="submit" class="btn btn-primary btn-sm fin-allocate">
+                                    <button type="submit" class="btn btn-primary fin-allocate">
                                         Settle {{ row.txn.unallocated_amount|abs_value|money }}
                                     </button>
                                 {% endif %}
@@ -480,7 +482,7 @@
                     <label class="fin-bulk-label" for="{{ bulk_reconcile_form.project_tag.id_for_label }}">Project</label>
                     {{ bulk_reconcile_form.project_tag }}
 
-                    <button type="submit" class="btn btn-primary btn-sm">Settle selected</button>
+                    <button type="submit" class="btn btn-primary">Settle selected</button>
 
                     {% comment %}
                         The other thing a batch of rows can be: ten Workday
@@ -497,14 +499,13 @@
                     {% if bulk_encumbrance_form %}
                         <span class="fin-bulk-or">or</span>
                         {{ bulk_encumbrance_form.encumbrance }}
-                        <button type="submit" class="btn btn-default btn-sm" formnovalidate
+                        <button type="submit" class="btn btn-default" formnovalidate
                                 formaction="{% url 'finance:bulk-match-encumbrance' %}">
                             Draw selected
                         </button>
                     {% endif %}
 
-                    <button type="button" class="btn btn-link btn-sm" id="fin-qbulk-cancel"
-                            style="color:#cbd2d9;">Cancel</button>
+                    <button type="button" class="btn btn-link" id="fin-qbulk-cancel">Cancel</button>
                 </div>
             </div>
         </form>

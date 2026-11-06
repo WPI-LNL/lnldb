@@ -1,13 +1,14 @@
 {# Page 3 -- add or change an encumbrance: money set aside for a purchase that has not reached Workday yet. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:ledger' %}">&larr; Ledger</a>{% endblock %}
 
 {% block fin_content %}
     <div class="row">
         <div class="col-md-9">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     {% if msg %}<p class="fin-muted">{{ msg }}</p>{% endif %}
                     <form method="post" enctype="multipart/form-data" id="fin-encumbrance-form">
@@ -26,7 +27,7 @@
                             here. One the table left out would be posted blank
                             and saved over the line, as the split table warns.
                         {% endcomment %}
-                        <label>Lines</label>
+                        <div class="fin-panel-subhead">Lines</div>
                         <div class="fin-table-wrap">
                             <table class="table fin-table" id="fin-encumbrance-lines">
                                 <thead>
@@ -54,8 +55,8 @@
                             {% include 'finance/partials/_encumbrance_line.html' with line=formset.empty_form %}
                         </template>
 
-                        <div style="display:flex;align-items:center;gap:12px;margin:10px 0 15px;">
-                            <button type="button" class="btn btn-default btn-sm" id="fin-add-line">
+                        <div class="fin-form-row">
+                            <button type="button" class="btn btn-default" id="fin-add-line">
                                 <span class="glyphicon glyphicon-plus"></span> Add a line
                             </button>
                             <span class="fin-muted">Total <strong id="fin-encumbrance-total">$0.00</strong></span>
@@ -85,7 +86,7 @@
                     {% if matched %}
                         <hr>
                         <p><strong>Already matched to Workday</strong></p>
-                        <p class="fin-muted" style="font-size:13px;">
+                        <p class="fin-muted">
                             These lines are entries on a Workday line now. Open one to change it.
                         </p>
                         <table class="table fin-table">
@@ -108,21 +109,21 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">How this works</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         An encumbrance sets money aside against a budget line right now, so the
                         remaining balance you see reflects what has actually been committed —
                         not just what Workday has charged.
                     </p>
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         Give it a line for each fund the purchase is charged to. A line with no
                         description of its own uses the encumbrance's.
                     </p>
-                    <p class="fin-muted" style="font-size:13px;">
-                        It stays <span class="label label-warning">Pending</span> until the
+                    <p class="fin-muted">
+                        It stays <span class="fin-tag is-warn">Pending</span> until the
                         matching line shows up in a Workday export. Encumbrances can never be
                         marked Settled on their own.
                     </p>
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         When that line is imported it appears in the
                         <a href="{% url 'finance:queue' %}">ingestion queue</a> under
                         <em>Already encumbered?</em>, with this encumbrance on the list. Matching

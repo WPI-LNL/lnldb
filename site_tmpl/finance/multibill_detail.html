@@ -1,10 +1,49 @@
 {# One multi-bill: what it covers, what it comes to and why, who it went to, and what can be done next. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 
-{% block fin_content %}
-    <p class="hidden-print"><a href="{% url 'finance:multibill-list' %}">&larr; All multi-bills</a></p>
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:multibill-list' %}">&larr; All multi-bills</a>{% endblock %}
+{% block fin_title %}
+    {{ bill.display_name }}
+    {% if bill.date_paid %}
+        <span class="fin-tag is-ok">Paid {{ bill.date_paid|date:"M j, Y" }}</span>
+    {% else %}
+        <span class="fin-tag">Unpaid</span>
+    {% endif %}
+{% endblock %}
+{% block fin_sub %}One invoice covering {{ bill.events.all|length }} event{{ bill.events.all|length|pluralize }}.{% endblock %}
+{% block fin_actions %}
+    {% if can_change %}
+        <a href="{% url 'finance:multibill-edit' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
+        <a href="{% url 'finance:multibill-charge-new' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-plus"></span> Add a charge</a>
+    {% endif %}
+    <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
+    {% if can_change %}
+        {% if bill.isd_number %}
+            <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-default">Change ISD</a>
+        {% elif bill.worktag_charged %}
+            <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-primary">Record ISD</a>
+        {% else %}
+            <a href="{% url 'finance:multibill-worktag' bill.pk %}" class="btn btn-default">Enter worktag</a>
+        {% endif %}
+    {% endif %}
+    {% if not has_closed_events %}
+        {% if bill.date_paid %}
+            <form class="fin-inline" method="post" action="{% url 'finance:multibill-unpaid' bill.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-default">Mark unpaid</button>
+            </form>
+        {% else %}
+            <a href="{% url 'finance:multibill-paid' bill.pk %}" class="btn btn-primary">Mark paid…</a>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-file"></span> Invoice PDF</a>
+    {% if can_change %}
+        <a href="{% url 'finance:multibill-delete' bill.pk %}" class="btn btn-link text-danger">Delete</a>
+    {% endif %}
+{% endblock %}
 
+{% block fin_content %}
     {% comment %}
         The saved total is what finance matches payments against and splits
         between the events; the events and charges are what the invoice draws.
@@ -20,9 +59,9 @@
                 {{ breakdown.total|money }}. An event's price has probably changed since it was billed. Finance
                 matches payments against the saved total, and the invoice shows the new one.
                 {% if can_change %}
-                    <form method="post" action="{% url 'finance:multibill-update-total' bill.pk %}" style="display:inline;">
+                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-update-total' bill.pk %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-xs btn-warning">Update the total to {{ breakdown.total|money }}</button>
+                        <button type="submit" class="btn btn-primary">Update the total to {{ breakdown.total|money }}</button>
                     </form>
                 {% endif %}
             {% endif %}
@@ -41,65 +80,25 @@
     {% endif %}
 
     <div class="fin-panel">
-        <div class="fin-panel-head">
-            <span>
-                {{ bill.display_name }}
-                {% if bill.date_paid %}
-                    <span class="label label-success">Paid {{ bill.date_paid|date:"M j, Y" }}</span>
-                {% else %}
-                    <span class="label label-default">Unpaid</span>
-                {% endif %}
-            </span>
-            <span class="hidden-print">
-                {% if can_change %}
-                    <a href="{% url 'finance:multibill-edit' bill.pk %}" class="btn btn-xs btn-default">Edit</a>
-                    <a href="{% url 'finance:multibill-charge-new' bill.pk %}" class="btn btn-xs btn-default">Add a charge</a>
-                {% endif %}
-                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
-                {% if can_change %}
-                    {% if bill.isd_number %}
-                        <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-xs btn-default">Change ISD</a>
-                    {% elif bill.worktag_charged %}
-                        <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-xs btn-primary">Record ISD</a>
-                    {% else %}
-                        <a href="{% url 'finance:multibill-worktag' bill.pk %}" class="btn btn-xs btn-default">Enter worktag</a>
-                    {% endif %}
-                {% endif %}
-                {% if not has_closed_events %}
-                    {% if bill.date_paid %}
-                        <form method="post" action="{% url 'finance:multibill-unpaid' bill.pk %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-xs btn-default">Mark unpaid</button>
-                        </form>
-                    {% else %}
-                        <a href="{% url 'finance:multibill-paid' bill.pk %}" class="btn btn-xs btn-primary">Mark paid…</a>
-                    {% endif %}
-                {% endif %}
-                <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-xs btn-default">Invoice PDF</a>
-                {% if can_change %}
-                    <a href="{% url 'finance:multibill-delete' bill.pk %}" class="btn btn-xs btn-link text-danger">Delete</a>
-                {% endif %}
-            </span>
-        </div>
         <div class="fin-panel-body">
-            <div class="fin-stats" style="margin-bottom:12px;">
+            <div class="fin-stats fin-mb-12">
                 <div class="fin-stat">
                     <div class="fin-stat-label">Total</div>
                     <div class="fin-stat-value">{{ saved_total|money }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Bill to</div>
-                    <div class="fin-stat-value" style="font-size:16px;">
+                    <div class="fin-stat-value is-text">
                         {% if bill.org %}{{ bill.org.name }}{% else %}<span class="fin-muted">not set</span>{% endif %}
                     </div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Billed on</div>
-                    <div class="fin-stat-value" style="font-size:16px;">{{ bill.date_billed|date:"M j, Y" }}</div>
+                    <div class="fin-stat-value is-text">{{ bill.date_billed|date:"M j, Y" }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Payments received</div>
-                    <div class="fin-stat-value" style="font-size:16px;">{{ received|money }}</div>
+                    <div class="fin-stat-value is-text">{{ received|money }}</div>
                     {% if last_payment %}<div class="fin-stat-sub">last on {{ last_payment|date:"M j, Y" }}</div>{% endif %}
                     {% if perms.finance.view_subledger %}
                         <div class="fin-stat-sub hidden-print"><a href="{% url 'finance:ledger' %}?multibill={{ bill.pk }}">See them in the ledger</a></div>
@@ -109,7 +108,7 @@
             {% if bill.description %}<p>{{ bill.description|linebreaksbr }}</p>{% endif %}
             {% if bill.worktag_charged or bill.isd_number %}
                 <p>
-                    Charged to {{ bill.worktag_charged|default:"—" }}{% if bill.fund_label %} ({{ bill.fund_label }}){% endif %}{% if bill.isd_number %}
+                    Charged to {{ bill.worktag_charged|or_dash }}{% if bill.fund_label %} ({{ bill.fund_label }}){% endif %}{% if bill.isd_number %}
                     on ISD {{ bill.isd_number }}, {{ bill.isd_amount|money }}, created {{ bill.isd_entered_on|date:"M j, Y" }}{% else %}.
                     The ISD is not recorded yet{% endif %}.
                 </p>
@@ -172,12 +171,12 @@
                                 {% endif %}
                             </td>
                             <td class="fin-num">{{ row.total|money }}</td>
-                            <td class="hidden-print text-right" style="white-space:nowrap;">
+                            <td class="hidden-print text-right fin-nowrap">
                                 {% if can_change %}
-                                    <a href="{% url 'finance:multibill-charge-edit' bill.pk charge.pk %}" class="btn btn-xs btn-link">Change</a>
-                                    <form method="post" action="{% url 'finance:multibill-charge-delete' bill.pk charge.pk %}" style="display:inline;">
+                                    <a href="{% url 'finance:multibill-charge-edit' bill.pk charge.pk %}" class="btn btn-link">Change</a>
+                                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-charge-delete' bill.pk charge.pk %}">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-xs btn-link text-danger">Remove</button>
+                                        <button type="submit" class="btn btn-link text-danger">Remove</button>
                                     </form>
                                 {% endif %}
                             </td>
@@ -200,9 +199,9 @@
             <span>Emails sent</span>
             <span class="hidden-print">
                 {% if not bill.date_paid and not has_closed_events %}
-                    <a href="{% url 'finance:multibill-sent' bill.pk %}" class="btn btn-xs btn-default" title="It reached the client some other way, such as by hand">{% if bill.sent_on %}Change when it was sent{% else %}Mark sent…{% endif %}</a>
+                    <a href="{% url 'finance:multibill-sent' bill.pk %}" class="btn btn-default" title="It reached the client some other way, such as by hand">{% if bill.sent_on %}Change when it was sent{% else %}Mark sent…{% endif %}</a>
                 {% endif %}
-                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
+                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
             </span>
         </div>
         {% if bill.sent_on %}

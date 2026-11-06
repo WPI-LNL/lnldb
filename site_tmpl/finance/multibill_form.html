@@ -1,10 +1,11 @@
 {# Create a multi-bill, or change an unpaid one: its events, who it is billed to, and its name. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
 
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Back</a>{% endblock %}
+
 {% block fin_content %}
-    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
     {% if bill.isd_number %}
         <div class="alert alert-warning">
             ISD {{ bill.isd_number }} was created for {{ bill.isd_amount|money }}. If this changes what the bill comes to,
@@ -14,9 +15,8 @@
     <div class="row">
         <div class="col-md-8">
             <div class="fin-panel">
-                <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         {% if include_unmarked %}
                             <a href="?show_nonbulk_events=false">Show only events marked to be billed in bulk</a>
                         {% else %}
@@ -41,7 +41,7 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">The total</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;">
+                    <p class="fin-muted">
                         There is nothing to type. The bill comes to what each event would be billed on its own, plus
                         any charges you add on its page: one-offs, rentals, and percentage fees or discounts. It is
                         worked out again whenever the events or charges change, until the bill is paid.
@@ -51,7 +51,7 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">Events for different clients</div>
                 <div class="fin-panel-body">
-                    <p class="fin-muted" style="font-size:13px;margin:0;">
+                    <p class="fin-muted fin-m-0">
                         Events booked under different clients can share one bill, such as a term of films booked
                         partly under "LNL" and partly under "LNL + SocComm Films". You are asked to confirm it, and the
                         bill goes to the client under <em>Bill to</em>.

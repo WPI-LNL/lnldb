@@ -4,7 +4,7 @@
     A doughnut chart with a scannable legend beside it.
 
     Expects: rows (label/amount/color/percent, plus optional shows), canvas_id,
-    total, and empty_icon / empty_text for the no-data case. Optional
+    total, and empty_text for the no-data case. Optional
     legend_link_prefix turns each legend row into a ledger link.
 {% endcomment %}
 {% if rows %}
@@ -37,7 +37,7 @@
     </div>
 {% else %}
     <div class="fin-empty">
-        <span class="glyphicon glyphicon-{{ empty_icon|default:'stats' }}"></span>
+        <span class="glyphicon glyphicon-inbox"></span>
         {{ empty_text|default:"Nothing recorded in this period yet." }}
     </div>
 {% endif %}

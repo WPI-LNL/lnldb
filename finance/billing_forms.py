@@ -22,6 +22,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.formats import date_format
+from django.utils.safestring import mark_safe
 
 from events.models import BaseEvent, Event2019, Organization
 from finance.forms import finance_form_helper
@@ -35,20 +36,23 @@ class CustomOrganizationEmailModelMultipleChoiceField(forms.ModelMultipleChoiceF
         return '%s (%s)' % (org.name, org.exec_email)
 
 
+# crispy escapes an add-on's text, so markup has to say it is safe.
+CALENDAR_ADDON = mark_safe('<i class="glyphicon glyphicon-calendar"></i>')
+
+
 class BillingForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.event = event
         self.helper.layout = Layout(
-            PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
-            PrependedText('amount', '<strong>$</strong>'),
+            PrependedText('date_billed', CALENDAR_ADDON, css_class="datepick"),
+            PrependedText('amount', '$'),
             FormActions(
-                Submit('save-and-return', 'Save and Return'),
-                Submit('save-and-make-email', 'Save and Make Email'),
-                Reset('reset', 'Reset Form'),
+                Submit('save-and-return', 'Save and return'),
+                Submit('save-and-make-email', 'Save and make email'),
+                Reset('reset', 'Reset form', css_class='btn-default'),
             )
         )
         super(BillingForm, self).__init__(*args, **kwargs)
@@ -77,15 +81,14 @@ class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
 
         self.helper.layout = Layout(
-            PrependedText('amount', '<strong>$</strong>'),
+            PrependedText('amount', '$'),
             FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
+                Submit('save', 'Save changes'),
+                Reset('reset', 'Reset form', css_class='btn-default'),
             )
         )
         super(BillingUpdateForm, self).__init__(*args, **kwargs)
@@ -590,7 +593,7 @@ class BillingEmailForm(forms.ModelForm):
             'email_to_users',
             'email_to_orgs',
             FormActions(
-                Submit('save', 'Send Email'),
+                Submit('save', 'Send email'),
             )
         )
 
@@ -651,7 +654,7 @@ class MultiBillingEmailForm(forms.ModelForm):
             'email_to_users',
             'email_to_orgs',
             FormActions(
-                Submit('save', 'Send Email'),
+                Submit('save', 'Send email'),
             )
         )
 

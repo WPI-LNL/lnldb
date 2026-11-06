@@ -1,18 +1,19 @@
 {# Page 4 -- delete confirmation for a ledger entry. Deletions are not versioned; say so. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% if txn %}{% url 'finance:txn-detail' txn.pk %}{% else %}{% url 'finance:ledger' %}{% endif %}">&larr; Back</a>{% endblock %}
 
 {% block fin_content %}
     <div class="row">
         <div class="col-md-6">
             <div class="fin-panel">
-                <div class="fin-panel-head">Remove this entry?</div>
                 <div class="fin-panel-body">
                     <dl class="fin-kv">
                         <dt>Amount</dt>
                         <dd class="{{ entry.amount|money_class }}"><strong>{{ entry.amount|money }}</strong></dd>
                         <dt>Description</dt><dd>{{ entry.description|default:"(untitled)" }}</dd>
-                        <dt>Date</dt><dd>{{ entry.effective_date|date:"F j, Y" }}</dd>
+                        <dt>Date</dt><dd>{{ entry.effective_date|date:"M j, Y" }}</dd>
                         {% if entry.fr_line_target %}
                             <dt>Funding line</dt><dd>{{ entry.fr_line_target.label }}</dd>
                         {% endif %}

@@ -342,13 +342,13 @@ class EncumbranceViewTests(FinanceViewTestCase):
 
     def test_the_form_renders(self):
         response = self.client.get(reverse('finance:encumbrance-new'))
-        self.assertContains(response, 'Add Encumbrance')
+        self.assertContains(response, 'Add encumbrance')
         self.assertContains(response, 'Add a line')
         self.assertNotContains(response, 'What is this for?')
 
     def test_the_queue_button_says_add_encumbrance(self):
         response = self.client.get(reverse('finance:queue'))
-        self.assertContains(response, 'Add Encumbrance')
+        self.assertContains(response, 'Add encumbrance')
         self.assertNotContains(response, 'Log a purchase')
 
     def test_a_positive_amount_is_recorded_as_money_going_out(self):
@@ -423,7 +423,7 @@ class EncumbranceViewTests(FinanceViewTestCase):
         self._post(reverse('finance:encumbrance-new'))
         header = Encumbrance.objects.get()
         url = reverse('finance:encumbrance-edit', args=[header.pk])
-        self.assertContains(self.client.get(url), 'Edit Encumbrance')
+        self.assertContains(self.client.get(url), 'Edit encumbrance')
         self._post(url, lines=self._edit_lines(header, amount='80.00'), existing=1,
                    description='Spike tape run')
         entry = ParsedTransaction.objects.get()

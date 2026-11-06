@@ -1,7 +1,11 @@
 {# Page 4 -- one ledger entry, its routing form and its audit trail. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load crispy_forms_tags %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}">&larr; Ledger</a>{% endblock %}
+{% block fin_title %}{{ entry.description|default:"(untitled)" }}{% endblock %}
+{% block fin_sub %}Entry &middot; {{ entry.effective_date|date:"M j, Y" }} &middot; {{ entry.amount|money }}{% endblock %}
 
 {% block fin_content %}
     <div class="row">
@@ -26,34 +30,34 @@
             {% if txn %}
                 <div class="fin-panel fin-immutable">
                     <div class="fin-panel-head">
-                        <span><span class="glyphicon glyphicon-lock"></span> Workday Record</span>
+                        <span><span class="glyphicon glyphicon-lock"></span> Workday record</span>
                         <span class="fin-locked-note">read-only</span>
                     </div>
                     <div class="fin-panel-body">
                         <dl class="fin-kv">
-                            <dt>Operational Transaction</dt>
+                            <dt>Operational transaction</dt>
                             <dd><a href="{% url 'finance:txn-detail' txn.pk %}"><code>{{ txn.reference }}</code></a></dd>
-                            <dt>Accounting Date</dt><dd>{{ txn.accounting_date|date:"F j, Y" }}</dd>
-                            <dt>Bank Line Total</dt>
+                            <dt>Accounting date</dt><dd>{{ txn.accounting_date|date:"M j, Y" }}</dd>
+                            <dt>Bank line total</dt>
                             <dd class="{{ txn.net_amount|money_class }}"><strong>{{ txn.net_amount|money }}</strong></dd>
                             {% if txn.payee %}<dt>Payee</dt><dd>{{ txn.payee }}</dd>{% endif %}
                             {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
                         </dl>
                         {% if txn.is_split %}
-                            <div class="alert alert-info" style="margin-bottom:0;">
+                            <div class="alert alert-info fin-mb-0">
                                 This bank line is split across {{ txn.slices.count }} entries.
                                 <a href="{% url 'finance:txn-detail' txn.pk %}">View the whole split &rarr;</a>
                             </div>
                         {% endif %}
                         {% if entry.crosses_partition %}
-                            <div class="alert alert-warning" style="margin-bottom:0;margin-top:8px;">
+                            <div class="alert alert-warning fin-mb-0 fin-mt-8">
                                 <span class="glyphicon glyphicon-transfer"></span>
                                 {{ entry.partition_note }}
                                 That is allowed — SGA reimburses one account for the other’s
                                 spending — but it is worth being sure it is deliberate.
                             </div>
                         {% elif txn.default_partition %}
-                            <div class="alert alert-info" style="margin-bottom:0;margin-top:8px;">
+                            <div class="alert alert-info fin-mb-0 fin-mt-8">
                                 Paid out of <code>{{ txn.partition_code_label }}</code>, and counted
                                 on that side.
                             </div>
@@ -124,15 +128,15 @@
             {% if entry.linked_event %}
                 <div class="fin-panel">
                     <div class="fin-panel-head">
-                        <span>Inherited from the Event</span>
+                        <span>Inherited from the event</span>
                         <span class="fin-locked-note">never re-keyed</span>
                     </div>
                     <div class="fin-panel-body">
                         <dl class="fin-kv">
                             <dt>Event</dt>
                             <dd><a href="{% url 'events:detail' entry.linked_event.pk %}">{{ entry.linked_event.event_name }}</a></dd>
-                            <dt>Client Type</dt><dd>{{ entry.client_type_display }}</dd>
-                            <dt>Services</dt><dd>{{ entry.event_services_display|default:"—" }}</dd>
+                            <dt>Client type</dt><dd>{{ entry.client_type_display }}</dd>
+                            <dt>Services</dt><dd>{{ entry.event_services_display|or_dash }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -143,7 +147,7 @@
         <div class="col-md-7">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Subledger Metadata</span>
+                    <span>Subledger metadata</span>
                     <span>
                         {{ entry|entry_badge }} {{ entry|status_badge }}
                     </span>
@@ -162,12 +166,12 @@
                         <dl class="fin-kv">
                             <dt>Amount</dt>
                             <dd class="{{ entry.amount|money_class }}">{{ entry.amount|money }}</dd>
-                            <dt>Date</dt><dd>{{ entry.effective_date|date:"F j, Y" }}</dd>
-                            <dt>Description</dt><dd>{{ entry.description|default:"—" }}</dd>
-                            <dt>Fund</dt><dd>{{ entry.fund_source|default:"—" }}</dd>
-                            <dt>Spend Category</dt><dd>{{ entry.lnl_spend_category|default:"—" }}</dd>
-                            <dt>Project</dt><dd>{{ entry.project_tag|default:"—" }}</dd>
-                            <dt>Explanation</dt><dd>{{ entry.audit_explanation|default:"—"|linebreaksbr }}</dd>
+                            <dt>Date</dt><dd>{{ entry.effective_date|date:"M j, Y" }}</dd>
+                            <dt>Description</dt><dd>{{ entry.description|or_dash }}</dd>
+                            <dt>Fund</dt><dd>{{ entry.fund_source|or_dash }}</dd>
+                            <dt>Spend category</dt><dd>{{ entry.lnl_spend_category|or_dash }}</dd>
+                            <dt>Project</dt><dd>{{ entry.project_tag|or_dash }}</dd>
+                            <dt>Explanation</dt><dd>{{ entry.audit_explanation|linebreaksbr|or_dash }}</dd>
                         </dl>
                     {% endif %}
                 </div>
@@ -179,7 +183,7 @@
                 <div class="fin-panel-body">
                     {% if entry.receipt_file %}
                         {% if can_view_receipts %}
-                            <a href="{{ entry.receipt_file.url }}" target="_blank" class="btn btn-default btn-sm">
+                            <a href="{{ entry.receipt_file.url }}" target="_blank" class="btn btn-default">
                                 <span class="glyphicon glyphicon-paperclip"></span>
                                 View receipt
                             </a>
@@ -198,7 +202,7 @@
 
             {# ---- Audit trail ---- #}
             <div class="fin-panel">
-                <div class="fin-panel-head">Audit Trail</div>
+                <div class="fin-panel-head">Audit trail</div>
                 <div class="fin-panel-body">
                     <ul class="fin-audit">
                         {% for item in audit_trail %}
@@ -224,7 +228,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="fin-audit-meta">
-                                    {{ item.date|date:"F j, Y \a\t P" }}
+                                    {{ item.date|date:"M j, Y \a\t P" }}
                                     {% if item.comment %}&middot; {{ item.comment }}{% endif %}
                                 </div>
                             </li>

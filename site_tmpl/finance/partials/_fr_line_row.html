@@ -44,12 +44,12 @@
         {% if f.instance.pk %}
             <span class="fin-fr-delete-flag">{{ f.DELETE }}</span>
         {% endif %}
-        <button type="button" class="btn btn-xs btn-link text-danger fin-fr-drop"
+        <button type="button" class="btn btn-link text-danger fin-fr-drop"
                 title="Remove this line">&times;</button>
     </td>
 </tr>
 {% if f.errors %}
-    <tr class="fin-fr-errors"><td colspan="10" class="text-danger" style="font-size:12px;">
+    <tr class="fin-fr-errors"><td colspan="10" class="text-danger fin-small">
         {% for field, errors in f.errors.items %}
             {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
         {% endfor %}

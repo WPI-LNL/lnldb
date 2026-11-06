@@ -1,15 +1,18 @@
 {# Page 1 -- executive dashboard. Every chart reads its data from a json_script block. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 {% load static %}
+
+{% block fin_title %}Dashboard{% endblock %}
+{% block fin_sub %}Where the money stands, and what needs a decision.{% endblock %}
 
 {% block fin_content %}
     {# ---- Action banner: only shown when something needs a decision ---- #}
     {% if unreconciled_count %}
         <div class="fin-action-banner">
             <div class="fin-banner-text">
-                <span class="glyphicon glyphicon-exclamation-sign"></span>
+                <span class="glyphicon glyphicon-alert"></span>
                 <strong>{{ unreconciled_count }}</strong>
                 line{{ unreconciled_count|pluralize }} waiting to be settled,
                 covering <strong>{{ unreconciled_total|money }}</strong> of activity.
@@ -20,7 +23,7 @@
                 {% endif %}
             </div>
             {% permission request.user has 'finance.edit_subledger' %}
-                <a href="{% url 'finance:queue' %}?{{ filter_state.querystring }}" class="btn btn-warning btn-sm">
+                <a href="{% url 'finance:queue' %}?{{ filter_state.querystring }}" class="btn btn-primary">
                     Clear the queue &rarr;
                 </a>
             {% endpermission %}
@@ -33,7 +36,7 @@
                 waiting for the Workday feed.
             </div>
             <a href="{% url 'finance:ledger' %}?status=pending&amp;{{ filter_state.querystring }}"
-               class="btn btn-default btn-sm">Review</a>
+               class="btn btn-default">Review</a>
         </div>
     {% endif %}
 
@@ -41,12 +44,12 @@
     <div class="fin-stats">
         <div class="fin-stat">
             <div class="fin-stat-label">Revenue</div>
-            <div class="fin-stat-value text-success">{{ total_revenue|money }}</div>
+            <div class="fin-stat-value {{ total_revenue|money_class }}">{{ total_revenue|money }}</div>
             <div class="fin-stat-sub">money in</div>
         </div>
         <div class="fin-stat">
             <div class="fin-stat-label">Expenses</div>
-            <div class="fin-stat-value text-danger">{{ total_expense|negate|money }}</div>
+            <div class="fin-stat-value {{ total_expense|negate|money_class }}">{{ total_expense|negate|money }}</div>
             <div class="fin-stat-sub">money out</div>
         </div>
         <div class="fin-stat">
@@ -70,8 +73,8 @@
     {# ---- Money in vs money out, by month ---- #}
     <div class="fin-panel">
         <div class="fin-panel-head">
-            <span>Money In vs Money Out</span>
-            <span class="fin-muted" style="font-weight:400;font-size:12px;">
+            <span>Money in vs money out</span>
+            <span class="fin-muted fin-panel-note">
                 {% if filter_state.fiscal_year %}
                     across FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}
                 {% else %}last 12 months{% endif %}
@@ -82,7 +85,7 @@
                 <canvas id="fin-cashflow" height="80"></canvas>
             {% else %}
                 <div class="fin-empty">
-                    <span class="glyphicon glyphicon-stats"></span>
+                    <span class="glyphicon glyphicon-inbox"></span>
                     No activity recorded in this period yet.
                 </div>
             {% endif %}
@@ -94,12 +97,12 @@
         <div class="col-md-4">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Spending by Category</span>
-                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ category_total|money }}</span>
+                    <span>Spending by category</span>
+                    <span class="fin-muted fin-panel-note">{{ category_total|money }}</span>
                 </div>
                 <div class="fin-panel-body">
                     {% url 'finance:ledger' as ledger_url %}
-                    {% include 'finance/partials/_doughnut.html' with rows=categories canvas_id='fin-chart-categories' legend_link_prefix=ledger_url|add:"?category=" empty_icon='piggy-bank' empty_text='No categorised spending in this period yet.' %}
+                    {% include 'finance/partials/_doughnut.html' with rows=categories canvas_id='fin-chart-categories' legend_link_prefix=ledger_url|add:"?category=" empty_text='No categorised spending in this period yet.' %}
                 </div>
             </div>
         </div>
@@ -107,13 +110,13 @@
         <div class="col-md-4">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Department vs Student Org</span>
-                    <span class="fin-muted" style="font-weight:400;font-size:12px;">
+                    <span>Department vs student org</span>
+                    <span class="fin-muted fin-panel-note">
                         {{ client_type_shows }} show{{ client_type_shows|pluralize }}
                     </span>
                 </div>
                 <div class="fin-panel-body">
-                    {% include 'finance/partials/_doughnut.html' with rows=client_types canvas_id='fin-chart-clienttypes' empty_icon='education' empty_text='No event revenue linked yet.' %}
+                    {% include 'finance/partials/_doughnut.html' with rows=client_types canvas_id='fin-chart-clienttypes' empty_text='No event revenue linked yet.' %}
                     {% if client_types %}
                         <p class="fin-chart-note">
                             Client type is inherited from each event&rsquo;s billing org
@@ -128,11 +131,11 @@
         <div class="col-md-4">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Service Mix</span>
-                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ service_total|money }}</span>
+                    <span>Service mix</span>
+                    <span class="fin-muted fin-panel-note">{{ service_total|money }}</span>
                 </div>
                 <div class="fin-panel-body">
-                    {% include 'finance/partials/_doughnut.html' with rows=services canvas_id='fin-chart-services' empty_icon='music' empty_text='No services recorded on linked events yet.' %}
+                    {% include 'finance/partials/_doughnut.html' with rows=services canvas_id='fin-chart-services' empty_text='No services recorded on linked events yet.' %}
                     {% if services %}
                         <p class="fin-chart-note">
                             A show&rsquo;s revenue is split across its services in proportion to
@@ -154,8 +157,8 @@
         <div class="col-md-6">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Revenue by Source</span>
-                    <span class="fin-muted" style="font-weight:400;font-size:12px;">event billing, and each kind of other income</span>
+                    <span>Revenue by source</span>
+                    <span class="fin-muted fin-panel-note">event billing, and each kind of other income</span>
                 </div>
                 <div class="fin-panel-body">
                     {% for row in revenue_sources %}
@@ -171,7 +174,7 @@
                                 <div class="fin-rank-fill" style="width:{{ row.bar }}%;background:{{ row.color }}"></div>
                             </div>
                             {% if row.taken_back %}
-                                <div class="fin-muted" style="font-size:11px;"
+                                <div class="fin-muted fin-small"
                                      title="SGA reclaimed money it had paid -- a reimbursement made twice. It is netted off here because it undoes income rather than being spending.">
                                     net of {{ row.taken_back|money }} SGA took back
                                 </div>
@@ -179,7 +182,7 @@
                         </div>
                     {% empty %}
                         <div class="fin-empty">
-                            <span class="glyphicon glyphicon-usd"></span>
+                            <span class="glyphicon glyphicon-inbox"></span>
                             No revenue recorded in this period yet.
                         </div>
                     {% endfor %}
@@ -190,9 +193,9 @@
         <div class="col-md-6">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Event Billing, Kept</span>
+                    <span>Event billing, kept</span>
                     <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}"
-                       class="fin-muted" style="font-weight:400;font-size:12px;">Event P&amp;L &rarr;</a>
+                       class="fin-muted fin-panel-note">Event P&amp;L &rarr;</a>
                 </div>
                 <div class="fin-panel-body">
                     {% comment %}
@@ -200,14 +203,14 @@
                         the rental house. Counting it as income makes LNL look like
                         a bigger business than it is.
                     {% endcomment %}
-                    <div class="fin-stats" style="margin-bottom:10px;">
+                    <div class="fin-stats fin-mb-12">
                         <div class="fin-stat">
                             <div class="fin-stat-label">Billed and received</div>
                             <div class="fin-stat-value">{{ billing_kept.gross|money }}</div>
                         </div>
                         <div class="fin-stat">
                             <div class="fin-stat-label">Passed through</div>
-                            <div class="fin-stat-value text-danger">{{ billing_kept.passthrough|negate|money }}</div>
+                            <div class="fin-stat-value {{ billing_kept.passthrough|negate|money_class }}">{{ billing_kept.passthrough|negate|money }}</div>
                             <div class="fin-stat-sub">to rental houses and vendors</div>
                         </div>
                         <div class="fin-stat">
@@ -220,7 +223,7 @@
                     </div>
                     {% if retention %}
                         <div class="fin-panel-subhead">Clients this year</div>
-                        <div class="fin-stats" style="margin-bottom:6px;">
+                        <div class="fin-stats fin-mb-4">
                             <div class="fin-stat">
                                 <div class="fin-stat-label">Returning</div>
                                 <div class="fin-stat-value">{{ retention.returning.count }}</div>
@@ -233,13 +236,13 @@
                             </div>
                         </div>
                         {% if retention.new_clients %}
-                            <div class="fin-muted" style="font-size:12px;"
+                            <div class="fin-muted fin-small"
                                  title="Clients LNL had not worked a show for in any earlier fiscal year, by what they paid this year">
                                 New: {% for client in retention.new_clients %}{{ client.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                             </div>
                         {% endif %}
                     {% elif not filter_state.fiscal_year %}
-                        <div class="fin-muted" style="font-size:12px;">Pick a fiscal year to see which clients are new.</div>
+                        <div class="fin-muted fin-small">Pick a fiscal year to see which clients are new.</div>
                     {% endif %}
                 </div>
             </div>
@@ -251,8 +254,8 @@
         <div class="col-md-6">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Revenue by Client</span>
-                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ client_total|money }}</span>
+                    <span>Revenue by client</span>
+                    <span class="fin-muted fin-panel-note">{{ client_total|money }}</span>
                 </div>
                 <div class="fin-panel-body">
                     {% for row in clients %}
@@ -272,7 +275,7 @@
                         </div>
                     {% empty %}
                         <div class="fin-empty">
-                            <span class="glyphicon glyphicon-user"></span>
+                            <span class="glyphicon glyphicon-inbox"></span>
                             No revenue recorded in this period yet.
                         </div>
                     {% endfor %}
@@ -283,9 +286,9 @@
         <div class="col-md-6">
             <div class="fin-panel">
                 <div class="fin-panel-head">
-                    <span>Project Spending</span>
+                    <span>Project spending</span>
                     <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}"
-                       class="fin-muted" style="font-weight:400;font-size:12px;">Explore &rarr;</a>
+                       class="fin-muted fin-panel-note">Explore &rarr;</a>
                 </div>
                 <div class="fin-panel-body">
                     {% for project in projects %}
@@ -316,7 +319,7 @@
                         </div>
                     {% empty %}
                         <div class="fin-empty">
-                            <span class="glyphicon glyphicon-tags"></span>
+                            <span class="glyphicon glyphicon-inbox"></span>
                             Nothing tagged to a project in this period yet.
                         </div>
                     {% endfor %}
@@ -334,9 +337,9 @@
     {% if funds_now.accounts %}
         <div class="fin-panel">
             <div class="fin-panel-head">
-                <span>What Each Fund Holds Today</span>
+                <span>What each fund holds today</span>
                 <a href="{% url 'finance:balances' %}?fy={{ current_fiscal_year }}&amp;partition={{ filter_state.partition|default:'all' }}"
-                   class="fin-muted" style="font-weight:400;font-size:12px;">Balances &rarr;</a>
+                   class="fin-muted fin-panel-note">Balances &rarr;</a>
             </div>
             <div class="fin-table-wrap">
                 <table class="table fin-table">
@@ -379,10 +382,10 @@
         <div class="fin-panel">
             <div class="fin-panel-head">
                 <span>Owed to LNL</span>
-                <span class="fin-muted" style="font-weight:400;font-size:12px;">every year since the books started</span>
+                <span class="fin-muted fin-panel-note">every year since the books started</span>
             </div>
             <div class="fin-panel-body">
-                <div class="fin-stats" style="margin-bottom:0;">
+                <div class="fin-stats fin-mb-0">
                     <div class="fin-stat">
                         <div class="fin-stat-label">By SGA</div>
                         <div class="fin-stat-value {% if owed_by_sga %}text-warning{% else %}text-muted{% endif %}">
@@ -412,9 +415,9 @@
     {% endcomment %}
     <div class="fin-panel">
         <div class="fin-panel-head">
-            <span>Events That Cost More Than They Brought In</span>
+            <span>Events that cost more than they brought in</span>
             <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}"
-               class="fin-muted" style="font-weight:400;font-size:12px;">Every event &rarr;</a>
+               class="fin-muted fin-panel-note">Every event &rarr;</a>
         </div>
         <div class="fin-table-wrap">
             <table class="table fin-table">
@@ -425,13 +428,13 @@
                             <span class="fin-muted">{{ row.event.datetime_start|date:"M j, Y" }}</span>
                         </td>
                         <td class="fin-num">{{ row.received|money }} <span class="fin-muted">in</span></td>
-                        <td class="fin-num">{{ row.costs|money }} <span class="fin-muted">out</span></td>
+                        <td class="fin-num">{{ row.costs|negate|money }} <span class="fin-muted">out</span></td>
                         <td class="fin-num {{ row.margin|money_class }}">{{ row.margin|money }}</td>
                     </tr>
                 {% empty %}
                     <tr><td>
                         <div class="fin-empty">
-                            <span class="glyphicon glyphicon-calendar"></span>
+                            <span class="glyphicon glyphicon-inbox"></span>
                             No event in this period has cost more than it brought in -- of the ones with
                             costs linked to them.
                         </div>
@@ -444,9 +447,9 @@
     {# ---- Funding request burndowns ---- #}
     <div class="fin-panel">
         <div class="fin-panel-head">
-            <span>SGA Funding Burndown</span>
+            <span>SGA funding burndown</span>
             <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}"
-               class="fin-muted" style="font-weight:400;font-size:12px;">View all &rarr;</a>
+               class="fin-muted fin-panel-note">View all &rarr;</a>
         </div>
         <div class="fin-panel-body fin-fr-list">
             {% for fr in funding_requests %}
@@ -470,7 +473,7 @@
                         <span class="fin-fr-figures {% if fr.overspent %}text-danger{% endif %}">
                             {{ fr.spent|money }} of {{ fr.awarded|money }}
                             {% if fr.overspent %}
-                                <span class="label label-danger">Overspent</span>
+                                <span class="fin-tag is-alert">Overspent</span>
                             {% else %}
                                 <span class="fin-muted">({{ fr.remaining|money }} left)</span>
                             {% endif %}
@@ -495,7 +498,7 @@
                                     <span class="{% if line.is_overspent %}text-danger{% else %}fin-muted{% endif %}">
                                         {{ line.spent|money }} / {% approved line %}
                                         {% if line.is_overspent %}
-                                            <span class="label label-danger">Over</span>
+                                            <span class="fin-tag is-alert">Over</span>
                                         {% endif %}
                                     </span>
                                 </div>

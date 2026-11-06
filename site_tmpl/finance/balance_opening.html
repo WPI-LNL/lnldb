@@ -1,6 +1,8 @@
 {# What each account held when the books started, and which fund held it. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; Balances</a>{% endblock %}
 
 {% block fin_content %}
     <div class="row">
@@ -26,7 +28,7 @@
                                 </div>
                             {% endwith %}
                             {% if section.funds %}
-                                <p class="fin-muted" style="font-size:13px;">
+                                <p class="fin-muted">
                                     How much of that each fund held. Leave a fund blank if it held nothing.
                                 </p>
                                 {% for fund, field in section.funds %}
@@ -40,7 +42,7 @@
                                     {% endwith %}
                                 {% endfor %}
                             {% else %}
-                                <p class="fin-muted" style="font-size:13px;margin:0;">
+                                <p class="fin-muted fin-m-0">
                                     No other fund is held in {{ section.account.code }}, so all of it is {{ section.own }}.
                                 </p>
                             {% endif %}
@@ -48,7 +50,7 @@
                     </div>
                 {% endfor %}
                 {% if form.sections %}
-                    <div class="text-right" style="margin-bottom:20px;">
+                    <div class="text-right fin-mb-20">
                         <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
                         <button type="submit" class="btn btn-primary">Save opening balances</button>
                     </div>
@@ -58,7 +60,7 @@
         <div class="col-md-5">
             <div class="fin-panel">
                 <div class="fin-panel-head">How the opening works</div>
-                <div class="fin-panel-body" style="font-size:13px;">
+                <div class="fin-panel-body">
                     <p class="fin-muted">
                         The books start on {{ books_start|date:"M j, Y" }}. Whatever each account held at the
                         end of {{ night_before|date:"M j, Y" }} is its opening balance, and every line from
@@ -69,11 +71,11 @@
                         still owed LNL a reimbursement for spending before then, say so here. Whatever you
                         do not assign is the account's own money.
                     </p>
-                    <p class="fin-muted" style="margin:0;">
+                    <p class="fin-muted fin-m-0">
                         Saving replaces the opening split, so this page always shows what the opening is.
                     </p>
                     {% if skipped %}
-                        <p class="text-warning" style="margin:10px 0 0;">
+                        <p class="text-warning fin-m-0 fin-mt-12">
                             {% for account in skipped %}{{ account.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
                             ha{{ skipped|pluralize:"s,ve" }} no carry-forward fund held in
                             {{ skipped|pluralize:"it,them" }}, so there is nothing for the rest to belong to.

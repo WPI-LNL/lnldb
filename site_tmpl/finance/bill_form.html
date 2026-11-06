@@ -1,0 +1,23 @@
+{# A bill, or the email that sends one. The form itself comes from finance.billing_forms. #}
+{% extends 'finance/base_titled.html' %}
+{% load crispy_forms_tags %}
+
+{% block extras %}
+    {{ block.super }}
+    {% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; {{ back_label }}</a>{% endblock %}
+{% block fin_sub %}{{ extra }}{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-9">
+            <div class="fin-panel">
+                <div class="fin-panel-body">
+                    {% crispy form %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

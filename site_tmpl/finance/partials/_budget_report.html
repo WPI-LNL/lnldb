@@ -34,7 +34,7 @@
     {% csrf_token %}
     {% if can_save and budget_form.spent_lines %}
         <div class="fin-brf-save fin-no-print">
-            <button type="submit" class="btn btn-primary btn-sm">Save answers</button>
+            <button type="submit" class="btn btn-primary">Save answers</button>
             <span class="fin-muted">How many undergraduates each line served.</span>
         </div>
     {% endif %}
@@ -49,7 +49,7 @@
                         {% if item.line.category %}<span class="fin-muted">({{ item.line.category.name }})</span>{% endif %}
                     </span>
                     {% if can_view_receipts %}
-                        <a href="?{{ budget_query }}&amp;format=pdf&amp;line={{ item.line.pk }}" class="btn btn-xs btn-primary fin-no-print" target="_blank">
+                        <a href="?{{ budget_query }}&amp;format=pdf&amp;line={{ item.line.pk }}" class="btn btn-default fin-no-print" target="_blank">
                             <span class="glyphicon glyphicon-file"></span> PDF for SGA
                         </a>
                     {% endif %}
@@ -57,7 +57,7 @@
                 <div class="fin-panel-body">
                     {% comment %} SGA's questions for the line, in the order its form asks them. {% endcomment %}
                     <dl class="fin-brf-facts">
-                        <div><dt>Used for</dt><dd>{{ item.used_for|default:"—" }}</dd></div>
+                        <div><dt>Used for</dt><dd>{{ item.used_for|or_dash }}</dd></div>
                         <div><dt>Type</dt><dd>Expense</dd></div>
                         <div><dt>SGA money</dt><dd><strong>{{ item.sga|money }}</strong>{% if item.line.amount_awarded is not None %} <span class="fin-muted">of {{ item.line.amount_awarded|money }} approved</span>{% endif %}</dd></div>
                         <div><dt>Group funds</dt><dd>{{ item.group|money }}</dd></div>
@@ -119,7 +119,7 @@
 
     {% if can_save and budget_form.spent_lines %}
         <div class="fin-brf-save fin-no-print">
-            <button type="submit" class="btn btn-primary btn-sm">Save answers</button>
+            <button type="submit" class="btn btn-primary">Save answers</button>
         </div>
     {% endif %}
 </form>

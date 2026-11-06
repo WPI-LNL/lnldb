@@ -1,16 +1,12 @@
 {# The Reports tab: every report, what it answers, and the ledger as a download. #}
-{% extends 'finance/base_finance.html' %}
+{% extends 'finance/base_titled.html' %}
 {% load finance_extras %}
+
+{% block fin_title %}Reports{% endblock %}
+{% block fin_sub %}{% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}All years{% endif %} &middot; each one prints, and downloads as CSV.{% endblock %}
 
 {% block fin_content %}
     <div class="fin-panel">
-        <div class="fin-panel-head">
-            <span>Reports</span>
-            <span class="fin-locked-note">
-                {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}all years{% endif %}
-                &middot; each one prints, and downloads as CSV
-            </span>
-        </div>
         <div class="fin-table-wrap">
             <table class="table fin-table">
                 <tbody>
@@ -30,9 +26,9 @@
                                 </div>
                             </td>
                             <td class="fin-nowrap" style="width:140px;">
-                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}" class="btn btn-xs btn-default">View</a>
+                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}" class="btn btn-default">View</a>
                                 {% if item.takes != 'request' %}
-                                    <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                                    <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-default">
                                         <span class="glyphicon glyphicon-download-alt"></span> CSV
                                     </a>
                                 {% endif %}
@@ -49,8 +45,8 @@
                             </div>
                         </td>
                         <td class="fin-nowrap">
-                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-xs btn-default">View</a>
-                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-default">View</a>
+                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-default">
                                 <span class="glyphicon glyphicon-download-alt"></span> CSV
                             </a>
                         </td>

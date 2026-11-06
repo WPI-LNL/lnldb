@@ -71,7 +71,7 @@ def balance_sheet(request):
              .select_related('closed_by').first())
 
     context = {
-        'h2': "Fund Balances",
+        'h2': "Balances",
         'fin_page': 'balances',
         'year': year,
         'close': close,
