@@ -106,27 +106,29 @@ class PercentOfTests(TestCase):
 
 
 class BurndownBarTests(TestCase):
-    """ Green remaining, red spent, and an overspend that refuses to hide. """
+    """ Spent and left, as money out and money in, and an overspend that refuses to hide. """
 
     def test_a_partly_spent_award(self):
         html = burndown_bar(Decimal('250'), Decimal('1000'))
-        self.assertIn('width:25%', html)
-        self.assertIn('width:75%', html)
+        self.assertIn('is-spent" style="width:25%', html)
+        self.assertIn('is-left" style="width:75%', html)
+        self.assertNotIn('is-over', html)
 
     def test_an_overspend_is_named_rather_than_clamped(self):
         """ A bar that silently stops at 100% hides the one case that matters. """
         html = burndown_bar(Decimal('1200'), Decimal('1000'))
         self.assertIn('Over by $200.00', html)
-        self.assertIn('progress-bar-danger', html)
+        self.assertIn('is-over', html)
 
     def test_an_award_of_nothing_reads_as_fully_spent(self):
         html = burndown_bar(Decimal('10'), Decimal('0'))
-        self.assertIn('progress-bar-danger', html)
+        self.assertIn('is-over', html)
         self.assertIn('width:100%', html)
 
-    def test_a_fully_spent_award_is_all_red(self):
+    def test_a_fully_spent_award_is_full_but_not_over(self):
         html = burndown_bar(Decimal('1000'), Decimal('1000'))
         self.assertIn('width:100%', html)
+        self.assertNotIn('is-over', html)
 
     def test_rubbish_renders_nothing_rather_than_raising(self):
         self.assertEqual(burndown_bar('elephant', 'giraffe'), '')

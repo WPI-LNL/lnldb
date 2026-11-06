@@ -7,10 +7,17 @@
 
 {% block fin_content %}
     <div class="row">
-        <div class="col-md-9">
+        <div class="col-md-12">
             <div class="fin-panel">
                 <div class="fin-panel-body">
-                    {% if msg %}<p class="fin-muted">{{ msg }}</p>{% endif %}
+                    <details class="fin-howto fin-mb-12">
+                        <summary>How this works</summary>
+                        <ul>
+                            <li>An encumbrance sets money aside against a budget now, before the charge reaches Workday.</li>
+                            <li>Give it a line for each fund the purchase is charged to. A line with no description uses the encumbrance's.</li>
+                            <li>It stays <span class="fin-tag is-warn">Pending</span> until its Workday line is imported. That line then offers it in the <a href="{% url 'finance:queue' %}">queue</a> under <em>Already encumbered?</em>. Match it there: settling the line the ordinary way charges the budget twice.</li>
+                        </ul>
+                    </details>
                     <form method="post" enctype="multipart/form-data" id="fin-encumbrance-form">
                         {% csrf_token %}
                         {% crispy form %}
@@ -35,12 +42,12 @@
                                         <th style="width:110px;">Amount</th>
                                         <th>Description</th>
                                         <th>Fund</th>
-                                        <th>Spend Category</th>
-                                        <th>SGA Line</th>
+                                        <th>Spend category</th>
+                                        <th>SGA line</th>
                                         <th>Incurred for event</th>
                                         <th>Project</th>
                                         <th title="Projection spending rather than Event Production">Projection</th>
-                                        <th style="width:40px;">Del</th>
+                                        <th class="fin-x-col"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -86,9 +93,7 @@
                     {% if matched %}
                         <hr>
                         <p><strong>Already matched to Workday</strong></p>
-                        <p class="fin-muted">
-                            These lines are entries on a Workday line now. Open one to change it.
-                        </p>
+                        <p class="fin-muted">Open one to change it.</p>
                         <table class="table fin-table">
                             <tbody>
                                 {% for entry in matched %}
@@ -105,38 +110,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="fin-panel">
-                <div class="fin-panel-head">How this works</div>
-                <div class="fin-panel-body">
-                    <p class="fin-muted">
-                        An encumbrance sets money aside against a budget line right now, so the
-                        remaining balance you see reflects what has actually been committed —
-                        not just what Workday has charged.
-                    </p>
-                    <p class="fin-muted">
-                        Give it a line for each fund the purchase is charged to. A line with no
-                        description of its own uses the encumbrance's.
-                    </p>
-                    <p class="fin-muted">
-                        It stays <span class="fin-tag is-warn">Pending</span> until the
-                        matching line shows up in a Workday export. Encumbrances can never be
-                        marked Settled on their own.
-                    </p>
-                    <p class="fin-muted">
-                        When that line is imported it appears in the
-                        <a href="{% url 'finance:queue' %}">ingestion queue</a> under
-                        <em>Already encumbered?</em>, with this encumbrance on the list. Matching
-                        it there closes the encumbrance against the real charge &mdash; settling
-                        the line the ordinary way instead would charge the budget twice.
-                    </p>
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock %}
 
 {% block finalsay %}
 {{ block.super }}
 <script src="{% asset 'js/encumbrance.js' %}"></script>
+<script src="{% asset 'js/row_remove.js' %}"></script>
 {% endblock %}

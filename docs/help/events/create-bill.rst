@@ -44,8 +44,8 @@ Create and Send a Bill
 #. Next you will have the option to generate and send an email to the client to request their Workday worktag. If you
    do not wish to send an email at this time, click `Save and Return`. Otherwise click `Save and Make Email`.
 #. If you chose to send the email, the next page will automatically generate an email for you and give you the
-   opportunity to edit the message and subject line. The `User Recipients` field allows you to define specific users to
-   send the email to, while the `Client Recipients` field lists any applicable exec board email aliases. Once you're
+   opportunity to edit the message and subject line. The `User recipients` field allows you to define specific users to
+   send the email to, while the `Client recipients` field lists any applicable exec board email aliases. Once you're
    satisfied with the setup, click `Send Email`. The bill will be added to the email automatically as an attachment.
 
 

@@ -5,7 +5,6 @@
 {% load static %}
 
 {% block fin_title %}Ledger{% endblock %}
-{% block fin_sub %}Every entry in the books, with the Workday line behind it.{% endblock %}
 {% block fin_actions %}
     {% comment %}
         Every row the filters select, not only this page of
@@ -61,7 +60,7 @@
     {# ---- Totals ---- #}
     <div class="fin-stats">
         <div class="fin-stat">
-            <div class="fin-stat-label">Rows</div>
+            <div class="fin-stat-label">Entries</div>
             <div class="fin-stat-value">{{ result_count }}</div>
         </div>
         <div class="fin-stat">
@@ -200,7 +199,7 @@
                             <td data-col="status">{{ entry|status_badge }}</td>
                             <td data-col="partition">
                                 {% if entry.is_projection %}
-                                    <span class="fin-tag is-projection">PROJ</span>
+                                    <span class="fin-tag is-projection">Projection</span>
                                 {% else %}<span class="fin-muted">Event</span>{% endif %}
                                 {% comment %}
                                     Filed on the opposite side from the account that

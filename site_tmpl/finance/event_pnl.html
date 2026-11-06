@@ -3,14 +3,13 @@
 {% load finance_extras %}
 
 {% block fin_title %}Events{% endblock %}
-{% block fin_sub %}What each event brought in and cost, by the year it ran. Every linked entry counts, whenever it landed.{% endblock %}
 
 {% block fin_content %}
     {% comment %}
         The year here is the year the event *ran*, and every entry linked to it
-        counts whatever year it landed in -- see finance.calculators. Said on
-        the page because it is the one place in the app where the filter bar's
-        year means something other than an entry's own date.
+        counts whatever year it landed in -- see finance.calculators. The Margin
+        tile says so, as this is the one place in the app where the filter
+        bar's year means something other than an entry's own date.
     {% endcomment %}
     <div class="fin-stats">
         <div class="fin-stat">
@@ -39,7 +38,7 @@
         <div class="fin-stat">
             <div class="fin-stat-label">Lost money</div>
             <div class="fin-stat-value {% if totals.losses %}text-danger{% else %}text-muted{% endif %}">{{ totals.losses }}</div>
-            <div class="fin-stat-sub">events where LNL's own costs beat what came in</div>
+            <div class="fin-stat-sub">events that cost more than they brought in</div>
         </div>
     </div>
 

@@ -3,7 +3,7 @@
 {% load finance_extras %}
 
 {% block fin_title %}Reports{% endblock %}
-{% block fin_sub %}{% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}All years{% endif %} &middot; each one prints, and downloads as CSV.{% endblock %}
+{% block fin_sub %}{% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}All years{% endif %}{% endblock %}
 
 {% block fin_content %}
     <div class="fin-panel">
@@ -18,11 +18,12 @@
                             <td>
                                 {{ item.summary }}
                                 <div class="fin-muted">
-                                    {% if item.takes == 'range' %}The fiscal year chosen above, or any dates.
-                                    {% elif item.takes == 'year' %}The fiscal year chosen above.
-                                    {% elif item.takes == 'trend' %}Term over term or year over year, up to the fiscal year chosen above.
-                                    {% elif item.takes == 'request' %}One funding request, chosen on the report.
-                                    {% else %}As of today.{% endif %}
+                                    {% if item.takes == 'range' %}Fiscal year or any dates
+                                    {% elif item.takes == 'year' %}Fiscal year
+                                    {% elif item.takes == 'trend' %}Terms or years, up to the fiscal year
+                                    {% elif item.takes == 'request' %}One funding request
+                                    {% elif item.takes == 'budget' %}One budget
+                                    {% else %}As of today{% endif %}
                                 </div>
                             </td>
                             <td class="fin-nowrap" style="width:140px;">
@@ -38,11 +39,8 @@
                     <tr>
                         <td><a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}"><strong>Ledger</strong></a></td>
                         <td>
-                            Every entry in the ledger, one line each, with its event, fund, category,
-                            funding request and the Workday line behind it.
-                            <div class="fin-muted">
-                                The fiscal year and side chosen above. The ledger's own filters narrow it further.
-                            </div>
+                            Every entry, with its event, fund, category and Workday line.
+                            <div class="fin-muted">Fiscal year and side, or the ledger's own filters</div>
                         </td>
                         <td class="fin-nowrap">
                             <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-default">View</a>

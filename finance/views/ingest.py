@@ -124,8 +124,8 @@ def queue(request):
         'rows': rows,
         'page_obj': page,
         'queue_count': paginator.count,
-        # Gross magnitude of outstanding work; see the note in views/dashboard.py.
-        'queue_total': sum((abs(t.unallocated_amount) for t in unreconciled), Decimal('0.00')),
+        # The same figure as the dashboard's; see the note in views/dashboard.py.
+        'queue_total': sum((abs(t.net_amount) for t in unreconciled), Decimal('0.00')),
         'autofilled_count': filled,
         'can_import': request.user.has_perm('finance.import_workdaytransaction'),
         'import_open': request.GET.get('import') == '1',
@@ -636,8 +636,6 @@ def encumbrance(request, pk=None):
         'matched': (instance.lines.filter(parent_transaction__isnull=False)
                     .select_related('parent_transaction', 'fund_source')
                     if instance else []),
-        'msg': "Encumber funds now so the budget reflects this spend before it clears Workday. "
-               "A purchase charged to more than one fund gets a line for each.",
     }
     context.update(filter_context(request))
     return render(request, 'finance/encumbrance.html', context)

@@ -184,12 +184,20 @@ class TransactionDetailTests(FinanceViewTestCase):
         self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
                          [Decimal('-600.00'), Decimal('-400.00')])
 
-    def test_a_new_row_can_be_ticked_to_leave_it_out(self):
-        """ Every row has the box, not only the saved ones. """
+    def test_a_new_row_can_be_removed_to_leave_it_out(self):
+        """ Every row has the X and the hidden box it ticks, not only the saved ones. """
         page = self.client.get(self._url()).content.decode('utf-8')
         self.assertIn('name="slices-0-DELETE"', page)
         self.assertIn('name="slices-1-DELETE"', page)
+        self.assertEqual(page.count('fin-row-drop'), page.count('fin-split-row'))
+        self.assertNotIn('data-saved', page)
         self._split('1000.00', '250.00', **{'slices-1-DELETE': 'on'})
+        self.assertEqual(list(self.txn.slices.values_list('amount', flat=True)),
+                         [Decimal('-1000.00')])
+
+    def test_a_removed_new_row_is_not_checked_at_all(self):
+        """ It is hidden, so an error on it could never be seen or fixed. """
+        self._split('1000.00', 'rubbish', **{'slices-1-DELETE': 'on'})
         self.assertEqual(list(self.txn.slices.values_list('amount', flat=True)),
                          [Decimal('-1000.00')])
 

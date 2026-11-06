@@ -109,7 +109,7 @@ Either way, lines already matched to Workday are kept.
 To undo a match, click `Undo` on the row before it disappears, or, later, open the Workday line and click
 `Undo settling`. The line goes back to the queue, and the money goes back on the encumbrance as it was before you matched
 it, at what was encumbered rather than what was charged. A warning says that both happened, so check the encumbrance is
-still wanted. Removing one matched entry, with `Remove` on its page or the `Del` box on the split page, puts its money
+still wanted. Removing one matched entry, with `Remove` on its page or the X on the split page, puts its money
 back the same way.
 
-`Last Modified: November 5, 2026`
+`Last Modified: November 6, 2026`

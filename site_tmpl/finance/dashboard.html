@@ -5,7 +5,6 @@
 {% load static %}
 
 {% block fin_title %}Dashboard{% endblock %}
-{% block fin_sub %}Where the money stands, and what needs a decision.{% endblock %}
 
 {% block fin_content %}
     {# ---- Action banner: only shown when something needs a decision ---- #}
@@ -45,15 +44,13 @@
         <div class="fin-stat">
             <div class="fin-stat-label">Revenue</div>
             <div class="fin-stat-value {{ total_revenue|money_class }}">{{ total_revenue|money }}</div>
-            <div class="fin-stat-sub">money in</div>
         </div>
         <div class="fin-stat">
             <div class="fin-stat-label">Expenses</div>
             <div class="fin-stat-value {{ total_expense|negate|money_class }}">{{ total_expense|negate|money }}</div>
-            <div class="fin-stat-sub">money out</div>
         </div>
         <div class="fin-stat">
-            <div class="fin-stat-label">Net Position</div>
+            <div class="fin-stat-label">Net position</div>
             <div class="fin-stat-value {{ net_position|money_class }}">{{ net_position|money }}</div>
             <div class="fin-stat-sub">
                 {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}all years{% endif %}
@@ -66,7 +63,7 @@
             <div class="fin-stat-value {% if unreconciled_count %}text-warning{% else %}text-muted{% endif %}">
                 {{ unreconciled_count }}
             </div>
-            <div class="fin-stat-sub">{{ unreconciled_total|money }} across the queue</div>
+            <div class="fin-stat-sub">{{ unreconciled_total|money }} in the queue</div>
         </div>
     </div>
 
@@ -119,9 +116,8 @@
                     {% include 'finance/partials/_doughnut.html' with rows=client_types canvas_id='fin-chart-clienttypes' empty_text='No event revenue linked yet.' %}
                     {% if client_types %}
                         <p class="fin-chart-note">
-                            Client type is inherited from each event&rsquo;s billing org
-                            (Workday fund 810-FD means Student Organization). Non-event
-                            revenue is excluded.
+                            Event revenue only. Client type comes from each event&rsquo;s billing
+                            org; Workday fund 810-FD is a student organization.
                         </p>
                     {% endif %}
                 </div>
@@ -138,8 +134,7 @@
                     {% include 'finance/partials/_doughnut.html' with rows=services canvas_id='fin-chart-services' empty_text='No services recorded on linked events yet.' %}
                     {% if services %}
                         <p class="fin-chart-note">
-                            A show&rsquo;s revenue is split across its services in proportion to
-                            list price, so a lighting-and-sound show counts toward both.
+                            A show&rsquo;s revenue is shared across its services by list price.
                         </p>
                     {% endif %}
                 </div>
@@ -158,7 +153,6 @@
             <div class="fin-panel">
                 <div class="fin-panel-head">
                     <span>Revenue by source</span>
-                    <span class="fin-muted fin-panel-note">event billing, and each kind of other income</span>
                 </div>
                 <div class="fin-panel-body">
                     {% for row in revenue_sources %}
@@ -354,7 +348,7 @@
                         {% for row in account.rows %}
                             <tr>
                                 <td>{{ row.name }}</td>
-                                <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|figure }}</td>
+                                <td class="fin-num {% if row.needs_attention %}text-danger{% endif %}">{{ row.closing|figure }}</td>
                                 <td class="fin-muted">{{ row.status }}</td>
                             </tr>
                         {% endfor %}
@@ -382,7 +376,7 @@
         <div class="fin-panel">
             <div class="fin-panel-head">
                 <span>Owed to LNL</span>
-                <span class="fin-muted fin-panel-note">every year since the books started</span>
+                <span class="fin-muted fin-panel-note">all years</span>
             </div>
             <div class="fin-panel-body">
                 <div class="fin-stats fin-mb-0">
@@ -391,7 +385,7 @@
                         <div class="fin-stat-value {% if owed_by_sga %}text-warning{% else %}text-muted{% endif %}">
                             <a href="{% url 'finance:fr-list' %}?fy=all">{{ owed_by_sga|money }}</a>
                         </div>
-                        <div class="fin-stat-sub">funding-request spending not yet reimbursed</div>
+                        <div class="fin-stat-sub">not yet reimbursed</div>
                     </div>
                     <div class="fin-stat">
                         <div class="fin-stat-label">By clients</div>
@@ -435,8 +429,7 @@
                     <tr><td>
                         <div class="fin-empty">
                             <span class="glyphicon glyphicon-inbox"></span>
-                            No event in this period has cost more than it brought in -- of the ones with
-                            costs linked to them.
+                            No event with linked costs lost money in this period.
                         </div>
                     </td></tr>
                 {% endfor %}
@@ -467,7 +460,7 @@
                             {% if fr.obj.is_budget %}
                                 <span class="fin-tag">Budget</span>
                             {% elif fr.obj.is_projection %}
-                                <span class="fin-tag is-projection">PROJ</span>
+                                <span class="fin-tag is-projection">Projection</span>
                             {% endif %}
                         </span>
                         <span class="fin-fr-figures {% if fr.overspent %}text-danger{% endif %}">

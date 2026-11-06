@@ -6,7 +6,6 @@
 {% load bootstrap3 %}
 
 {% block fin_title %}Queue{% endblock %}
-{% block fin_sub %}Imported Workday lines waiting to be settled.{% endblock %}
 {% block fin_actions %}
     {% permission request.user has 'finance.edit_subledger' %}
         <a href="{% url 'finance:encumbrance-new' %}" class="btn btn-default">
@@ -29,7 +28,7 @@
             <div class="fin-stat-value {% if queue_count %}text-warning{% else %}text-success{% endif %}">
                 {{ queue_count }}
             </div>
-            <div class="fin-stat-sub">{{ queue_total|money }} outstanding</div>
+            <div class="fin-stat-sub">{{ queue_total|money }} in the queue</div>
         </div>
 
         {% if can_edit %}
@@ -38,7 +37,7 @@
                 <div class="fin-stat-value {% if autofilled_count %}text-success{% endif %}">
                     {{ autofilled_count }}
                 </div>
-                <div class="fin-stat-sub">boxes on this page &mdash; read rather than type</div>
+                <div class="fin-stat-sub">boxes on this page</div>
             </div>
         {% endif %}
     </div>

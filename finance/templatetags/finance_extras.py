@@ -303,10 +303,11 @@ def requested(item):
 @register.simple_tag
 def burndown_bar(spent, awarded):
     """
-    Green remaining / red spent, with an overspend rendered as a full red bar
-    plus an explicit overage figure -- a bar that silently clamps at 100% would
-    hide the one case the Treasurer most needs to see. Nothing approved and
-    nothing spent, as on a line SGA denied, has nothing to show, so no bar.
+    Spent and left, in the colours of the dashboard's money out and money in,
+    with an overspend rendered as a full darker red bar plus an explicit overage
+    figure -- a bar that silently clamps at 100% would hide the one case the
+    Treasurer most needs to see. Nothing approved and nothing spent, as on a
+    line SGA denied, has nothing to show, so no bar.
     """
     try:
         spent, awarded = Decimal(spent), Decimal(awarded)
@@ -317,13 +318,13 @@ def burndown_bar(spent, awarded):
         if spent <= 0:
             return ''
         return mark_safe('<div class="progress fin-burndown"><div class="progress-bar '
-                         'progress-bar-danger" style="width:100%"></div></div>')
+                         'is-over" style="width:100%"></div></div>')
 
     if spent > awarded:
         over = spent - awarded
         return format_html(
             '<div class="progress fin-burndown" title="Overspent by ${}">'
-            '<div class="progress-bar progress-bar-danger" style="width:100%">'
+            '<div class="progress-bar is-over" style="width:100%">'
             'Over by ${}</div></div>',
             intcomma('%.2f' % over), intcomma('%.2f' % over))
 
@@ -331,8 +332,8 @@ def burndown_bar(spent, awarded):
     spent_pct = max(0, min(100, spent_pct))
     return format_html(
         '<div class="progress fin-burndown" title="${} of ${} spent">'
-        '<div class="progress-bar progress-bar-danger" style="width:{}%"></div>'
-        '<div class="progress-bar progress-bar-success" style="width:{}%"></div></div>',
+        '<div class="progress-bar is-spent" style="width:{}%"></div>'
+        '<div class="progress-bar is-left" style="width:{}%"></div></div>',
         intcomma('%.2f' % spent), intcomma('%.2f' % awarded), spent_pct, 100 - spent_pct)
 
 

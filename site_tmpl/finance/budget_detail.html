@@ -66,7 +66,7 @@
                     <tbody>
                         {% for label, side in sides %}
                             <tr>
-                                <td>{{ label }}{% if forloop.last %} <span class="fin-tag is-projection">P</span>{% endif %}</td>
+                                <td>{{ label }}</td>
                                 <td class="fin-num">{{ side.line_count }}</td>
                                 {% if side.line_count %}
                                     <td class="fin-num">{% requested side %}</td>
@@ -213,7 +213,7 @@
                                     <td class="fin-line-indent">{% if line.number %}<code>{{ line.number }}</code>{% else %}<span class="fin-unknown" title="No Request ID yet">?</span>{% endif %}</td>
                                     <td>
                                         <span class="fin-line-caret" aria-hidden="true">&#9656;</span>{{ line.name }}
-                                        {% if line.is_projection %}<span class="fin-tag is-projection">P</span>{% endif %}
+                                        {% if line.is_projection %}<span class="fin-tag is-projection">Projection</span>{% endif %}
                                         {% if line.description %}<div class="fin-muted fin-small">{{ line.description|truncatechars:120 }}</div>{% endif %}
                                     </td>
                                     <td class="fin-num">{% requested line %}</td>

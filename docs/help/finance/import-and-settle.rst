@@ -151,7 +151,7 @@ Split a Line That Paid for Several Things
 -----------------------------------------
 
 One card charge can cover tape, a repair and a show's rental. Click `Split` on the row (or open the line from the ledger)
-to reach `Split this purchase`. Add a row for each part with `Add a slice`, fill in each one, and click `Save split`.
+to reach `Split this purchase`. Add a row for each part with `Add an entry`, fill in each one, and click `Save split`.
 Type each amount as it reads on the receipt, without a minus sign: every part runs the same way as the line. To drop a
 row, tick its `Del` box; a row that came from an encumbrance goes back on the encumbrance instead of being deleted, as
 Undo puts it back. The parts must add up to the line exactly; the page tells you how much is left over. Saving
@@ -210,4 +210,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: November 5, 2026`
+`Last Modified: November 6, 2026`

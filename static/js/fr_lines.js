@@ -103,25 +103,6 @@
         addLine($(this).closest('tbody.fin-cat-block'));
     });
 
-    $table.on('click', '.fin-fr-drop', function () {
-        var $row = $(this).closest('tr.fin-fr-row');
-        var $flag = $row.find('.fin-fr-delete-flag input[type="checkbox"]');
-
-        /* A line that is already in the database is staged for removal rather
-           than deleted on the spot: Django deletes it when the form is saved,
-           and until then the click stays undoable. */
-        if ($flag.length) {
-            var staged = !$flag.prop('checked');
-            $flag.prop('checked', staged);
-            $row.toggleClass('fin-fr-deleted', staged);
-            $(this).attr('title', staged ? 'Keep this line' : 'Remove this line')
-                   .html(staged ? '&#8634;' : '&times;');
-            return;
-        }
-        $row.next('tr.fin-fr-errors').remove();
-        $row.remove();
-    });
-
     /* Under each Approved box, what it means as it stands: blank is Pending SGA
        Approval, 0 is Denied, an amount needs no tag. */
     $table.on('input change', 'input[name$="-amount_awarded"]', function () {

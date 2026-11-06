@@ -492,6 +492,14 @@ class EncumbranceViewTests(FinanceViewTestCase):
         self._post(reverse('finance:encumbrance-edit', args=[header.pk]))
         self.assertEqual(header.open_lines().get().effective_date, datetime.date(2025, 9, 15))
 
+    def test_a_new_line_removed_on_the_page_is_not_saved(self):
+        self._post(reverse('finance:encumbrance-new'))
+        header = Encumbrance.objects.get()
+        lines = self._edit_lines(header)
+        lines.append({'amount': 'rubbish', 'DELETE': 'on'})
+        self._post(reverse('finance:encumbrance-edit', args=[header.pk]), lines=lines, existing=1)
+        self.assertEqual(ParsedTransaction.objects.count(), 1)
+
     def test_a_line_can_be_added_and_one_removed(self):
         self._post(reverse('finance:encumbrance-new'))
         header = Encumbrance.objects.get()

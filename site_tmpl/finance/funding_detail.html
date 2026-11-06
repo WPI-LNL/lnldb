@@ -7,7 +7,7 @@
 {% block fin_title %}
     {{ fr.name }}
     {% if fr.reference %}<code>{{ fr.reference }}</code>{% endif %}
-    {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
+    {% if fr.is_projection %}<span class="fin-tag is-projection">Projection</span>{% endif %}
     {% if fr.closed %}<span class="fin-tag">Closed</span>{% endif %}
 {% endblock %}
 {% block fin_sub %}{% if fr.approving_body %}Approved by the {{ fr.approving_body }}{% else %}SGA funding request{% endif %}{% endblock %}

@@ -125,8 +125,10 @@ def dashboard(request):
         'fin_page': 'dashboard',
         'unreconciled_count': len(unreconciled),
         # Gross, not net: a $350 deposit and a $475 invoice are two pieces of
-        # work, not $125 of it. Netting them would understate the queue.
-        'unreconciled_total': sum((abs(t.unallocated_amount) for t in unreconciled),
+        # work, not $125 of it. Netting them would understate the queue. Each
+        # line's whole amount, as a line with entries and not yet settled is
+        # still waiting, and leaving it out would read as $0 of work.
+        'unreconciled_total': sum((abs(t.net_amount) for t in unreconciled),
                                   Decimal('0.00')),
         'pending_encumbrances': pending_encumbrances,
         'total_revenue': revenue,

@@ -111,7 +111,7 @@ def report(request, slug):
     """
     if slug not in reports.REPORTS:
         raise Http404
-    title, summary, takes = reports.REPORTS[slug]
+    title, _, takes = reports.REPORTS[slug]
     state = get_filter_state(request)
     today = timezone.localdate()
     projection = state.projection_flag
@@ -212,7 +212,6 @@ def report(request, slug):
         'h2': title,
         'fin_page': 'reports',
         'report': built,
-        'summary': summary,
         'takes': takes,
         'period_error': period_error,
         'range_from': (request.GET.get('from') or '').strip(),

@@ -11,7 +11,7 @@
         <span class="fin-tag">Unpaid</span>
     {% endif %}
 {% endblock %}
-{% block fin_sub %}One invoice covering {{ bill.events.all|length }} event{{ bill.events.all|length|pluralize }}.{% endblock %}
+{% block fin_sub %}{{ bill.events.all|length }} event{{ bill.events.all|length|pluralize }}{% endblock %}
 {% block fin_actions %}
     {% if can_change %}
         <a href="{% url 'finance:multibill-edit' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
@@ -174,9 +174,10 @@
                             <td class="hidden-print text-right fin-nowrap">
                                 {% if can_change %}
                                     <a href="{% url 'finance:multibill-charge-edit' bill.pk charge.pk %}" class="btn btn-link">Change</a>
-                                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-charge-delete' bill.pk charge.pk %}">
+                                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-charge-delete' bill.pk charge.pk %}"
+                                          onsubmit="return confirm('Remove this charge from the bill?');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-link text-danger">Remove</button>
+                                        <button type="submit" class="btn btn-link text-danger fin-x" title="Remove this charge" aria-label="Remove this charge">&times;</button>
                                     </form>
                                 {% endif %}
                             </td>

@@ -3,7 +3,6 @@
 {% load finance_extras %}
 
 {% block fin_title %}Billing{% endblock %}
-{% block fin_sub %}Every bill by the stage it has reached, longest-waiting first.{% endblock %}
 {% block fin_actions %}
     <a href="{% url 'finance:multibill-list' %}" class="btn btn-default">All multi-bills</a>
 {% endblock %}
@@ -461,20 +460,18 @@
                 <button type="submit" form="fin-close-form" class="btn btn-primary" onclick="return confirm('Close the ticked events? Closing locks each event for edits, and cannot be easily undone.');">Close the ticked events</button>
             </div>
             <p class="fin-muted">
-                Closing a multi-bill's row closes each of its events. A bill marked paid with less received in Workday
-                than it was billed for still has money owed on it, so it is not closed here: settle the payment in the
-                queue, or, if it was paid some other way, close the event from its own page.
+                Closing a multi-bill's row closes each of its events. A bill with less received in Workday than it was
+                billed for is not closed here: settle the payment in the queue, or close the event from its own page.
             </p>
         {% elif stage == 'create-isd' %}
             <p class="fin-muted">
-                Create the ISD in Workday with these. Keep the memo as it is: the ingestion queue reads the event back
-                out of it when the payment arrives. Then type the number Workday gives the ISD and click
-                <em>Record ISD</em>. That also stops the client changing the worktag.
+                Keep the memo as it is: the queue reads the event back out of it when the payment arrives. Then enter
+                the ISD's number and click <em>Record ISD</em>, which also stops the client changing the worktag.
             </p>
         {% elif stage == 'waiting-on-client' %}
             <p class="fin-muted">
-                If a client replies with the worktag by email instead of using the bill's form, click
-                <em>Enter worktag</em>. A multi-bill has no form, so its worktag is always entered here.
+                If a client emails the worktag instead of using the bill's form, click <em>Enter worktag</em>.
+                A multi-bill has no form, so its worktag is always entered here.
             </p>
         {% endif %}
     {% else %}

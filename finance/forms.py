@@ -19,6 +19,7 @@ from decimal import Decimal, InvalidOperation
 
 from ajax_select.fields import AutoCompleteSelectField
 from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Div, Layout
 from django import forms
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import F, Q, Value
@@ -444,7 +445,7 @@ PARTITION_CHOICES = (
 
 class FilterBarForm(forms.Form):
     """ The persistent top bar: fiscal year + Event | Projection partition. """
-    fiscal_year = forms.ChoiceField(required=False, label="Fiscal Year")
+    fiscal_year = forms.ChoiceField(required=False, label="Fiscal year")
     partition = forms.ChoiceField(choices=PARTITION_CHOICES, required=False, initial='all')
 
     def __init__(self, *args, **kwargs):
@@ -1469,6 +1470,7 @@ class EncumbranceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(EncumbranceForm, self).__init__(*args, **kwargs)
         self.helper = finance_form_helper()
+        self.helper.layout = Layout(Div('description', 'receipt_file', css_class='fin-form-grid is-two'))
 
 
 class EncumbranceLineForm(BaseAllocationForm):
@@ -2124,6 +2126,12 @@ class FundingRequestForm(forms.ModelForm):
             'date_approved': forms.DateInput(attrs={'type': 'date'}),
             'notes': forms.Textarea(attrs={'rows': 3}),
         }
+        help_texts = {
+            'reference': "E.g. A.27.16: the body (A, F, S or E, or ? if SGA gave no letter), the "
+                         "year and the number.",
+            'owed_at_books_start': "Only if spending began before the books start. Below zero is "
+                                   "what SGA had overpaid.",
+        }
 
     def __init__(self, *args, **kwargs):
         """
@@ -2135,7 +2143,7 @@ class FundingRequestForm(forms.ModelForm):
         """
         super(FundingRequestForm, self).__init__(*args, **kwargs)
         self.fields['fiscal_year'] = forms.ChoiceField(
-            choices=fiscal_year_choices(), initial=current_fiscal_year(), label="Fiscal Year")
+            choices=fiscal_year_choices(), initial=current_fiscal_year(), label="Fiscal year")
         # Almost always zero, so a blank box means zero rather than an error.
         self.fields['owed_at_books_start'].required = False
         kind = self.fields['kind']
@@ -2152,6 +2160,12 @@ class FundingRequestForm(forms.ModelForm):
             side.help_text = ("Money is charged to it or SGA has paid for it, so its side can't "
                               "change.")
         self.helper = finance_form_helper()
+        # In a grid, so the lines, which are what this page is mostly for, start
+        # on the first screen and not under a page of full-width boxes.
+        self.helper.layout = Layout(
+            Div('kind', 'name', 'reference', 'fiscal_year', 'date_submitted', 'date_approved',
+                'is_projection', 'closed', 'owed_at_books_start', 'notes',
+                css_class='fin-form-grid'))
 
     def clean_kind(self):
         """ Nothing posted keeps the type it had, or makes a funding request. """

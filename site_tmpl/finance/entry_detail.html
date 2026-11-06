@@ -38,14 +38,14 @@
                             <dt>Operational transaction</dt>
                             <dd><a href="{% url 'finance:txn-detail' txn.pk %}"><code>{{ txn.reference }}</code></a></dd>
                             <dt>Accounting date</dt><dd>{{ txn.accounting_date|date:"M j, Y" }}</dd>
-                            <dt>Bank line total</dt>
+                            <dt>Workday line total</dt>
                             <dd class="{{ txn.net_amount|money_class }}"><strong>{{ txn.net_amount|money }}</strong></dd>
                             {% if txn.payee %}<dt>Payee</dt><dd>{{ txn.payee }}</dd>{% endif %}
                             {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
                         </dl>
                         {% if txn.is_split %}
                             <div class="alert alert-info fin-mb-0">
-                                This bank line is split across {{ txn.slices.count }} entries.
+                                This Workday line is split across {{ txn.slices.count }} entries.
                                 <a href="{% url 'finance:txn-detail' txn.pk %}">View the whole split &rarr;</a>
                             </div>
                         {% endif %}
@@ -66,15 +66,17 @@
 
                     {% comment %}
                         Worktags are the same Workday record, so they share the
-                        box and are separated by a rule rather than a second panel.
+                        box. Folded, as they are looked up rather than read.
                     {% endcomment %}
                     {% if worktags %}
-                        <div class="fin-panel-divider">Worktags</div>
-                        <div class="fin-panel-body">
-                            <dl class="fin-kv">
-                                {% for key, value in worktags %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}
-                            </dl>
-                        </div>
+                        <details class="fin-panel-fold">
+                            <summary>Worktags</summary>
+                            <div class="fin-panel-body">
+                                <dl class="fin-kv">
+                                    {% for key, value in worktags %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}
+                                </dl>
+                            </div>
+                        </details>
                     {% endif %}
                 </div>
             {% else %}
@@ -82,14 +84,9 @@
                     <div class="fin-panel-head"><span>Encumbrance</span></div>
                     <div class="fin-panel-body">
                         <p class="fin-muted">
-                            This is a pending purchase logged before the Workday feed caught up.
-                            It has no bank line yet, so it stays Pending until it is matched to an
-                            imported transaction.
-                        </p>
-                        <p class="fin-muted">
-                            Match it from the <a href="{% url 'finance:queue' %}">ingestion
-                            queue</a>: the bank line it belongs to offers this row under
-                            <em>Already encumbered?</em>.
+                            Logged before its Workday line arrived, so it stays Pending until it is
+                            matched. Its line offers it in the <a href="{% url 'finance:queue' %}">queue</a>
+                            under <em>Already encumbered?</em>.
                         </p>
                     </div>
                 </div>

@@ -165,7 +165,7 @@ is Event Production or Projection on its own.
 #. Click `Save`.
 
 **Changing categories.** Rename a category by typing over its name; the new name applies to every line under it.
-**Move to** on a line moves it under another category. `Remove category` removes the category and moves its lines to
+**Move to** on a line moves it under another category. The X on a category removes it and moves its lines to
 **No category**; nothing is deleted until you save, and `Cancel` leaves everything as it was. A category can stay
 empty until you add lines to it.
 
@@ -235,4 +235,4 @@ saved, so **Projection request** locks once a request has money charged to it or
 line's **Projection** box locks once anything is charged to the line, encumbrances included. To correct one, move the
 entries to another line first.
 
-`Last Modified: November 5, 2026`
+`Last Modified: November 6, 2026`

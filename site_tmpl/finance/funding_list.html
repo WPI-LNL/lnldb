@@ -4,7 +4,6 @@
 {% load permissionif %}
 
 {% block fin_title %}SGA Funding{% endblock %}
-{% block fin_sub %}Funding requests and budgets: what SGA approved, what has been spent, and what SGA owes or has deposited.{% endblock %}
 {% block fin_actions %}
     {% comment %}
         The one button for both kinds of SGA funding: it belongs to this page
@@ -35,7 +34,7 @@
             <div class="fin-panel-head">
                 <span>Owed by SGA</span>
                 <span class="fin-locked-note">
-                    spending that has reached Workday, less what SGA has paid for it &middot; every year
+                    spent in Workday, less what SGA has paid &middot; all years
                 </span>
             </div>
             <div class="fin-panel-body">
@@ -129,7 +128,7 @@
                         <tr>
                             <td>
                                 <a href="{% url 'finance:fr-detail' fr.pk %}">{{ fr.name }}</a>
-                                {% if fr.is_projection %}<span class="fin-tag is-projection">P</span>{% endif %}
+                                {% if fr.is_projection %}<span class="fin-tag is-projection">Projection</span>{% endif %}
                                 {% if fr.closed %}<span class="fin-tag">Closed</span>{% endif %}
                             </td>
                             <td>{{ fr.reference|or_dash }}</td>

@@ -182,6 +182,24 @@ class DashboardTests(FinanceViewTestCase):
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
         self.assertContains(response, "waiting to be settled")
 
+    def test_the_queue_total_is_each_line_in_full(self):
+        """
+        Gross, and a line stays at its whole amount once it has entries: it is
+        waiting until it is settled, and it used to count as $0.
+        """
+        self.make_txn(op='OT-T1', amount='-350.00')
+        filled = self.make_txn(op='OT-T2', amount='475.00')
+        ParsedTransaction.objects.create(
+            parent_transaction=filled, amount=filled.net_amount, fund_source=fund('legacy'),
+            effective_date=filled.accounting_date, status=TransactionStatus.PENDING)
+        expected = Decimal('825.00')
+        dashboard = self.client.get(reverse('finance:dashboard') + '?fy=2026')
+        self.assertEqual(dashboard.context['unreconciled_count'], 2)
+        self.assertEqual(dashboard.context['unreconciled_total'], expected)
+        queue = self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertEqual(queue.context['queue_total'], expected)
+        self.assertContains(queue, '$825.00 in the queue')
+
     def test_action_banner_absent_when_clear(self):
         txn = self.make_txn(op='OT-B')
         ParsedTransaction.objects.create(
@@ -902,7 +920,7 @@ class ProjectExplorerTests(FinanceViewTestCase):
         that is the whole point of the explorer.
         """
         response = self.client.get(reverse('finance:projects-detail', args=[self.parent.pk]))
-        self.assertContains(response, "True Fully-Loaded Cost")
+        self.assertContains(response, "Total cost")
         self.assertContains(response, "8,000.00")   # rolled up from the child
         self.assertContains(response, "all fiscal years")
 
@@ -995,10 +1013,20 @@ class FundingRequestViewTests(FinanceViewTestCase):
         content = response.content.decode()
         # One X per row: the saved line plus the three blank ones, and the
         # empty row the Add buttons clone.
-        self.assertEqual(content.count('fin-fr-drop'), 5)
-        # ...and the saved row still carries the DELETE flag the X drives.
-        self.assertIn('fin-fr-delete-flag', content)
+        self.assertEqual(content.count('fin-row-drop'), 5)
+        # ...and every row carries the DELETE flag the X drives, hidden, with
+        # the saved one marked so that its X stages the removal.
+        self.assertEqual(content.count('fin-row-flag'), 5)
         self.assertIn('line_items-0-DELETE', content)
+        self.assertEqual(content.count('data-saved'), 1)
+
+    def test_a_new_line_removed_on_the_page_is_not_saved(self):
+        """ Its X ticks the same box, and the row is left in the form, hidden. """
+        response = self.client.post(
+            reverse('finance:fr-edit', args=[self.fr.pk]),
+            self._edit_post(**{'line_items-1-DELETE': 'on'}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual([line.name for line in self.fr.line_items.all()], ['Fixtures'])
 
     def test_invalid_line_leaves_request_untouched(self):
         """ A rejected line must not leave a half-saved header behind. """

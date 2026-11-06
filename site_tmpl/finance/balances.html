@@ -5,7 +5,6 @@
 
 {% block fin_title %}Balances{% endblock %}
 {% block fin_sub %}
-    What each fund holds, against what Workday says &middot;
     FY{{ year.fiscal_year|stringformat:"s"|slice:"2:" }}, {{ year.first|date:"M j, Y" }} &ndash; {{ year.last|date:"M j, Y" }}{% if not year.year_over %} (so far){% endif %}
 {% endblock %}
 {% block fin_actions %}
@@ -174,7 +173,7 @@
                         <div class="fin-stat">
                             <div class="fin-stat-label">SGA will owe LNL</div>
                             <div class="fin-stat-value">{{ account.owed_by_sga|figure }}</div>
-                            <div class="fin-stat-sub">for funding request spending, once the encumbered purchases are charged</div>
+                            <div class="fin-stat-sub">once encumbered purchases are charged</div>
                         </div>
                     {% endif %}
                 </div>
@@ -358,7 +357,7 @@
                                             <form method="post" action="{% url 'finance:checkpoint-delete' row.checkpoint.pk %}"
                                                   onsubmit="return confirm('Remove this Workday balance?');">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn btn-link text-danger" title="Remove">&times;</button>
+                                                <button type="submit" class="btn btn-link text-danger fin-x" title="Remove this Workday balance" aria-label="Remove this Workday balance">&times;</button>
                                             </form>
                                         {% endpermission %}
                                     </td>
@@ -415,7 +414,7 @@
                                             <form method="post" action="{% url 'finance:transfer-delete' transfer.pk %}"
                                                   onsubmit="return confirm('Take this transfer back?');">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn btn-link text-danger" title="Remove">&times;</button>
+                                                <button type="submit" class="btn btn-link text-danger fin-x" title="Take this transfer back" aria-label="Take this transfer back">&times;</button>
                                             </form>
                                         {% endpermission %}
                                     {% endif %}

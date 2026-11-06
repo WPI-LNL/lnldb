@@ -1784,34 +1784,25 @@ def budget_report_form(budget, form=None):
 #: The order here is the order the Reports tab lists them in.
 REPORTS = OrderedDict((
     ('income-and-spending', ("Income and spending",
-                             "What came in, by source and client, and what went out, by "
-                             "spend category, beside the same dates a year earlier. The "
-                             "starting point for a budget request.", 'range')),
+                             "What came in and what went out, beside the same dates a year "
+                             "earlier.", 'range')),
     ('fund-balances', ("Fund balances",
-                       "What each fund in each account held at the start and end of the year, "
-                       "what moved, and what carries forward or goes back to SGA.", 'year')),
+                       "What each fund held, what moved, and what carries forward or goes back "
+                       "to SGA.", 'year')),
     ('events', ("Events",
-                "Every event's billing, payments, costs and margin, by client type, with the "
-                "costs SGA paid for shown separately.", 'range')),
+                "Each event's billing, payments, costs and margin, by client type.", 'range')),
     ('owed-to-lnl', ("Owed to LNL",
-                     "What SGA owes on each funding request and what each client owes on their "
-                     "bill, and how long each has been owed.", 'today')),
+                     "What SGA and each client owe, and for how long.", 'today')),
     ('work-split', ("Student organizations and departments",
-                    "The value of LNL's work for student organizations against departments and "
-                    "outside clients, at full rates whether billed or not, service by service: "
-                    "the external wear percentage.", 'range')),
+                    "LNL's work for each side at full rates, billed or not: the external wear "
+                    "percentage.", 'range')),
     ('activity', ("Event activity",
-                  "What LNL is doing more or less of, term over term or year over year: who for, "
-                  "which services, which service tiers and add-ons, and which clients.",
+                  "What LNL did more or less of: who for, which services and which clients.",
                   'trend')),
     ('fr-report-form', ("Funding Request Report Form",
-                        "What SGA asks for before it pays a funding request back: every purchase "
-                        "charged to the request, line by line, with its receipt. Downloads as "
-                        "the PDF to submit, with the receipts in it.", 'request')),
+                        "Every purchase charged to a request, with its receipt, as the PDF SGA "
+                        "asks for.", 'request')),
     ('budget-report-form', ("Budget Report Form",
-                            "SGA's proof of spending for the year's budget: a payment request for "
-                            "each line item, with what it was used for, SGA money and group funds "
-                            "spent, the date and the undergraduates who benefited, and every "
-                            "purchase under it with its receipt. Downloads as one PDF a line, or "
-                            "all of them in a zip.", 'budget')),
+                            "A payment request for each budget line, with its purchases and "
+                            "receipts, as a PDF a line or a zip of them all.", 'budget')),
 ))

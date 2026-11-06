@@ -1,5 +1,5 @@
 {# One row of an encumbrance's lines table, and the template "Add a line" copies. #}
-<tr class="fin-encumbrance-line">
+<tr class="fin-encumbrance-line"{% if line.instance.pk %} data-saved{% endif %}>
     {{ line.id }}
     <td>{{ line.amount }}</td>
     <td>{{ line.description }}</td>
@@ -16,10 +16,10 @@
     <td>{{ line.linked_event }}</td>
     <td>{{ line.project_tag }}</td>
     <td class="text-center">{{ line.is_projection }}</td>
-    <td>{{ line.DELETE }}</td>
+    <td class="fin-row-remove">{% include 'finance/partials/_row_remove.html' with form=line %}</td>
 </tr>
 {% if line.errors %}
-    <tr><td colspan="9">
+    <tr class="fin-row-errors"><td colspan="9">
         <div class="text-danger fin-small">
             {% for field, errors in line.errors.items %}
                 {% for error in errors %}

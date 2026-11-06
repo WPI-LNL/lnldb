@@ -278,9 +278,13 @@ Page layout
 ``finance/base_finance.html`` draws the filter bar. Every page extends
 ``finance/base_titled.html`` on top of it, which draws the one page header:
 ``fin_back`` is the way back from a record or a form, ``fin_title`` the title
-(``h2`` unless the page says otherwise), ``fin_sub`` a line under it, and
-``fin_actions`` the buttons on the right. A page with its own printed heading
-sets ``fin_head_class`` to ``hidden-print``.
+(``h2`` unless the page says otherwise), and ``fin_actions`` the buttons on the
+right. ``fin_sub`` is a line under the title for facts about this period or
+record, such as its date and amount. It never says what the page is for: a tab
+has no ``fin_sub`` unless it has a fact to give. How a page works goes in the
+help pages, or, if it has to be on the page, folded away in a ``fin-howto``
+``<details>`` so the page opens on its figures. A page with its own printed
+heading sets ``fin_head_class`` to ``hidden-print``.
 
 A button's size comes from where it sits, in ``finance.css``, not from a class:
 30px by default, and 22px in a table row, a panel heading or an alert. So
@@ -289,12 +293,22 @@ A button's size comes from where it sits, in ``finance.css``, not from a class:
 not load ``finance.css``, and keeps its ``btn-sm``.
 
 Blue (``btn-primary``) is the one main action of a group, white (``btn-default``)
-any other action, a link the quiet ones, a red link removes something, and solid
-red is the last step of a delete. Each meaning has one icon: ``plus`` to add,
+any other action, a link the quiet ones, and solid red is the last step of a
+delete. A row of a table is removed with an X, class ``fin-x``, in a column with
+no heading. On a form's table of lines, that is ``partials/_row_remove.html``
+with ``js/row_remove.js``: Django needs a row's ``DELETE`` box ticked to remove
+it, so the box is there, hidden, and the X drives it. A saved row stays on screen,
+struck through, until the form is saved, and its X becomes an undo. A row that was
+never saved goes at once. Each meaning has one icon: ``plus`` to add,
 ``pencil`` to edit, ``download-alt`` to download, ``file`` for a PDF or form,
 ``bookmark`` for an encumbrance, ``scissors`` to split, and ``lock`` for anything
 locked, closed or read-only. An empty state is ``inbox``, ``search`` or
 ``ok-circle``.
+
+A bar on the page takes its colours from the charts. A burndown uses those of
+*Money in vs money out*, ``--fin-alert-strong`` for spent and ``--fin-ok-strong``
+for what is left, and the darker ``--fin-alert`` when it is overspent. Every bar
+is ``--fin-bar-height`` tall.
 
 The top of ``finance.css`` holds the colours and the type scale. Any colour that
 carries words clears 4.5:1 against what it sits on, and ``--fin-faint`` is for

@@ -30,7 +30,7 @@
     --fin-accent-border: #d7e5ee;
 
     --fin-ok: #3c763d;
-    --fin-ok-strong: #5cb85c;
+    --fin-ok-strong: #59a14f;  /* The charts' money in. */
     --fin-ok-bg: #e9f5e9;
     --fin-ok-border: #cfe8cf;
 
@@ -40,13 +40,17 @@
     --fin-warn-border: #f0e0b8;
 
     --fin-alert: #a94442;
-    --fin-alert-strong: #d9534f;
+    --fin-alert-strong: #e15759;  /* The charts' money out. */
     --fin-alert-bg: #fdeceb;
     --fin-alert-border: #f5cfcd;
 
     --fin-projection: #6f42c1;
     --fin-projection-bg: #f3effa;
     --fin-projection-border: #e3d9f5;
+
+    /* Every bar is one height, tall enough for the 11px words on an overspent
+       burndown. */
+    --fin-bar-height: 14px;
 }
 
 /* ---- Type -----------------------------------------------------------------
@@ -73,6 +77,7 @@
 .fin-jump-label,
 .fin-panel-divider,
 .fin-panel-subhead,
+.fin-panel-fold > summary,
 .fin-field > label,
 .fin-brf-facts dt,
 .fin-table > thead > tr > th {
@@ -125,6 +130,22 @@
 .btn-link.text-danger,
 .btn-link.text-danger:hover,
 .btn-link.text-danger:focus { color: var(--fin-alert); }
+
+/* The X that removes a row. One size in every table, and a target of 24px by
+   22px, since a mark this small is otherwise hard to hit. Its column has no
+   heading: the mark says what it does, and the title says it in words. */
+.fin-page .btn.fin-x {
+    min-width: 24px;
+    padding: 2px 6px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+}
+.fin-page .btn.fin-x:hover,
+.fin-page .btn.fin-x:focus { background: var(--fin-alert-bg); text-decoration: none; }
+.fin-page .btn.fin-x .glyphicon { font-size: 12px; }
+.fin-x-col { width: 40px; }
 
 /* ---- Alerts ---------------------------------------------------------------
    Bootstrap's theme gives each alert a gradient and an inner shadow. Flat here,
@@ -288,6 +309,31 @@
 .fin-howto > ul { margin: 6px 0 0; padding-left: 18px; color: var(--fin-text-soft); }
 .fin-howto > ul > li { margin-bottom: 4px; }
 
+/* Something a panel holds but nobody reads every time: a divider that opens. */
+.fin-panel-fold > summary {
+    display: list-item;
+    padding: 6px 14px;
+    border-top: 1px solid var(--fin-border);
+    background: var(--fin-surface-soft);
+    cursor: pointer;
+}
+
+/* A form's short boxes side by side, rather than one full-width box a line. */
+.fin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 16px;
+    align-items: start;
+}
+.fin-form-grid.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 991px) {
+    .fin-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .fin-form-grid,
+    .fin-form-grid.is-two { grid-template-columns: minmax(0, 1fr); }
+}
+
 .fin-jump {
     display: flex;
     flex-wrap: wrap;
@@ -340,6 +386,7 @@
 .fin-page-title .fin-tag { vertical-align: 3px; }
 .fin-page-note { font-size: 13px; font-weight: 400; color: var(--fin-muted); }
 .fin-page-sub { color: var(--fin-muted); }
+.fin-page-sub:empty { display: none; }
 .fin-page-actions {
     display: flex;
     flex-wrap: wrap;
@@ -411,8 +458,11 @@
 }
 
 /* ---- Burndown bars -------------------------------------------------------- */
+/* The colours of the dashboard's Money in vs money out chart: spent is money out,
+   and what is left is green. Overspent is the darker red, which sets it apart
+   from plain spending and lets the words on it clear 4.5:1. */
 .fin-burndown {
-    height: 16px;
+    height: var(--fin-bar-height);
     margin-bottom: 0;
     background: var(--fin-border-soft);
     border-radius: 2px;
@@ -421,9 +471,14 @@
 
 .fin-burndown .progress-bar {
     font-size: 11px;
-    line-height: 16px;
+    line-height: var(--fin-bar-height);
+    background-image: none;
     box-shadow: none;
 }
+
+.fin-burndown .progress-bar.is-spent { background-color: var(--fin-alert-strong); }
+.fin-burndown .progress-bar.is-left { background-color: var(--fin-ok-strong); }
+.fin-burndown .progress-bar.is-over { background-color: var(--fin-alert); }
 
 /* Each funding request is its own card so two requests can never be mistaken
    for one another, and its line items stay collapsed until asked for. */
@@ -567,15 +622,16 @@
 .fin-sga-return[open] > summary { margin-bottom: 4px; }
 
 /* ---- Funding request line editor ------------------------------------------ */
-/* Every row removes the same way, with an X. On a row that is already saved
-   that X only *stages* the removal -- Django needs the DELETE flag set, and it
-   takes effect on save -- so the row stays visible and struck through until
-   then, and the X becomes an undo. */
-.fin-fr-delete-flag { display: none; }
-.fin-page .fin-table .btn.fin-fr-drop { font-size: 14px; line-height: 1; padding: 0 4px; text-decoration: none; }
-.fin-fr-deleted > td { opacity: 0.45; }
-.fin-fr-deleted > td:not(.fin-fr-remove) { text-decoration: line-through; }
-.fin-fr-deleted .fin-fr-drop { color: var(--fin-accent); }
+/* ---- Removing a row of a line table ----------------------------------------
+   See js/row_remove.js. A saved row stays, struck through, until the form is
+   saved, and its X becomes an undo. */
+.fin-row-flag { display: none; }
+.fin-row-remove { text-align: right; }
+.fin-row-removed > td { opacity: 0.45; }
+.fin-row-removed > td:not(.fin-row-remove) { text-decoration: line-through; }
+.fin-row-removed > td.fin-row-remove { opacity: 1; }
+.fin-page .fin-row-removed .btn.fin-x,
+.fin-page .fin-row-removed .btn.fin-x:hover { color: var(--fin-accent); background: var(--fin-accent-soft); }
 
 /* ---- Dense data table ----------------------------------------------------- */
 .fin-table { font-size: 13px; margin-bottom: 0; }
@@ -1183,7 +1239,7 @@ input.hidden-file-input { display: none; }
 .fin-rank-track {
     background: var(--fin-border-soft);
     border-radius: 2px;
-    height: 10px;
+    height: var(--fin-bar-height);
     overflow: hidden;
 }
 
@@ -1197,7 +1253,7 @@ input.hidden-file-input { display: none; }
    so bars are comparable across projects; segments divide it by child asset. */
 .fin-stack {
     display: flex;
-    height: 14px;
+    height: var(--fin-bar-height);
     border-radius: 2px;
     overflow: hidden;
     background: var(--fin-border-soft);
@@ -1313,6 +1369,34 @@ input.hidden-file-input { display: none; }
 #fin-fr-form.is-budget #div_id_reference,
 #fin-fr-form.is-budget #div_id_is_projection,
 #fin-fr-form.is-budget #div_id_owed_at_books_start { display: none; }
+/* Crispy wraps a tick box in a form-group of its own, which would stay behind as
+   an empty cell of the grid. */
+#fin-fr-form.is-budget .form-group:has(> #div_id_is_projection) { display: none; }
+@media (min-width: 992px) {
+    #fin-fr-form.is-request #div_id_notes { grid-column: span 3; }
+    #fin-fr-form.is-budget #div_id_notes { grid-column: 1 / -1; }
+}
+/* The same box as every other form's, in a table that draws its own inputs. */
+#fin-fr-lines input[type="text"],
+#fin-fr-lines input[type="number"],
+#fin-fr-lines select,
+#fin-fr-lines textarea {
+    height: 30px;
+    padding: 3px 8px;
+    font-size: 13px;
+    border: 1px solid var(--fin-border-strong);
+    border-radius: 3px;
+    background-color: #fff;
+    box-shadow: none;
+}
+#fin-fr-lines tr.fin-fr-row input[type="text"],
+#fin-fr-lines tr.fin-fr-row input[type="number"],
+#fin-fr-lines tr.fin-fr-row select,
+#fin-fr-lines tr.fin-fr-row textarea { width: 100%; }
+#fin-fr-lines textarea { min-height: 30px; resize: vertical; }
+/* Room under each box for the tag that hangs below Approved. */
+#fin-fr-lines > tbody > tr.fin-fr-row > td { padding-bottom: 20px; vertical-align: top; }
+#fin-fr-lines > tbody > tr.fin-fr-row > td.fin-row-remove { padding-top: 9px; }
 #fin-fr-lines input[name$="-number"] { width: 64px; }
 /* Requested and Approved are dollar boxes: a $ in front, so an empty one reads
    as somewhere to type an amount. Approved's meaning sits under it. */

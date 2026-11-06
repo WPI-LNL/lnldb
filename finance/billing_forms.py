@@ -646,11 +646,11 @@ class BillingEmailForm(forms.ModelForm):
         model = BillingEmail
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
 
-    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
+    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User recipients")
     email_to_orgs = CustomOrganizationEmailModelMultipleChoiceField(
         queryset=Organization.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
-        required=False, label="Client Recipients",
+        required=False, label="Client recipients",
         help_text="The email address listed is the client's exec email alias on file."
     )
 
@@ -703,10 +703,10 @@ class MultiBillingEmailForm(forms.ModelForm):
         model = MultiBillingEmail
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
 
-    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
+    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User recipients")
     email_to_orgs = CustomOrganizationEmailModelMultipleChoiceField(
         queryset=Organization.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
-        required=False, label="Client Recipients",
+        required=False, label="Client recipients",
         help_text="The email address listed is the client's exec email alias on file."
     )

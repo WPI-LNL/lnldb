@@ -4,7 +4,6 @@
 
 {% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:billing' %}">&larr; Billing</a>{% endblock %}
 {% block fin_title %}Multi-bills{% endblock %}
-{% block fin_sub %}Bills that cover several events with one invoice, newest first.{% endblock %}
 {% block fin_actions %}
     <a href="{% url 'finance:multibill-new' %}" class="btn btn-primary">
         <span class="glyphicon glyphicon-plus"></span> New multi-bill

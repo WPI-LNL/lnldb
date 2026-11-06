@@ -8,7 +8,7 @@
     cell; js/fr_lines.js fills the key and the order in from where the row
     sits when the form is sent.
 {% endcomment %}
-<tr class="fin-fr-row">
+<tr class="fin-fr-row"{% if f.instance.pk %} data-saved{% endif %}>
     <td class="fin-budget-only fin-line-indent">{{ f.number }}</td>
     <td>{{ f.name }}</td>
     <td>{{ f.description }}</td>
@@ -33,23 +33,13 @@
     <td class="fin-budget-only">
         <select class="fin-line-move" aria-label="Move this line to a category" title="Move this line to another category"></select>
     </td>
-    {% comment %}
-        Saved and unsaved lines get the same X. A saved line cannot simply
-        vanish from the DOM -- Django needs its DELETE flag set to actually
-        remove the row -- so the checkbox is still here, hidden, and the X
-        drives it.
-    {% endcomment %}
-    <td class="fin-fr-remove">
+    <td class="fin-row-remove">
         {{ f.id }}{{ f.category_key }}
-        {% if f.instance.pk %}
-            <span class="fin-fr-delete-flag">{{ f.DELETE }}</span>
-        {% endif %}
-        <button type="button" class="btn btn-link text-danger fin-fr-drop"
-                title="Remove this line">&times;</button>
+        {% include 'finance/partials/_row_remove.html' with form=f %}
     </td>
 </tr>
 {% if f.errors %}
-    <tr class="fin-fr-errors"><td colspan="10" class="text-danger fin-small">
+    <tr class="fin-fr-errors fin-row-errors"><td colspan="10" class="text-danger fin-small">
         {% for field, errors in f.errors.items %}
             {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
         {% endfor %}

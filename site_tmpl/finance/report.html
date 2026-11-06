@@ -5,7 +5,6 @@
 {% block fin_head_class %}hidden-print{% endblock %}
 {% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">&larr; Reports</a>{% endblock %}
 {% block fin_title %}{{ report.title }} <span class="fin-page-note">{{ report.period }}{% if report.dates and report.dates != report.period %} &middot; {{ report.dates }}{% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}</span>{% endblock %}
-{% block fin_sub %}{{ summary }}{% endblock %}
 {% block fin_actions %}
     {% if pdf_url and can_view_receipts %}
         <a href="{{ pdf_url }}" class="btn btn-primary" target="_blank">

@@ -5,7 +5,6 @@
 
 {% block fin_head_class %}hidden-print{% endblock %}
 {% block fin_title %}Projects{% endblock %}
-{% block fin_sub %}What each project really cost, across every year and funding source.{% endblock %}
 {% block fin_actions %}
     {% permission request.user has 'finance.manage_projecttag' %}
         <a href="{% url 'finance:project-new' %}" class="btn btn-primary">
@@ -43,7 +42,7 @@
                             <span class="glyphicon glyphicon-folder-open fin-muted"></span>
                         {% endif %}
                         {{ item.node.name }}
-                        {% if item.node.is_projection %}<span class="fin-tag is-projection">P</span>{% endif %}
+                        {% if item.node.is_projection %}<span class="fin-tag is-projection">Projection</span>{% endif %}
                     </span>
                     <span class="fin-tree-cost">{{ item.cost|money }}</span>
                 </a>
@@ -71,7 +70,7 @@
                         <span class="hidden-print">
                             <a href="?children={% if include_children %}0{% else %}1{% endif %}&amp;{{ filter_state.querystring }}"
                                class="btn btn-default">
-                                {% if include_children %}Excluding{% else %}Including{% endif %} sub-assets
+                                {% if include_children %}Leave out sub-assets{% else %}Include sub-assets{% endif %}
                             </a>
                             <a href="?print=1&amp;{{ filter_state.querystring }}" class="btn btn-default"
                                onclick="window.print();return false;">
@@ -89,11 +88,11 @@
 
                         <div class="fin-stats fin-mb-0">
                             <div class="fin-stat">
-                                <div class="fin-stat-label">True Fully-Loaded Cost</div>
+                                <div class="fin-stat-label">Total cost</div>
                                 <div class="fin-stat-value">{{ lifetime_cost|money }}</div>
                                 <div class="fin-stat-sub">
                                     all fiscal years &middot;
-                                    {% if include_children %}including sub-assets{% else %}this node only{% endif %}
+                                    {% if include_children %}including sub-assets{% else %}this project only{% endif %}
                                 </div>
                             </div>
                             {% if filter_state.fiscal_year %}
@@ -106,7 +105,7 @@
                                 </div>
                             {% endif %}
                             <div class="fin-stat">
-                                <div class="fin-stat-label">Transactions</div>
+                                <div class="fin-stat-label">Entries</div>
                                 <div class="fin-stat-value">{{ entries|length }}</div>
                                 <div class="fin-stat-sub">
                                     {% if filter_state.fiscal_year %}in the current filter{% else %}all time{% endif %}
@@ -143,7 +142,7 @@
                 {% endif %}
 
                 <div class="fin-panel">
-                    <div class="fin-panel-head">Transaction ledger</div>
+                    <div class="fin-panel-head">Entries</div>
                     <div class="fin-table-wrap">
                         <table class="table fin-table">
                             <thead>

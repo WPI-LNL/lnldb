@@ -13,8 +13,9 @@
         <button type="button" class="btn btn-default fin-cat-add-line">
             <span class="glyphicon glyphicon-plus"></span> Line
         </button>
-        <button type="button" class="btn btn-link text-danger fin-cat-remove"
-                title="Remove this category. Its lines move to No category.">Remove category</button>
+        <button type="button" class="btn btn-link text-danger fin-x fin-cat-remove"
+                title="Remove this category. Its lines move to No category."
+                aria-label="Remove this category">&times;</button>
         {% for error in cf.name.errors %}<span class="text-danger fin-small fin-ml-8">{{ error }}</span>{% endfor %}
     </td>
 </tr>

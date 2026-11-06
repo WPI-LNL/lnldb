@@ -534,7 +534,7 @@ class FundingPageTests(FinanceViewTestCase):
         self.assertIn('Pending SGA Approval', content)
         self.assertIn('Denied', content)
         self.assertIn('no Request ID yet', content)
-        self.assertNotIn('Project', content.split('id="fin-budget-lines"')[1])
+        self.assertNotIn('>Project<', content.split('id="fin-budget-lines"')[1])
         self.assertIn('SGA deposit', content)
         self.assertNotIn('Report form', content)
 
@@ -1284,7 +1284,7 @@ class DeniedLineBarTests(BudgetWorld, FinanceViewTestCase):
     def test_the_dashboard_and_the_requests_page(self):
         FRLineItem.objects.filter(funding_request=self.request).update(
             amount_awarded=Decimal('0.00'))
-        red = 'progress-bar-danger" style="width:100%"'
+        red = 'is-over" style="width:100%"'
         dashboard = self.client.get(reverse('finance:dashboard') + '?fy=%s' % YEAR)
         lines = dashboard.content.decode().split('fin-fr-line-head')
         self.assertNotIn(red, next(chunk for chunk in lines[1:] if '>Truss<' in chunk))

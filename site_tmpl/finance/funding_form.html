@@ -31,24 +31,16 @@
                 {% crispy form %}
 
                 <div class="fin-panel-subhead">Lines</div>
-                <p class="fin-muted">
-                    Each line burns down independently. Refunds charged against a line
-                    restore its balance automatically. Add as many lines as it needs.
-                </p>
-                <p class="fin-muted">
-                    <strong>Approved:</strong> type the dollar amount SGA approved. Leave it blank while the
-                    line is <span class="fin-approval is-waiting">Pending SGA Approval</span>; enter 0 if SGA
-                    denied the line, and it shows as $0 <span class="fin-approval is-turned-down">Denied</span>.
-                    The tag under each box says which it is. Neither can be charged to.
-                </p>
-                <p class="fin-muted fin-budget-only">
-                    <strong>Categories:</strong> click <em>Add category</em> to make one, then <em>+ Line</em> on it
-                    to add lines under it. <em>Move to</em> moves a line to another category. Removing a
-                    category moves its lines to <em>No category</em>.
-                    <strong>Request ID:</strong> the line's four digits from SGA, which Workday memos quote,
-                    e.g. <code>Velcro restock, consumables, (4521)</code>.
-                    <strong>Projection:</strong> a line's side is locked once anything is charged to it.
-                </p>
+                <details class="fin-howto fin-mb-12">
+                    <summary>How lines work</summary>
+                    <ul>
+                        <li><strong>Approved:</strong> leave it blank while the line is <span class="fin-approval is-waiting">Pending SGA Approval</span>, and enter 0 if SGA <span class="fin-approval is-turned-down">Denied</span> it. Neither can be charged to.</li>
+                        <li>Refunds charged against a line restore its balance.</li>
+                        <li class="fin-budget-only"><strong>Categories:</strong> <em>+ Line</em> adds a line under a category, and <em>Move to</em> moves one to another. Removing a category moves its lines to <em>No category</em>.</li>
+                        <li class="fin-budget-only"><strong>Request ID:</strong> the line's four digits from SGA, which Workday memos quote, e.g. <code>Velcro restock, consumables, (4521)</code>.</li>
+                        <li class="fin-budget-only"><strong>Projection:</strong> a line's side locks once anything is charged to it.</li>
+                    </ul>
+                </details>
 
                 {{ formset.management_form }}
                 {{ categories.management_form }}
@@ -65,7 +57,7 @@
                                 <th>Spend category</th>
                                 <th class="fin-request-only" style="width:80px;">Order</th>
                                 <th class="fin-budget-only">Move to</th>
-                                <th style="width:60px;">Remove</th>
+                                <th class="fin-x-col"></th>
                             </tr>
                         </thead>
                         {% comment %}
@@ -133,4 +125,5 @@
 {% block finalsay %}
 {{ block.super }}
 <script src="{% asset 'js/fr_lines.js' %}"></script>
+<script src="{% asset 'js/row_remove.js' %}"></script>
 {% endblock %}
