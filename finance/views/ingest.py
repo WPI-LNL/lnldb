@@ -26,7 +26,7 @@ from reversion.models import Version
 
 from finance.billing import bill_closed, bills_paid_from, mark_paid_from_payments, payment_offer, unpay_uncovered
 from finance.calculators import bill_payments, latest_bill
-from finance.filters import filter_context, get_filter_state
+from finance.filters import back_to, filter_context, get_filter_state
 from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
                            EncumbranceLineFormSet, ReconcileForm, WorkdayCSVUploadForm)
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
@@ -453,7 +453,7 @@ def reconcile(request, pk):
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     form = ReconcileForm(request.POST, parent_transaction=txn, prefix='txn%s' % txn.pk)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
     wants_json = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
     if not form.is_valid():
@@ -856,6 +856,7 @@ def draw_from_encumbrance(entry, txn, user, stretch=True):
 
     # Nothing left over, so the reservation becomes this line's entry rather
     # than spawning one and deleting itself -- the row keeps its history.
+    entry.held_before_match = entry.amount
     entry.parent_transaction = txn
     entry.amount = draw
     entry.effective_date = txn.accounting_date
@@ -943,7 +944,7 @@ def match_encumbrance(request, pk):
       on any other settled line.
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
     wants_json = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
     def fail(message, status=400):
@@ -1036,7 +1037,7 @@ def match_encumbrance(request, pk):
 def settle(request, pk):
     """ Mark every slice of a fully-allocated bank line as Settled. """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
     try:
         txn.settle()
     except Exception as exc:
@@ -1053,6 +1054,12 @@ def _before_the_match(entry):
     The newest version of it with no bank line. ``None`` for a slice drawn off a
     larger line, which was written already on its bank line, and for a row with
     no history from before its match.
+
+    Good for the description, which a draw leaves alone, but not for the
+    amount. Every draw in a bulk action is one revision, however it is
+    written, because ``RevisionMiddleware`` wraps the whole request, and a
+    revision keeps one version of a row. So the line seems to go straight from
+    what it first held to its match. See ``ParsedTransaction.held_before_match``.
     """
     for version in Version.objects.get_for_object(entry):
         try:
@@ -1071,9 +1078,10 @@ def _put_back_on_encumbrance(entry):
     Two shapes, the two :func:`draw_from_encumbrance` writes:
 
     * **The encumbrance line itself**, which the match that finished it moved
-      onto the bank line. It goes back to the amount and description its
-      history says it had, so an encumbrance the charge stretched over comes
-      back at what was encumbered, not at what was charged.
+      onto the bank line. It goes back to what it held just before that match,
+      so an encumbrance the charge stretched over comes back at what was
+      encumbered, not at what was charged, and to the description its history
+      says it had.
     * **A slice drawn off a larger line.** Its money goes back onto that line
       if it is still open -- the one on the same encumbrance with the same
       routing -- and otherwise the slice becomes an open line again itself.
@@ -1106,10 +1114,13 @@ def _put_back_on_encumbrance(entry):
     entry.status = TransactionStatus.PENDING
     entry.effective_date = header.logged_on
     if before is not None:
-        entry.amount = before['amount']
+        # A row matched before held_before_match existed has only its history.
+        entry.amount = (before['amount'] if entry.held_before_match is None
+                        else entry.held_before_match)
         entry.description = before['description']
     else:
         entry.description = header.description
+    entry.held_before_match = None
     entry.full_clean()
     entry.save()
     return money(entry.amount)
@@ -1144,7 +1155,7 @@ def unreconcile(request, pk):
     (:func:`finance.billing.unpay_uncovered`), and the warning says so too.
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
     wants_json = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
     slices = list(txn.slices.all())
@@ -1260,7 +1271,7 @@ def bulk_reconcile(request):
     rejected -- the same rule the ledger's bulk action follows.
     """
     form = BulkReconcileForm(request.POST)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
 
     if not form.is_valid():
         for errors in form.errors.values():
@@ -1388,7 +1399,7 @@ def bulk_match_encumbrance(request):
     selection needed more than was encumbered is said as a warning.
     """
     form = BulkEncumbranceForm(request.POST)
-    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    redirect_to = back_to(request, reverse('finance:queue'))
 
     if not form.is_valid():
         for errors in form.errors.values():

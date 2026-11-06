@@ -49,6 +49,14 @@
             color: green;
         }
 
+        /* What the prices have moved by since the client was given the total. */
+        div.adjustment {
+            clear: both;
+            overflow: hidden;
+            margin-top: 10px;
+            font-size: 10pt;
+        }
+
         p.description {
             clear: both;
             font-size: 10pt;
@@ -240,6 +248,13 @@
             </tr>
             {% endfor %}
         </table>
+        {% endif %}
+
+        {% if adjustment %}
+        <div class="adjustment">
+            <span class="left">Adjustment to the amount billed</span>
+            <span class="right">{{ adjustment|invoice_money }}</span>
+        </div>
         {% endif %}
 
         <div class="grand-total">

@@ -52,6 +52,7 @@ from django.utils import timezone
 
 from finance.calculators import bill_payments, days_owed, latest_bill, received_by_event
 from finance.models import (ZERO, Billing, MultiBilling, books_start_date, client_of, dollars, finance_settings,
+                            local_day,
                             fiscal_year_for, money, no_bill_needed_for)
 
 READY = 'ready'
@@ -337,17 +338,10 @@ class BillItem(object):
         return reverse('finance:bill-isd', args=(self.event.pk, self.bill.pk))
 
 
-def _local_day(value):
-    """ The local date of a datetime, or a date as it is. """
-    if isinstance(value, datetime.datetime):
-        return timezone.localdate(value) if timezone.is_aware(value) else value.date()
-    return value
-
-
 def _last_emailed(emails):
     """ The day the latest of these bill emails went out, or ``None`` if none did. """
     sent = [email.sent_at for email in emails if email.sent_at is not None]
-    return _local_day(max(sent)) if sent else None
+    return local_day(max(sent)) if sent else None
 
 
 def sent_on(bill):
@@ -363,7 +357,7 @@ def sent_on(bill):
 
 def _reviewed_day(event):
     """ The day an event was reviewed for billing, or, with no record of it, the day it ended. """
-    return _local_day(event.reviewed_on or event.datetime_end)
+    return local_day(event.reviewed_on or event.datetime_end)
 
 
 def _history_days(events, comment):
@@ -380,7 +374,7 @@ def _history_days(events, comment):
     rows = (Version.objects.filter(content_type__in=types, object_id__in=[str(e.pk) for e in events],
                                    revision__comment__startswith=comment)
             .values('object_id').annotate(last=Max('revision__date_created')))
-    return {int(row['object_id']): _local_day(row['last']) for row in rows}
+    return {int(row['object_id']): local_day(row['last']) for row in rows}
 
 
 def event_item(event, bill, no_bill=None):
@@ -393,7 +387,7 @@ def event_item(event, bill, no_bill=None):
     if bill is None:
         no_bill = no_bill if no_bill is not None else no_bill_needed_for(event)
         if no_bill is not None:
-            return BillItem(NO_BILL_NEEDED, [event], since=_local_day(no_bill.decided_on), no_bill=no_bill)
+            return BillItem(NO_BILL_NEEDED, [event], since=local_day(no_bill.decided_on), no_bill=no_bill)
         return BillItem(READY, [event], since=_reviewed_day(event))
     if bill.date_paid:
         return BillItem(PAID, [event], bill, since=bill.date_paid)
@@ -742,7 +736,7 @@ def attach_payments(items, today=None, paid=False):
     today = today or timezone.localdate()
     filed = received_by_event({event.pk for item in billed for event in item.events})
     for item in billed:
-        if start is not None and any(_local_day(event.datetime_start) < start for event in item.events):
+        if start is not None and any(local_day(event.datetime_start) < start for event in item.events):
             continue
         payments = [filed[event.pk] for event in item.events if event.pk in filed]
         days = [last for _, last in payments if last is not None]

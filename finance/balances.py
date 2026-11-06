@@ -52,7 +52,7 @@ from collections import defaultdict, namedtuple
 from django.db.models import Q
 from django.utils import timezone
 
-from finance.models import (ZERO, BalanceCheckpoint, FiscalYearClose, FundBehaviour,
+from finance.models import (ZERO, BalanceCheckpoint, FiscalYearClose, FundBehaviour, local_day, started_between,
                             FundSource, FundTransfer, ParsedTransaction, PartitionCode,
                             TransactionStatus, WorkdayTransaction, account_own_funds,
                             books_start_date, fiscal_year_bounds, fiscal_year_for, money,
@@ -96,11 +96,6 @@ class UnpaidBill(object):
         return org.retname if org else ''
 
 
-def _local_day(value):
-    """ The local date of a stored datetime. """
-    return timezone.localdate(value) if timezone.is_aware(value) else value.date()
-
-
 def event_paid_days(event_ids):
     """
     ``{event pk: day}`` the day each of these events stopped waiting for its
@@ -128,10 +123,10 @@ def event_paid_days(event_ids):
             days.append(bill.date_paid)
         no_bill = no_bill_needed_for(event)
         if no_bill is not None:
-            days.append(_local_day(no_bill.decided_on))
+            days.append(local_day(no_bill.decided_on))
         if event.closed:
             # Closed before the day was recorded: it has stopped waiting, since when is unknown.
-            days.append(_local_day(event.closed_on) if event.closed_on else datetime.date.min)
+            days.append(local_day(event.closed_on) if event.closed_on else datetime.date.min)
         if days:
             out[event.pk] = min(days)
     return out
@@ -426,8 +421,8 @@ class Books(object):
             return []
         ids = list(BaseEvent.objects
                    .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False),
-                           cancelled=False, test_event=False,
-                           datetime_start__date__gte=self.start)
+                           started_between(self.start),
+                           cancelled=False, test_event=False)
                    .values_list('pk', flat=True).distinct())
         if not ids:
             return []

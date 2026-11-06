@@ -1287,7 +1287,7 @@ class UnreconcileTests(FinanceViewTestCase):
         """ Unsettling is the other half of settling, and Undo must not be a way around it. """
         self.revoke('settle_subledger')
         response = self._undo()
-        self.assertContains(response, "don't have permission to unsettle it")
+        self.assertContains(response, "don&#x27;t have permission to unsettle it")
         self.assertTrue(ParsedTransaction.objects.filter(pk=self.entry.pk).exists())
 
     def test_a_pending_line_can_be_undone_without_it(self):

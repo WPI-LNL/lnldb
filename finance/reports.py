@@ -27,6 +27,7 @@ it in :data:`REPORTS`, and give it a branch in
 import csv
 import datetime
 import io
+import re
 from collections import OrderedDict, defaultdict
 
 from django.db.models import Q, Sum
@@ -186,6 +187,25 @@ class Report(object):
 # The CSV
 # ---------------------------------------------------------------------------
 
+#: What a spreadsheet takes a text cell to be a formula from.
+FORMULA_STARTS = ('=', '+', '-', '@', '\t', '\r')
+_PLAIN_NUMBER = re.compile(r'[-+]?[\d,]*\.?\d+$')
+
+
+def csv_cell(value):
+    """
+    A value for a CSV cell, unable to run as a formula.
+
+    Event names, memos and notes are typed by clients or come from Workday, and
+    a download is opened in Excel. A leading apostrophe makes Excel read a
+    cell as text. Anything that isn't text, and a plain negative number written
+    as text, is left alone so a column of figures still sums.
+    """
+    if isinstance(value, str) and value.startswith(FORMULA_STARTS) and not _PLAIN_NUMBER.match(value):
+        return "'" + value
+    return value
+
+
 def _csv_value(column, value):
     """
     A cell as a spreadsheet wants it: plain numbers with a minus sign, ISO
@@ -198,7 +218,7 @@ def _csv_value(column, value):
         return '%.2f' % money(value)
     if column.kind == Column.DATE:
         return value.isoformat()
-    return str(value)
+    return csv_cell(str(value))
 
 
 def as_csv(report):
@@ -225,7 +245,7 @@ def as_csv(report):
     if any((section.columns or report.columns) is not report.columns
            for section in report.sections):
         for section in report.sections:
-            writer.writerow([section.title])
+            writer.writerow([csv_cell(section.title)])
             writer.writerow([c.label for c in (section.columns or report.columns)])
             writer.writerows(lines(section))
             writer.writerow([])
@@ -235,7 +255,7 @@ def as_csv(report):
     writer.writerow((['Section'] if several else []) + [c.label for c in report.columns])
     for section in report.sections:
         for cells in lines(section):
-            writer.writerow(([section.title] if several else []) + cells)
+            writer.writerow(([csv_cell(section.title)] if several else []) + cells)
     return out.getvalue()
 
 

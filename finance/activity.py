@@ -29,7 +29,7 @@ from collections import OrderedDict, namedtuple
 
 from django.utils import timezone
 
-from finance.models import ZERO, ClientType, client_of, client_type_for, money
+from finance.models import ZERO, ClientType, client_of, client_type_for, money, started_between
 
 #: Who a show was for, as the reports group them. A client on the student
 #: organization Workday fund (810, set in the Finance Configuration) is a
@@ -318,10 +318,8 @@ def load_work(first=None, last=None, today=None):
     book = PriceBook()
 
     def shows(model, *related, **selected):
-        queryset = model.objects.filter(approved=True, cancelled=False, test_event=False,
-                                        datetime_start__date__lte=last)
-        if first is not None:
-            queryset = queryset.filter(datetime_start__date__gte=first)
+        queryset = model.objects.filter(started_between(first, last), approved=True, cancelled=False,
+                                        test_event=False)
         return (queryset.select_related('billing_org', *selected.get('select', ()))
                 .prefetch_related('org', 'rentals', 'arbitraryfees', 'billings',
                                   'multibillings__events', 'extrainstance_set__extra__category',

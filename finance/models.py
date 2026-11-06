@@ -30,6 +30,7 @@ deploys. What stays hard-coded is listed and justified above
 import datetime
 import hashlib
 import re
+import time
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 import reversion
@@ -338,6 +339,12 @@ class FinanceSettings(models.Model):
 
 _CACHE = {}
 
+#: How long, in seconds, a worker trusts its copy of a table. Saving a row
+#: clears the copy in the worker that saved it at once; each other worker runs
+#: its own copy of this module and hears nothing, so this is how long an admin
+#: edit can take to reach all of them.
+CACHE_SECONDS = 60
+
 
 def reset_finance_cache(*keys):
     """ Forget cached table reads. No arguments clears everything. """
@@ -353,12 +360,15 @@ def _cached(key, build, default):
     migrations have run, and ``manage.py migrate`` on an empty database would
     otherwise fail on the first fiscal-year calculation.
     """
-    if key not in _CACHE:
+    held = _CACHE.get(key)
+    now = time.monotonic()
+    if held is None or now - held[0] >= CACHE_SECONDS:
         try:
-            _CACHE[key] = build()
+            held = (now, build())
         except Exception:
             return default
-    return _CACHE[key]
+        _CACHE[key] = held
+    return held[1]
 
 
 def finance_settings():
@@ -396,6 +406,36 @@ def fiscal_year_bounds(fiscal_year):
     else:
         end = datetime.date(fiscal_year, first_month, 1) - datetime.timedelta(days=1)
     return start, end
+
+
+def local_day(value):
+    """ The local date of a datetime, or a date as it is. """
+    if isinstance(value, datetime.datetime):
+        return timezone.localdate(value) if timezone.is_aware(value) else value.date()
+    return value
+
+
+def _local_midnight(day):
+    """ The moment a local day begins. """
+    return timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+
+
+def started_between(first=None, last=None, field='datetime_start'):
+    """
+    The filter for what started from local day ``first`` to ``last`` inclusive.
+    Either may be ``None`` for no limit on that side.
+
+    Compares the stored moment with the moments those days begin and end,
+    rather than using a ``__date`` lookup. That lookup makes the database
+    convert every row's time zone, and MySQL can only do so with its time-zone
+    tables loaded. Without them it matches nothing and raises no error.
+    """
+    limits = Q()
+    if first is not None:
+        limits &= Q(**{'%s__gte' % field: _local_midnight(first)})
+    if last is not None:
+        limits &= Q(**{'%s__lt' % field: _local_midnight(last + datetime.timedelta(days=1))})
+    return limits
 
 
 def refund_window(fiscal_year):
@@ -685,6 +725,20 @@ def client_type_for_multibill(bill):
         events = sorted(bill.events.all(), key=lambda event: event.pk)
         return client_type_for(events[0]) if events else ClientType.UNKNOWN
     return _client_type_of_fund(getattr(bill.org, 'workday_fund', None))
+
+
+def changes_client_type(org, fund):
+    """
+    Whether putting ``fund`` on file for ``org`` would turn a student org into
+    a department, or the other way round.
+
+    The fund on file is what classifies the client's events that have no fund
+    of their own (:func:`client_type_for`), so one show paid from another
+    department's fund must not reclassify the rest of them.
+    """
+    held = getattr(org, 'workday_fund', None)
+    return (held is not None and fund is not None
+            and _client_type_of_fund(held) != _client_type_of_fund(fund))
 
 
 def _client_type_of_fund(fund):
@@ -2903,8 +2957,19 @@ class ParsedTransactionQuerySet(models.QuerySet):
         return self.filter(amount__gt=0, refund_of__isnull=True)
 
     def expenses(self):
-        """ Spending, including the refunds that offset it. """
+        """
+        Money going out, including the refunds that offset it and anything
+        still only encumbered. The ledger lists these. For what has actually
+        been spent, use :meth:`spending`.
+        """
         return self.filter(Q(amount__lt=0) | Q(refund_of__isnull=False))
+
+    def spending(self):
+        """
+        Money that has left the account: :meth:`expenses` with a bank line.
+        An open encumbrance has none, because it hasn't been spent yet.
+        """
+        return self.expenses().filter(parent_transaction__isnull=False)
 
 
 @reversion.register()
@@ -3013,6 +3078,12 @@ class ParsedTransaction(models.Model):
     encumbrance = models.ForeignKey(
         Encumbrance, on_delete=models.SET_NULL, null=True, blank=True, related_name='lines',
         help_text="The encumbrance this entry was written as a line of.")
+    # On the row rather than read from its history: a bulk draw writes a line
+    # down several times in one revision, which keeps only the last of them.
+    held_before_match = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, editable=False,
+        help_text="What this encumbrance line held just before the charge that finished it, "
+                  "which is what undoing that charge puts back.")
 
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)

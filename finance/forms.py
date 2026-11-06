@@ -257,7 +257,7 @@ class LineRequestChoiceField(forms.ModelChoiceField):
 REQUEST_ORDER = ('fiscal_year', 'reference', 'name', 'pk')
 
 
-def open_fr_lines():
+def open_fr_lines(keep=None):
     """
     The lines of every open funding request and budget, request by request.
 
@@ -266,12 +266,17 @@ def open_fr_lines():
     category, in the budget's own order, with the lines in no category last.
     Which kind the picker shows is the fund's to say (routing.js, rule 1).
 
+    ``keep`` is the key of a line to list whatever has become of it: the one an
+    entry is already charged to. A request is closed once SGA pays it, and the
+    entries charged to it still have to open and save.
+
     Spend is annotated because every option says what is left on its line,
     which would otherwise be a query per line per form.
     """
-    return (FRLineItem.objects
-            .filter(funding_request__closed=False)
-            .chargeable()
+    lines = FRLineItem.objects.filter(funding_request__closed=False).chargeable()
+    if keep:
+        lines = FRLineItem.objects.filter(Q(pk=keep) | Q(pk__in=lines.values('pk')))
+    return (lines
             .select_related('funding_request', 'category')
             .with_spend()
             .order_by(*['funding_request__%s' % key for key in REQUEST_ORDER]
@@ -609,10 +614,15 @@ class BaseAllocationForm(forms.ModelForm):
         self._narrow('refund_of', self._refundable_queryset())
         # Retired vocabulary rows stay on existing records but stop being
         # offered for new ones -- that is what the admin's "active" flag means.
-        self._narrow('lnl_spend_category', SpendCategory.objects.active())
-        self._narrow('fund_source', FundSource.objects.active())
+        # So does an archived project.
+        self._narrow('lnl_spend_category',
+                     self._live_or_saved('lnl_spend_category', SpendCategory.objects.active()))
+        self._narrow('fund_source', self._live_or_saved('fund_source', FundSource.objects.active()))
         self._narrow('non_event_revenue_type',
-                     RevenueSource.objects.active().select_related('credits_fund'))
+                     self._live_or_saved('non_event_revenue_type', RevenueSource.objects.active())
+                     .select_related('credits_fund'))
+        self._narrow('project_tag',
+                     self._live_or_saved('project_tag', ProjectTag.objects.filter(archived=False)))
         # Every request, closed ones included, newest first: SGA pays for a
         # request after the spending, often once it is closed. Budgets too,
         # for SGA's deposit and money returned to SGA.
@@ -710,7 +720,7 @@ class BaseAllocationForm(forms.ModelForm):
 
     def _offer_lines(self, field):
         """ The lines the FR line picker offers; see :meth:`_narrow_fr_lines`. """
-        lines = open_fr_lines()
+        lines = open_fr_lines(keep=self.instance.fr_line_target_id if self.instance.pk else None)
         fiscal_year = self._entry_fiscal_year()
 
         # A submitted form keeps the full list so that picking another year
@@ -927,6 +937,19 @@ class BaseAllocationForm(forms.ModelForm):
             return
         if not self.initial.get('description'):
             self.initial['description'] = suggest_description(self.parent_transaction)
+
+    def _live_or_saved(self, name, live):
+        """
+        ``live``, plus whatever this entry already holds in ``name``.
+
+        A choice that isn't on offer posts back blank, or is refused. So
+        without this, fixing a typo on an entry whose project was since
+        archived would quietly clear the project.
+        """
+        saved = getattr(self.instance, '%s_id' % name, None) if self.instance.pk else None
+        if saved is None:
+            return live
+        return live.model.objects.filter(Q(pk=saved) | Q(pk__in=live.values('pk')))
 
     def _narrow(self, name, queryset):
         """ Restrict a choice field's queryset if this subclass renders it. """
@@ -1588,6 +1611,19 @@ class SplitLineForm(BaseAllocationForm):
         fields = ('amount', 'description', 'fund_source', 'lnl_spend_category',
                   'fr_line_target', 'funding_request', 'project_tag', 'linked_event',
                   'linked_multibill', 'non_event_revenue_type', 'audit_explanation')
+
+    def has_changed(self):
+        """
+        Treat a new row with no amount as the blank row it is.
+
+        Blank rows are drawn with the fund and category filled in from the bank
+        line, and a posted form isn't filled in again. So without this every
+        row left unused looks half-finished, and refuses the save for its
+        missing amount. A row with no amount puts nothing on the line.
+        """
+        if not self.instance.pk and not (self.data.get(self.add_prefix('amount')) or '').strip():
+            return False
+        return super(SplitLineForm, self).has_changed()
 
     def _inherit_effective_date(self):
         """

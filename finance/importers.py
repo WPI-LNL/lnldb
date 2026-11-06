@@ -615,7 +615,11 @@ def _read_csv(raw):
         delimiter = csv.Sniffer().sniff(text[:8192], delimiters=',\t;').delimiter
     except csv.Error:
         delimiter = ','
-    return list(csv.reader(io.StringIO(text), delimiter=delimiter))
+    try:
+        return list(csv.reader(io.StringIO(text), delimiter=delimiter))
+    except csv.Error as exc:
+        raise ImportError_("That file could not be read as a CSV (%s). Export it from Workday "
+                           "again." % exc)
 
 
 def _read_xlsx(raw):
@@ -774,7 +778,7 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
 
         # Blank on every journal entry line, which is a normal thing for an
         # export to contain. Identity does not depend on it.
-        op_txn = _text(row.get('operational_transaction'))
+        op_txn = _text(row.get('operational_transaction'))[:128]
 
         net_amount = parse_decimal(row.get('credit_minus_debit'))
         if net_amount is None:

@@ -48,7 +48,7 @@ from decimal import Decimal
 from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
-from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, DrawsOn, FundSource, MultiBilling,
+from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, DrawsOn, FundSource, MultiBilling, local_day, started_between,
                             SuggestionRule, default_fund_source, dollars, fiscal_year_for,
                             fund_source_for_tracking, fund_source_for_workday_fund, money,
                             normalise_isd_number, normalise_sga_reference, normalise_term,
@@ -1345,11 +1345,11 @@ def suggest_linked_event(txn):
     # An annual event has one row per year. The memo carries a term code, but
     # it has already been stripped to get a clean name, and the accounting date
     # is the better signal anyway: an ISD is raised within weeks of the show.
-    event = min(matches, key=lambda e: abs((e.datetime_start.date()
+    event = min(matches, key=lambda e: abs((local_day(e.datetime_start)
                                             - txn.accounting_date).days))
     return Suggestion(
         event.pk, HIGH,
-        'Memo names this event (%s)' % date_format(event.datetime_start, 'M j, Y'),
+        'Memo names this event (%s)' % _event_day(event),
         str(event), source=EXPORT)
 
 
@@ -1440,9 +1440,14 @@ EVENT_NAME_STOPWORDS = frozenset((
 ))
 
 
+def _event_day(event):
+    """ The day an event started, here rather than in UTC: 9pm is still that day. """
+    return date_format(local_day(event.datetime_start), 'M j, Y')
+
+
 def _event_label(event):
     """ How a suggested event reads on a chip: the name, and when it ran. """
-    return '%s · %s' % (event.event_name, date_format(event.datetime_start, 'M j, Y'))
+    return '%s · %s' % (event.event_name, _event_day(event))
 
 
 def term_window(text):
@@ -1551,15 +1556,15 @@ def suggest_expense_event(txn, spend_category=None):
         for name in names:
             named |= Q(event_name__iexact=name)
         matches = list(BaseEvent.objects.filter(
-            named, cancelled=False, test_event=False,
-            datetime_start__date__range=term or (txn.accounting_date - reach,
-                                                 txn.accounting_date + reach))[:10])
+            named, started_between(*(term or (txn.accounting_date - reach,
+                                              txn.accounting_date + reach))),
+            cancelled=False, test_event=False)[:10])
         if matches:
-            event = min(matches, key=lambda e: abs((e.datetime_start.date()
+            event = min(matches, key=lambda e: abs((local_day(e.datetime_start)
                                                     - txn.accounting_date).days))
             return Suggestion(
                 event.pk, HIGH,
-                'Memo names this event (%s)' % date_format(event.datetime_start, 'M j, Y'),
+                'Memo names this event (%s)' % _event_day(event),
                 _event_label(event), source=MEMO)
 
     passthrough = event_passthrough_category()
@@ -1575,8 +1580,7 @@ def suggest_expense_event(txn, spend_category=None):
         txn.accounting_date - datetime.timedelta(days=EXPENSE_EVENT_GUESS_BEFORE_DAYS),
         txn.accounting_date + datetime.timedelta(days=EXPENSE_EVENT_GUESS_AFTER_DAYS))
     candidates = (BaseEvent.objects
-                  .filter(cancelled=False, test_event=False,
-                          datetime_start__date__range=window)
+                  .filter(started_between(*window), cancelled=False, test_event=False)
                   .prefetch_related('rentals'))
 
     cost = -money(txn.net_amount)
@@ -1591,7 +1595,7 @@ def suggest_expense_event(txn, spend_category=None):
             score += Decimal('0.5')
             if abs(billed - cost) <= cost * EXPENSE_EVENT_RENTAL_TOLERANCE:
                 score += 1
-        distance = abs((event.datetime_start.date() - txn.accounting_date).days)
+        distance = abs((local_day(event.datetime_start) - txn.accounting_date).days)
         scored.append((score, -distance, event, shared))
     if not scored:
         return None
@@ -1608,7 +1612,7 @@ def suggest_expense_event(txn, spend_category=None):
     return Suggestion(
         event.pk, MEDIUM,
         'Memo shares "%s" with this event (%s) -- check it'
-        % ('", "'.join(sorted(shared)), date_format(event.datetime_start, 'M j, Y')),
+        % ('", "'.join(sorted(shared)), _event_day(event)),
         _event_label(event), source=GUESS)
 
 

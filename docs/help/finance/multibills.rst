@@ -61,7 +61,9 @@ follows.
 
 **If an event's price changes after you billed it**, the bill's page says so: *The saved total is ... but the events and
 charges now come to ...*. Click `Update the total` to take up the new figure. Finance matches incoming payments against
-the saved total, so update it before you send the invoice again.
+the saved total, so update it before you send the invoice again. Until you do, a bill you have already sent keeps the
+figure the client was given: the invoice shows that total, with a row called *Adjustment to the amount billed* for the
+difference.
 
 Once a bill is paid, nothing about it can change until you mark it unpaid. Once any event on it is closed, it cannot
 be changed at all.

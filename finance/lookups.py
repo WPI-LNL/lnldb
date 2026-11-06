@@ -28,7 +28,7 @@ from django.db.models import Q
 from django.utils.html import escape
 
 from events.models import BaseEvent
-from finance.models import ProjectTag
+from finance.models import ProjectTag, local_day
 
 
 class EventLookup(LookupChannel):
@@ -71,7 +71,7 @@ class EventLookup(LookupChannel):
         org = obj.billing_org or obj.org.first()
         return '&nbsp;<strong>%s</strong> <span class="text-muted">%s%s</span>' % (
             escape(obj.event_name),
-            escape(obj.datetime_start.strftime('%b %d, %Y')),
+            escape(local_day(obj.datetime_start).strftime('%b %d, %Y')),
             ' &middot; ' + escape(org.retname) if org else '',
         )
 

@@ -21,7 +21,8 @@ from django.utils import timezone
 
 from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest, MultiBilling,
                             ParsedTransaction, books_start_date, client_of, client_type_for,
-                            fiscal_year_bounds, money, no_bill_needed_for, service_colors)
+                            fiscal_year_bounds, local_day, money, no_bill_needed_for, service_colors,
+                            started_between)
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -90,9 +91,9 @@ def _percent(part, whole):
 def spend_by_category(fiscal_year=None, is_projection=None):
     """
     Spending grouped by LNL spend category. Positive figures, largest first,
-    uncategorised excluded.
+    uncategorised excluded. An open encumbrance is not spending yet.
     """
-    qs = _scoped(ParsedTransaction.objects.expenses().exclude(lnl_spend_category__isnull=True),
+    qs = _scoped(ParsedTransaction.objects.spending().exclude(lnl_spend_category__isnull=True),
                  fiscal_year, is_projection)
 
     # Name, slug and colour all come from the category row, so renaming or
@@ -145,7 +146,7 @@ def cash_flow_by_month(fiscal_year=None, is_projection=None, months=12):
     # would hide a month that had heavy activity in both directions.
     revenue_agg = (qs.revenue().annotate(month=TruncMonth('effective_date'))
                      .values('month').annotate(total=Sum('amount')))
-    expense_agg = (qs.expenses().annotate(month=TruncMonth('effective_date'))
+    expense_agg = (qs.spending().annotate(month=TruncMonth('effective_date'))
                      .values('month').annotate(total=Sum('amount')))
 
     revenue_by = {r['month']: money(r['total']) for r in revenue_agg}
@@ -724,7 +725,7 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
         state = 'paid'
     if state == 'paid' and bill is not None and paid_on is None:
         flags.append('not_marked_paid')
-    in_books = books_start is None or event.datetime_start.date() >= books_start
+    in_books = books_start is None or local_day(event.datetime_start) >= books_start
     if paid_on is not None and received <= 0 and billed and in_books:
         flags.append('paid_not_received')
     owed = billed - received if billed is not None and billed > received else ZERO
@@ -834,10 +835,8 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
         start, end = between
     elif fiscal_year:
         start, end = fiscal_year_bounds(fiscal_year)
-    if start is not None:
-        entries = entries.filter(linked_event__datetime_start__date__range=(start, end))
-    if since is not None:
-        entries = entries.filter(linked_event__datetime_start__date__gte=since)
+    entries = entries.filter(started_between(start, end, field='linked_event__datetime_start'),
+                             started_between(since, field='linked_event__datetime_start'))
 
     sums = {}
     for row in entries.values('linked_event').annotate(**_event_aggregates()):
@@ -856,10 +855,7 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
         billed = BaseEvent.objects.filter(
             Q(billings__isnull=False) | Q(multibillings__isnull=False),
             cancelled=False, test_event=False)
-        if start is not None:
-            billed = billed.filter(datetime_start__date__range=(start, end))
-        if since is not None:
-            billed = billed.filter(datetime_start__date__gte=since)
+        billed = billed.filter(started_between(start, end), started_between(since))
         event_ids.update(billed.values_list('pk', flat=True))
 
     if not event_ids:
@@ -1016,7 +1012,8 @@ def client_retention(fiscal_year=None, is_projection=None, rows=None, limit=5):
     earlier = set()
     previous = (BaseEvent.objects
                 .filter(Q(billing_org__in=list(clients)) | Q(org__in=list(clients)),
-                        datetime_start__date__lt=start, cancelled=False, test_event=False)
+                        started_between(last=start - datetime.timedelta(days=1)),
+                        cancelled=False, test_event=False)
                 .values_list('billing_org', 'org'))
     for billing_org, org in previous:
         earlier.update(pk for pk in (billing_org, org) if pk in clients)

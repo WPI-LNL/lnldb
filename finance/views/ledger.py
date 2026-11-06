@@ -28,11 +28,11 @@ from django.urls.base import reverse
 from django.views.decorators.http import require_POST
 
 import reversion
-from finance.filters import FilterState, filter_context, get_filter_state
+from finance.filters import FilterState, back_to, filter_context, get_filter_state
 from finance.forms import BulkActionForm
 from finance.models import (FundSource, MultiBilling, ParsedTransaction, ProjectTag, SpendCategory,
                             TransactionStatus, money)
-from finance.reports import Period
+from finance.reports import Period, csv_cell
 from finance.views.reports import csv_response
 
 # Every column the spreadsheet can show: ``(key, label, shown by default)``.
@@ -110,7 +110,7 @@ def _ledger_csv(entries, filename):
     writer.writerow([heading for heading, _ in LEDGER_CSV_COLUMNS])
     for entry in entries.select_related('fund_source', 'lnl_spend_category',
                                         'non_event_revenue_type'):
-        writer.writerow([read(entry) or '' for _, read in LEDGER_CSV_COLUMNS])
+        writer.writerow([csv_cell(read(entry) or '') for _, read in LEDGER_CSV_COLUMNS])
     return csv_response(out.getvalue(), filename)
 
 
@@ -298,7 +298,7 @@ def _without(params, key):
 def bulk_action(request):
     """ Backs the slide-up bulk action bar. """
     form = BulkActionForm(request.POST)
-    redirect_to = request.POST.get('next') or reverse('finance:ledger')
+    redirect_to = back_to(request, reverse('finance:ledger'))
 
     if not form.is_valid():
         for errors in form.errors.values():

@@ -589,7 +589,7 @@ class RemovingGuardTests(FinanceViewTestCase):
 
     def test_a_settled_entry_needs_the_settle_permission_to_remove(self):
         self.revoke('settle_subledger')
-        self.assertContains(self._delete(), "don't have permission to unsettle it")
+        self.assertContains(self._delete(), "don&#x27;t have permission to unsettle it")
         self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
 
     def test_a_pending_entry_can_be_removed_without_it(self):
@@ -610,7 +610,7 @@ class RemovingGuardTests(FinanceViewTestCase):
         self.revoke('settle_subledger')
         response = self._split(self.txn, self.purchase, DELETE='on',
                                lnl_spend_category=str(category('consumables').pk))
-        self.assertContains(response, "don't have permission to unsettle it")
+        self.assertContains(response, "don&#x27;t have permission to unsettle it")
         self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
 
     def test_a_refund_saved_again_on_the_split_keeps_its_purchases_routing(self):

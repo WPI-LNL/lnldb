@@ -24,6 +24,15 @@ class FinanceConfig(AppConfig):
         :mod:`finance.models`). Without these signals an admin edit
         would appear to do nothing until the next restart, which is a far worse
         failure than the query it saves.
+
+        The receivers are connected with ``weak=False``. Each is a function
+        local to this method, so a weak reference would be all that held it
+        once this method returned, and it would be collected. In development
+        Django's own check of the receiver's arguments happens to keep it
+        alive, which is why that only ever showed with ``DEBUG`` off.
+
+        A signal only reaches the worker that saved the row. The others catch
+        up when their copy expires; see ``_cached``.
         """
         from finance import models as finance_models
 
@@ -51,7 +60,7 @@ class FinanceConfig(AppConfig):
             def _invalidate(sender, keys=cache_keys, **kwargs):
                 finance_models.reset_finance_cache(*keys)
 
-            post_save.connect(_invalidate, sender=model,
+            post_save.connect(_invalidate, sender=model, weak=False,
                               dispatch_uid='finance.cache_save.%s' % model_name)
-            post_delete.connect(_invalidate, sender=model,
+            post_delete.connect(_invalidate, sender=model, weak=False,
                                 dispatch_uid='finance.cache_delete.%s' % model_name)

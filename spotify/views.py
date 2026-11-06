@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model, PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.messages.views import messages
+from django.utils.html import format_html
 from io import BytesIO
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify, SpotifyException
@@ -133,9 +134,11 @@ def configure_session(request, event_id):
                 return HttpResponseRedirect(reverse("events:detail", args=[event.pk]) + "#apps")
             except IntegrityError:
                 active_session = models.Session.objects.get(user=request.POST['user'], accepting_requests=True)
-                warning = "The Spotify account you selected is currently in use for <a href='%s'>%s</a>. Please " \
-                          "select a different account or uncheck \"Accepting requests\" to continue." % \
-                          (reverse("events:detail", args=[active_session.event.pk]), active_session.event.event_name)
+                # Messages are escaped when shown, so this one says its link is meant, and escapes the event name.
+                warning = format_html(
+                    "The Spotify account you selected is currently in use for <a href='{}'>{}</a>. Please select a "
+                    "different account or uncheck \"Accepting requests\" to continue.",
+                    reverse("events:detail", args=[active_session.event.pk]), active_session.event.event_name)
                 messages.warning(request, warning)
     else:
         form = forms.SpotifySessionForm(request_user=request.user, instance=session)

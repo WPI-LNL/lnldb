@@ -212,26 +212,32 @@
                         </ul>
                     </li>
                 {% endpermission %}
-                {% permission request.user has 'finance.view_subledger' %}
+                {% if perms.finance.view_subledger or perms.events.bill_event %}
                     <li class="{% ancestor '/db/finance/' %} dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                             Finance
                             <b class="caret"></b>
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a href="{% url "finance:dashboard" %}">Dashboard</a></li>
-                            <li><a href="{% url "finance:ledger" %}">Ledger</a></li>
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:dashboard" %}">Dashboard</a></li>
+                                <li><a href="{% url "finance:ledger" %}">Ledger</a></li>
+                            {% endpermission %}
                             {% permission request.user has 'finance.edit_subledger' %}
                                 <li><a href="{% url "finance:queue" %}">Queue</a></li>
                             {% endpermission %}
-                            <li><a href="{% url "finance:events" %}">Events</a></li>
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:events" %}">Events</a></li>
+                            {% endpermission %}
                             {% permission request.user has 'events.bill_event' %}
                                 <li><a href="{% url "finance:billing" %}">Billing</a></li>
                             {% endpermission %}
-                            <li><a href="{% url "finance:balances" %}">Balances</a></li>
-                            <li><a href="{% url "finance:projects" %}">Projects</a></li>
-                            <li><a href="{% url "finance:fr-list" %}">SGA Funding</a></li>
-                            <li><a href="{% url "finance:reports" %}">Reports</a></li>
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:balances" %}">Balances</a></li>
+                                <li><a href="{% url "finance:projects" %}">Projects</a></li>
+                                <li><a href="{% url "finance:fr-list" %}">SGA Funding</a></li>
+                                <li><a href="{% url "finance:reports" %}">Reports</a></li>
+                            {% endpermission %}
                             {% if perms.finance.import_workdaytransaction or perms.finance.edit_subledger %}
                                 <li class="divider"></li>
                             {% endif %}
@@ -243,7 +249,7 @@
                             {% endpermission %}
                         </ul>
                     </li>
-                {% endpermission %}
+                {% endif %}
                 {% permission request.user has 'data.search' %}
                 <li>
                     <form class="navbar-form navbar-left" action="{% url "events-search" %}" method="GET" role="search">

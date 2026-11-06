@@ -262,7 +262,8 @@ class MultiBillChargeForm(forms.ModelForm):
         rate = self.instance.rental_fee_percent
         if rate is None:
             rate = default_rental_fee_percent()
-        self.fields['add_rental_fee'].label = "Add the %s%% rental fee" % rate.normalize()
+        # Fixed-point: normalize() alone writes 20 as 2E+1.
+        self.fields['add_rental_fee'].label = "Add the %s%% rental fee" % format(rate.normalize(), 'f')
         self.fields['add_rental_fee'].help_text = "Rentals only, as on an event."
         if self.instance.pk:
             self.fields['add_rental_fee'].initial = self.instance.rental_fee_percent is not None
@@ -540,7 +541,18 @@ def clear_isd(bill, events):
     bill.isd_entered_on = None
     bill.isd_entered_by = None
     bill.save(update_fields=['isd_number', 'isd_amount', 'isd_entered_on', 'isd_entered_by'])
-    set_entered_into_workday(events, False)
+    release_events(events)
+
+
+def release_events(events):
+    """
+    Unlock the worktag form of each of these events no bill holds an ISD for
+    any more. One still billed on a bill that has an ISD stays locked.
+    """
+    set_entered_into_workday(
+        [event for event in events
+         if not event.billings.filter(isd_number__isnull=False).exists()
+         and not event.multibillings.filter(isd_number__isnull=False).exists()], False)
 
 
 class NoBillNeededForm(forms.ModelForm):
@@ -571,11 +583,24 @@ class NoBillNeededForm(forms.ModelForm):
         return cleaned
 
 
+def client_recipients(events, payer=None):
+    """
+    The clients a bill for ``events`` can be emailed to: everyone attached to
+    them, whoever pays for them, and the bill's own *Bill to*, who need not be
+    attached to any of them.
+    """
+    pks = {org.pk for event in events for org in event.org.all()}
+    pks.update(event.billing_org_id for event in events if event.billing_org_id)
+    if payer is not None:
+        pks.add(payer.pk)
+    return Organization.objects.filter(pk__in=pks)
+
+
 class BillingEmailForm(forms.ModelForm):
     def __init__(self, billing, *args, **kwargs):
         super(BillingEmailForm, self).__init__(*args, **kwargs)
         self.billing = billing
-        orgs = billing.event.org.all()
+        orgs = client_recipients([billing.event])
         self.fields["email_to_orgs"].queryset = orgs
         self.fields["email_to_orgs"].initial = orgs
         if billing.event.contact:
@@ -634,11 +659,7 @@ class MultiBillingEmailForm(forms.ModelForm):
     def __init__(self, multibilling, *args, **kwargs):
         super(MultiBillingEmailForm, self).__init__(*args, **kwargs)
         self.multibilling = multibilling
-        orgsets = map(lambda event: event.org.all(), multibilling.events.all())
-        orgs = next(iter(orgsets))
-        for orgset in orgsets:
-            orgs |= orgset
-        orgs = orgs.distinct()
+        orgs = client_recipients(multibilling.events.all(), payer=multibilling.org)
         contacts = map(lambda event: event.contact.pk, multibilling.events.filter(contact__isnull=False))
         self.fields["email_to_orgs"].queryset = orgs
         self.fields["email_to_orgs"].initial = multibilling.org

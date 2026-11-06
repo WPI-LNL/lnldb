@@ -6,6 +6,7 @@ so the two controls behave identically on every finance page and survive
 navigation via querystring.
 """
 from django.db.models import Q
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from finance.models import current_fiscal_year, fiscal_year_bounds, fiscal_year_choices
 
@@ -122,6 +123,23 @@ class FilterState(object):
         return queryset.exclude(pk__in=queryset.model.objects.filter(matches).values('pk'))
 
 
+def _plausible_year(year):
+    """
+    Whether ``year`` could be a fiscal year. Anything else is a slip in the
+    address, and one too large for a date would otherwise be a server error.
+    """
+    return 1900 <= year <= 2999
+
+
+def back_to(request, default):
+    """ Where to go after a save: the page that asked, if it is one of ours. """
+    target = request.POST.get('next') or request.GET.get('next')
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return target
+    return default
+
+
 def get_filter_state(request):
     """
     Resolve the filter bar from the querystring, remembering the last choice in
@@ -131,14 +149,14 @@ def get_filter_state(request):
     if raw_fy == ALL_YEARS:
         fiscal_year = None
         request.session['finance_fy'] = ALL_YEARS
-    elif raw_fy.isdigit():
+    elif raw_fy.isdecimal() and _plausible_year(int(raw_fy)):
         fiscal_year = int(raw_fy)
         request.session['finance_fy'] = fiscal_year
     else:
         remembered = request.session.get('finance_fy')
         if remembered == ALL_YEARS:
             fiscal_year = None
-        elif isinstance(remembered, int):
+        elif isinstance(remembered, int) and _plausible_year(remembered):
             fiscal_year = remembered
         else:
             fiscal_year = current_fiscal_year()

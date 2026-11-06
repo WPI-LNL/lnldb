@@ -345,6 +345,11 @@ Migration                                   What it does
                                             Request ID, side and undergraduates,
                                             ``FundSource.draws_on`` in place of the yes/no
                                             ``requires_funding_request``, and no project on a line
+``0006_officer_finance_permissions``        Gives the Officer group the finance permissions on a
+                                            database that already has the group; see *Who holds
+                                            them*
+``0007_held_before_match``                  What an encumbrance line held before the charge that
+                                            finished it, for undoing that charge
 ==========================================  ======================================================
 
 Tables and seed rows are kept in separate files because production runs on
@@ -434,6 +439,12 @@ balance and burndown reads them exactly as it read a single-line
 encumbrance and never reads the ``Encumbrance`` row at all. A line keeps the
 link after it is matched, so the entry it became can say where it came from.
 A line with no description of its own takes the encumbrance's.
+
+Undoing the charge that finished a line puts back what the line held just
+before it, which the match records in ``held_before_match``. It can't come from
+the line's history: ``RevisionMiddleware`` makes a whole request one revision,
+which keeps one version of a row, so a bulk draw that wrote a line down three
+times leaves only what it held before the first.
 
 An encumbrance has no date. Money is encumbered from the day it is logged
 until it is matched, so its open lines are dated that day
@@ -2005,6 +2016,13 @@ page shows the saved total beside the new one and offers *Update the total*.
 Bills made before totals were worked out kept the figure typed for them, and
 are flagged the same way if it differs.
 
+**What the invoice says it comes to** follows the same rule
+(:func:`finance.views.billing.invoice_total`). Until the bill is sent it is what
+the prices come to, and the first email saves that figure. Once it is sent or
+paid it is the saved total, however often the invoice is drawn again. If the
+prices have moved since, an *Adjustment to the amount billed* row makes the
+page add up to it. *Update the total* is how the figure changes on purpose.
+
 **The bill's own charges** (:class:`~finance.models.MultiBillingCharge`) are
 priced as the same charge on one event would be:
 
@@ -2143,12 +2161,19 @@ because the payment that arrives later names the ISD, and is matched by it.
   starts with what the bill already records, else what the client sent
   through the bill's form, else the worktag on file for the client from their
   last bill. It says which, because the Treasurer confirms every worktag with
-  the client.
+  the client. Each submission of the client's form goes on file, unless its
+  fund is of the other kind: the fund on file says whether the client is a
+  student organization or a department (:func:`finance.models.client_type_for`),
+  so one show paid from elsewhere stays on that event alone
+  (:func:`finance.models.changes_client_type`).
 * **Recording the ISD** (:class:`~finance.billing_forms.BillISDForm`) ticks
   the events app's ``entered_into_workday`` on each event the bill covers, so
   the client's worktag form stays locked once the ISD exists, as it always
   has. *Remove the ISD* clears the record and unticks the box, for an ISD
-  entered by mistake or cancelled in Workday. The worktag stays. The Billing
+  entered by mistake or cancelled in Workday. The worktag stays. Deleting a
+  bill that has an ISD unticks it too, and warns, before and after, that the
+  ISD is still in Workday. Either way, an event still on another bill with an
+  ISD stays locked. The Billing
   page records an ISD from its row by posting the same form, with the row's
   worktag, fund and amount as hidden fields; *Change* opens the whole form.
 * **The old action is gone.** The events app's "entered into Workday" button
@@ -2339,6 +2364,11 @@ themselves informative.
 **Client type** is never entered by hand — it is inherited from each event's
 billing organisation. Non-event revenue (SGA's payments, donations) has no
 client and is excluded rather than silently bucketed as "Unknown".
+
+**Expenses and spending** count what has left the account
+(``ParsedTransaction.objects.spending()``), so an open encumbrance is on neither
+until its charge is matched, as on the *Income and Spending* report. The ledger
+still lists it (``expenses()``), and the dashboard's banner counts them.
 
 **Revenue by source** is event billing against each kind of non-event income.
 Money that went back to SGA is netted off the income it undoes, with a note
@@ -2683,7 +2713,10 @@ Reads that sit on hot paths — the partition lock runs on every save, the fisca
 year on every row of every page — are cached in module state and dropped by a
 ``post_save`` signal (:mod:`finance.apps`). An admin edit that appeared to do
 nothing until the next restart would be a far worse bug than the query it
-saves, so any new cached table must be registered there too.
+saves, so any new cached table must be registered there too. The signal only
+reaches the worker that saved the row. Each of the others keeps its copy for
+up to ``CACHE_SECONDS``, a minute, so an admin edit can take that long to reach
+every page.
 
 What stays in code, and why:
 
@@ -2753,7 +2786,10 @@ Who holds them
 
 Declaring a permission on a model creates the row; it does not put it in
 anybody's hands. The grants live in ``fixtures/groups.json``, which is what
-``manage.py loaddata fixtures/*.json`` applies when a database is built:
+``manage.py loaddata fixtures/*.json`` applies when a database is built. A
+database that already exists gets them from migration
+``0006_officer_finance_permissions``, because ``loaddata`` replaces each
+group's permissions wholesale and is not something to run on a live site:
 
 ===================  =========================================================
 Group                Finance permissions
@@ -2903,11 +2939,23 @@ Adding to the app
 
 **A setting read on a hot path** is cached in module state. Register its model
 in :meth:`finance.apps.FinanceConfig.ready` or an admin edit will appear to do
-nothing until the next restart.
+nothing for up to a minute, even in the worker that saved it.
+
+**A filter on when an event ran** uses :func:`finance.models.started_between`,
+never a ``__date`` lookup. That lookup makes the database convert the time
+zone of every row, and MySQL matches nothing, with no error, unless its
+time-zone tables are loaded. Show the day with
+:func:`finance.models.local_day`, because a stored time is in UTC and a 9pm
+show is already the next day there.
+
+**A CSV download** puts anything that isn't a figure or a date through
+:func:`finance.reports.csv_cell`, so an event name typed by a client can't run
+as a formula when the file is opened in Excel.
 
 **A permission** does nothing until a group holds it. Add it to the Officer
-group in ``fixtures/groups.json`` and to the assertion in
-``finance/tests/test_rollups.py``; see *Who holds them*.
+group in ``fixtures/groups.json``, to the assertion in
+``finance/tests/test_rollups.py``, and to a data migration for databases that
+already exist; see *Who holds them*.
 
 **A report** is a function in :mod:`finance.reports` that returns a
 :class:`~finance.reports.Report`. Add it to :data:`~finance.reports.REPORTS`

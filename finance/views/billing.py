@@ -35,7 +35,6 @@ from django.template.loader import render_to_string
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, UpdateView
@@ -49,9 +48,9 @@ from finance.billing import (CLOSABLE, CREATE_ISD, NO_BILL_NEEDED, PAID, READY, 
                              sent_on)
 from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillPaidForm,
                                    BillSentForm, BillWorktagForm, MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm,
-                                   NoBillNeededForm, bill_events, clear_isd, client_tally)
+                                   NoBillNeededForm, bill_events, clear_isd, client_tally, release_events)
 from finance.calculators import bill_payments, latest_bill
-from finance.filters import filter_context, get_filter_state
+from finance.filters import back_to, filter_context, get_filter_state
 from finance.models import (ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail,
                             NoBillNeeded, books_start_date, dollars, money, no_bill_needed_for)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
@@ -175,7 +174,38 @@ class BillingUpdate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequir
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class BillingDelete(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
+def isd_left_in_workday(bill):
+    """ What to say about a recorded ISD when its bill is deleted, before and after. """
+    return ("ISD %s for %s is in Workday, and deleting the bill does not cancel it. Cancel it there, or record it on "
+            "the corrected bill." % (bill.isd_number, dollars(bill.isd_amount)))
+
+
+class ReleaseISDMixin(object):
+    """
+    Deleting a bill that has an ISD: says the ISD is still in Workday, on the
+    way in and on the way out, and unlocks the events' worktag form. Left
+    locked, a corrected bill would have no ISD to remove and the client could
+    not send a worktag for it.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super(ReleaseISDMixin, self).get_context_data(**kwargs)
+        if self.object.isd_number:
+            context['isd_warning'] = isd_left_in_workday(self.object)
+        return context
+
+    def form_valid(self, form):
+        bill = self.object
+        events = bill_events(bill)
+        warning = isd_left_in_workday(bill) if bill.isd_number else None
+        response = super(ReleaseISDMixin, self).form_valid(form)
+        if warning:
+            release_events(events)
+            messages.warning(self.request, warning)
+        return response
+
+
+class BillingDelete(ReleaseISDMixin, BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
     template_name = "finance/bill_confirm_delete.html"
     msg = "Delete bill"
@@ -202,7 +232,8 @@ class BillingDelete(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequir
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class MultiBillingDelete(BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
+class MultiBillingDelete(ReleaseISDMixin, BillingPageMixin, SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
+                         DeleteView):
     model = MultiBilling
     template_name = "finance/bill_confirm_delete.html"
     msg = "Delete multi-bill"
@@ -301,7 +332,9 @@ class MultiBillingEmailCreate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, L
         kwargs['multibilling'] = self.multibilling
         # Written out as for a single bill, so the Treasurer edits a draft
         # rather than starting from nothing every time it is sent.
-        context = {'bill': self.multibilling, 'breakdown': self.multibilling.breakdown()}
+        breakdown = self.multibilling.breakdown()
+        context = {'bill': self.multibilling, 'breakdown': breakdown,
+                   'total': invoice_total(self.multibilling, breakdown)}
         kwargs['initial'] = {
             'subject': render_to_string('finance/emails/multibill_subject.txt', context,
                                         request=self.request).strip(),
@@ -311,6 +344,9 @@ class MultiBillingEmailCreate(BillingPageMixin, SetFormMsgMixin, HasPermMixin, L
 
     def form_valid(self, form):
         messages.success(self.request, "Billing Email Created!", extra_tags='success')
+        # The first time the client sees it, what they see is what is saved.
+        if sent_on(self.multibilling) is None and self.multibilling.recalculate() and self.multibilling.isd_differs:
+            messages.warning(self.request, isd_now_differs(self.multibilling))
         response = super(MultiBillingEmailCreate, self).form_valid(form)
         # send the email
         i = form.instance
@@ -389,7 +425,7 @@ def _record_workday(request, bill, form_class):
         set_revision_comment("Removed ISD %s from the bill" % number, None)
         clear_isd(bill, events)
         messages.success(request, "Removed ISD %s from %s. It is back at Create ISD." % (number, name))
-        return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+        return HttpResponseRedirect(back_to(request, billing_url(CREATE_ISD)))
     form = form_class(request.POST or None, bill=bill, events=events)
     if request.method == 'POST' and form.is_valid():
         if form_class is BillISDForm:
@@ -400,14 +436,14 @@ def _record_workday(request, bill, form_class):
             if bill.isd_differs:
                 messages.warning(request, "The ISD charges %s, and the bill comes to %s."
                                  % (dollars(bill.isd_amount), dollars(bill.amount)))
-            return HttpResponseRedirect(_back_to(request, billing_url(WAITING_ON_APPROVAL)))
+            return HttpResponseRedirect(back_to(request, billing_url(WAITING_ON_APPROVAL)))
         form.save(user=request.user)
         messages.success(request, "Recorded worktag %s for %s. It is ready for its ISD." % (bill.worktag_charged, name))
-        return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+        return HttpResponseRedirect(back_to(request, billing_url(CREATE_ISD)))
     isd = form_class is BillISDForm
     context = _billing_context(
         request, h2=("Record the ISD for %s" if isd else "Record the worktag for %s") % name, bill=bill,
-        item=item, form=form, isd=isd, cancel_url=_back_to(request, billing_url()))
+        item=item, form=form, isd=isd, cancel_url=back_to(request, billing_url()))
     return render(request, 'finance/bill_workday_form.html', context)
 
 
@@ -466,9 +502,9 @@ def no_bill_needed(request, event):
         record.decided_on = timezone.now()
         record.save()
         messages.success(request, "%s needs no bill: %s." % (event.event_name, record.get_reason_display()))
-        return HttpResponseRedirect(_back_to(request, billing_url(READY)))
+        return HttpResponseRedirect(back_to(request, billing_url(READY)))
     context = _billing_context(request, h2="No bill needed for %s" % event.event_name, event=event, item=item,
-                               form=form, decided=decided, cancel_url=_back_to(request, billing_url(READY)))
+                               form=form, decided=decided, cancel_url=back_to(request, billing_url(READY)))
     return render(request, 'finance/no_bill_needed_form.html', context)
 
 
@@ -483,7 +519,7 @@ def no_bill_needed_undo(request, event):
         return HttpResponseRedirect(reverse('events:detail', args=(event,)))
     decided.delete()
     messages.success(request, "%s is ready to bill again." % decided.event.event_name)
-    return HttpResponseRedirect(_back_to(request, billing_url(NO_BILL_NEEDED)))
+    return HttpResponseRedirect(back_to(request, billing_url(NO_BILL_NEEDED)))
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +589,7 @@ def billing_close(request):
     :func:`finance.billing.close_refusal`), and so is one no longer at either
     stage -- reopened, paid again, or closed since the page was drawn.
     """
-    back = _back_to(request, billing_url(PAID))
+    back = back_to(request, billing_url(PAID))
     keys = list(OrderedDict.fromkeys(request.POST.getlist('only') or request.POST.getlist('close')))
     if not keys:
         messages.info(request, "Tick the events to close first.")
@@ -849,14 +885,14 @@ def _mark_paid(request, bill):
         bill.paid_note = form.cleaned_data['paid_note']
         bill.save(update_fields=['date_paid', 'paid_note'])
         messages.success(request, "Marked %s paid on %s." % (name, date_format(bill.date_paid, 'M j, Y')))
-        return HttpResponseRedirect(_back_to(request, back))
+        return HttpResponseRedirect(back_to(request, back))
     start = books_start_date()
     before_books = start is not None and any(
         timezone.localtime(event.datetime_start).date() < start for event in bill_events(bill))
     context = _billing_context(request, h2="Mark %s paid" % name, bill=bill, form=form, received=received,
                                owed=owed, covered=covered, last_payment=last_payment, books_start=start,
                                before_books=before_books, is_multibill=isinstance(bill, MultiBilling),
-                               cancel_url=_back_to(request, back))
+                               cancel_url=back_to(request, back))
     return render(request, 'finance/bill_paid_form.html', context)
 
 
@@ -884,7 +920,7 @@ def _mark_sent(request, bill):
         bill.sent_note = ''
         bill.save(update_fields=['sent_on', 'sent_note'])
         messages.success(request, "%s is no longer marked sent." % (name[0].upper() + name[1:]))
-        return HttpResponseRedirect(_back_to(request, back))
+        return HttpResponseRedirect(back_to(request, back))
     form = BillSentForm(request.POST or None, bill=bill,
                         initial={'sent_on': bill.sent_on or timezone.localdate(), 'sent_note': bill.sent_note})
     if request.method == 'POST' and form.is_valid():
@@ -893,9 +929,9 @@ def _mark_sent(request, bill):
         bill.sent_note = form.cleaned_data['sent_note']
         bill.save(update_fields=['sent_on', 'sent_note'])
         messages.success(request, "Marked %s sent on %s." % (name, date_format(bill.sent_on, 'M j, Y')))
-        return HttpResponseRedirect(_back_to(request, back))
+        return HttpResponseRedirect(back_to(request, back))
     context = _billing_context(request, h2="Mark %s sent" % name, bill=bill, form=form,
-                               is_multibill=isinstance(bill, MultiBilling), cancel_url=_back_to(request, back))
+                               is_multibill=isinstance(bill, MultiBilling), cancel_url=back_to(request, back))
     return render(request, 'finance/bill_sent_form.html', context)
 
 
@@ -911,7 +947,7 @@ def _mark_unpaid(request, bill):
     bill.save(update_fields=['date_paid', 'paid_note'])
     name = _bill_name(bill)
     messages.success(request, "%s is unpaid again." % (name[0].upper() + name[1:]))
-    return HttpResponseRedirect(_back_to(request, back))
+    return HttpResponseRedirect(back_to(request, back))
 
 
 @login_required
@@ -937,15 +973,6 @@ def bill_mark_unpaid(request, event, pk):
     """ Undo marking one event's bill paid. """
     bill = get_object_or_404(Billing.objects.select_related('event'), event_id=event, pk=pk)
     return _mark_unpaid(request, bill)
-
-
-def _back_to(request, default):
-    """ Where to go after a save: the page that asked, if it is one of ours. """
-    target = request.POST.get('next') or request.GET.get('next')
-    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()},
-                                                  require_https=request.is_secure()):
-        return target
-    return default
 
 
 # ---------------------------------------------------------------------------
@@ -977,6 +1004,7 @@ def get_multibill_data(multibilling):
     charges = {kind: [] for kind, _ in MultiBillingCharge.KIND_CHOICES}
     for row in breakdown['charges']:
         charges[row['charge'].kind].append(row)
+    total_cost = invoice_total(multibilling, breakdown)
     adjustments = charges[MultiBillingCharge.PERCENT]
     rentals = charges[MultiBillingCharge.RENTAL]
     oneoffs = charges[MultiBillingCharge.ONE_OFF]
@@ -999,8 +1027,24 @@ def get_multibill_data(multibilling):
         'rentals_without_fee': [row for row in rentals if not row['charge'].rental_fee_percent],
         'oneoffs': oneoffs,
         'oneoffs_total': sum((row['total'] for row in oneoffs), ZERO),
-        'total_cost': breakdown['total'],
+        'adjustment': total_cost - breakdown['total'],
+        'total_cost': total_cost,
     }
+
+
+def invoice_total(bill, breakdown):
+    """
+    What a multi-bill's invoice says it comes to.
+
+    What the prices come to, until the client has it. From then on it is the
+    saved amount: that is the figure the client was given, and what payments
+    are matched against, so re-sending or re-downloading the invoice mustn't
+    change it because an event's price moved. The Treasurer changes it with
+    *Update total*, while it is unpaid.
+    """
+    if bill.date_paid or sent_on(bill):
+        return money(bill.amount)
+    return breakdown['total']
 
 
 def multibill_invoice_name(multibilling):

@@ -162,6 +162,9 @@ Each row shows the ISD's number and the day it was created. When the money arriv
 `Change ISD` opens the form again. Use it to correct a number, or click `Remove the ISD` there if it was entered by
 mistake or cancelled in Workday: the bill goes back to *Create ISD*, and the client's form opens again.
 
+Deleting a bill that has an ISD opens the client's form again too, but **it does not cancel the ISD**. The page reminds
+you: cancel it in Workday, or record it on the corrected bill.
+
 A bill marked entered into Workday before ISD numbers were recorded shows *not recorded*. Click `Record ISD` to add its
 number.
 

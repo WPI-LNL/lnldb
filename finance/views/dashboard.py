@@ -56,7 +56,7 @@ def dashboard(request):
     # -- headline numbers ----------------------------------------------------
     entries = state.apply(ParsedTransaction.objects.all())
     revenue = money(entries.revenue().aggregate(t=Sum('amount'))['t'])
-    expense = -money(entries.expenses().aggregate(t=Sum('amount'))['t'])
+    expense = -money(entries.spending().aggregate(t=Sum('amount'))['t'])
 
     # -- charts --------------------------------------------------------------
     fy, proj = state.fiscal_year, projection_flag

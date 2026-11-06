@@ -8,6 +8,7 @@
         <div class="col-md-6">
             <div class="fin-panel">
                 <div class="fin-panel-body">
+                    {% if isd_warning %}<div class="alert alert-warning">{{ isd_warning }}</div>{% endif %}
                     <p>Are you sure you want to delete {{ object }}?</p>
                     <form method="post">
                         {% csrf_token %}

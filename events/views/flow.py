@@ -1294,6 +1294,9 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        # Imported here rather than at the top: finance already imports the events models.
+        from finance.models import changes_client_type
+
         # Automatically add the user who submitted the workday form to the client
         org = self.object.org_to_be_billed
         if org is not None and self.request.user not in org.associated_users.all():
@@ -1303,8 +1306,10 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         else:
             set_revision_comment("Entered Workday billing info", form)
         # Keep the client's workday info on file current, so their next bill's form is pre-filled with what they
-        # used last
-        if org is not None and (org.workday_fund, org.worktag) != (self.object.workday_fund, self.object.worktag):
+        # used last. Not when it is a fund of the other kind: the fund on file says whether the client is a student
+        # org or a department, and one show paid from elsewhere must not change that. The event keeps what was sent.
+        if (org is not None and (org.workday_fund, org.worktag) != (self.object.workday_fund, self.object.worktag)
+                and not changes_client_type(org, self.object.workday_fund)):
             org.workday_fund = self.object.workday_fund
             org.worktag = self.object.worktag
             org.save()
