@@ -2,6 +2,7 @@ from django.contrib import admin
 from polymorphic.admin import PolymorphicChildModelAdmin, PolymorphicParentModelAdmin
 from reversion.admin import VersionAdmin
 
+from finance.models import Billing
 from . import models
 
 
@@ -49,7 +50,7 @@ client_unarchive.short_description = "UN-Set As Archived"
 
 # modeladmins
 class EventBillingInline(admin.TabularInline):
-    model = models.Billing
+    model = Billing
 
 
 class EventCCInline(admin.TabularInline):
@@ -170,7 +171,6 @@ class WorkshopAdmin(admin.ModelAdmin):
     inlines = [WorkshopDatesAdmin]
 
 
-admin.site.register(models.Billing)
 admin.site.register(models.Hours)
 admin.site.register(models.Building)
 admin.site.register(models.Location, LocAdmin)

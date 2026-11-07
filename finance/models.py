@@ -1,0 +1,4312 @@
+"""
+The subledger's data model.
+
+The whole app rests on one split, and it is worth stating plainly before
+reading any further:
+
+* :class:`WorkdayTransaction` is **the bank's record**. One row per line of
+  a Workday journal export. It is written by the importer and by nothing
+  else -- ``save()``, ``delete()`` and even the queryset's ``update()``
+  refuse. If it is wrong, it is wrong in Workday, and the fix is to correct
+  it there and re-import.
+
+* :class:`ParsedTransaction` is **LNL's own account of that money**: what it
+  was for, which budget it came out of, which project and event it belongs
+  to. One bank line can carry several, because a single card charge
+  routinely pays for several unrelated things.
+
+Reconciling is the act of writing the second against the first until the
+slices add up to the line exactly. Nothing in this module lets that
+balance be approximate; see :func:`money` for why every figure that leaves
+here is quantized to cents first.
+
+Almost everything else is deliberately data rather than code. Spend
+categories, fund sources, revenue sources, partition codes, CSV column
+aliases and the suggestion rules all live in editable tables, because each
+of them turned out to change on a schedule that has nothing to do with
+deploys. What stays hard-coded is listed and justified above
+:class:`TransactionStatus`.
+"""
+import datetime
+import hashlib
+import re
+import time
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+
+import reversion
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, RegexValidator
+from django.db import models, transaction
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce, Round
+from django.urls.base import reverse
+from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.text import slugify
+from mptt.models import MPTTModel, TreeForeignKey
+
+# ---------------------------------------------------------------------------
+# Money
+# ---------------------------------------------------------------------------
+
+#: Every monetary figure in this app is cents, and nothing else.
+CENTS = Decimal('0.01')
+ZERO = Decimal('0.00')
+
+
+def money(value):
+    """
+    A Decimal rounded to whole cents, half away from zero.
+
+    Everything here is stored as ``DecimalField(decimal_places=2)``, so it is
+    tempting to assume what comes back is already cents. It is not: SQLite
+    quantizes a plain column read but *not* an aggregate, so ``Sum('amount')``
+    returns fifteen significant digits and the trailing float noise with them
+    -- ``Decimal('-2808.24000000000')`` for a column that only ever held
+    ``-2808.24``. Subtracting two of those yields ``Decimal('0E-11')``, which
+    is zero, prints as ``0E-11``, and reads to a Treasurer as a bug.
+
+    So every total crosses back into cents here, at the point it leaves the
+    database. Doing it in the display layer instead would leave the raw value
+    in JSON payloads, form initial data and error messages, which is exactly
+    where it was showing up.
+
+    ``None`` and unparseable values become ``$0.00``: a total with nothing in
+    it is zero, and callers were already spelling that ``or Decimal('0.00')``.
+    """
+    if value is None or value == '':
+        return ZERO
+    if not isinstance(value, Decimal):
+        try:
+            value = Decimal(str(value))
+        except (ArithmeticError, TypeError, ValueError):
+            return ZERO
+    if not value.is_finite():
+        return ZERO
+    return value.quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+def dollars(value):
+    """
+    A figure as every finance page and message writes it: ``$1,234.56``,
+    ``($1,234.56)`` below zero, and ``$0`` for nothing, so a zero is never
+    mistaken for a figure not worked out. ``None`` is a figure not known yet,
+    written ``?``.
+    """
+    if value is None or value == '':
+        return '?'
+    amount = money(value)
+    if not amount:
+        return '$0'
+    body = '{:,.2f}'.format(abs(amount))
+    return ('($%s)' if amount < 0 else '$%s') % body
+
+
+def summed_money(column):
+    """
+    ``Sum(column)`` in whole cents, and ``$0.00`` over no rows, for the SQL side.
+
+    The same float noise :func:`money` strips from a total read into Python
+    breaks a total *compared in SQL*: SQLite adds -4342.40 and -2982.32 to
+    -7324.719999999999, which is not the -7324.72 the bank line holds, so a
+    split that balanced on the page never left the queue. Rounded here, the
+    database compares cents with cents. MySQL's DECIMAL sums exactly already.
+    """
+    return Coalesce(Round(Sum(column), 2), Value(ZERO),
+                    output_field=models.DecimalField(max_digits=12, decimal_places=2))
+
+
+# ---------------------------------------------------------------------------
+# Fiscal year helpers
+#
+# WPI's fiscal year runs July 1 -> June 30. FY26 == 2025-07-01 .. 2026-06-30,
+# i.e. the fiscal year is named for the calendar year it *ends* in. Which month
+# it starts in is a FinanceSettings field, not a constant -- see below.
+# ---------------------------------------------------------------------------
+
+# Not read by anything. The live values are the FinanceSettings row, edited from
+# the admin; migration 0002 seeds that row with its own copy of these figures.
+DEFAULT_FISCAL_YEAR_START_MONTH = getattr(settings, 'LNL_FISCAL_YEAR_START_MONTH', 7)
+DEFAULT_STUDENT_ORG_WORKDAY_FUND = getattr(settings, 'LNL_STUDENT_ORG_WORKDAY_FUND', 810)
+
+# The account codes that say which side of the partition a line starts on are
+# rows in the PartitionCode table, editable from the admin -- the codes and the
+# worktag they live in have both already changed once, which is exactly why
+# they are no longer constants. Migration 0002 seeds 226-AG and 315-AG from its
+# own list; DEFAULT_PARTITION_CODES below is not read by anything.
+# DEFAULT_PARTITION_WORKTAG is where to look for the code while the table is
+# empty.
+#
+# A code is a starting position, not a lock: see PartitionCode. A 315-AG line
+# filed as Event Production needs a written reason; any other crossing only
+# shows a warning. Lines carrying neither code start on Event Production.
+DEFAULT_PARTITION_WORKTAG = 'student_organization'
+DEFAULT_PARTITION_CODES = (
+    # (code, is_projection, note)
+    ('226-AG', False, 'Lens & Light Club — Event Production'),
+    ('315-AG', True, 'Projection'),
+)
+
+# Joins Journal Line Memo and Header Memo into WorkdayTransaction.memo, and
+# splits them back apart for rows imported before the two were kept separately.
+MEMO_SEPARATOR = ' — '
+
+
+# The worktags that take part in a bank line's identity, alongside the date,
+# amount, payee, memo and Operational Transaction. Deliberately a fixed list
+# rather than "every worktag": if Workday adds a column to the export, existing
+# lines must keep the fingerprints they already have, or a re-import would look
+# like a file full of new transactions.
+#
+# journal_line_memo is excluded because it is already inside `memo`; counting it
+# twice would give rows imported before it was stored separately a different
+# fingerprint from identical rows imported after.
+FINGERPRINT_WORKTAGS = (
+    'journal', 'fund', 'cost_center', 'ledger_account', 'spend_category',
+    'revenue_category', 'activity', 'student_organization', 'program',
+)
+
+
+def normalise_term(text):
+    """
+    Squash a name down to what is worth comparing: lower-case letters and
+    digits, nothing else.
+
+    LNL's category names carry punctuation and spacing that nobody reproduces
+    when typing them into a Workday memo -- "Equipment - Non Capital" is
+    written "equipment non capital", "Equipment-NonCapital" and
+    "equipment_noncapital" by three different people in the same week. All four
+    mean the row, so all four have to reach it.
+    """
+    return re.sub(r'[^a-z0-9]+', '', (text or '').lower())
+
+
+def worktag_value(worktags, key, default=''):
+    """ Case/format tolerant lookup into a ``worktags_json`` dict. """
+    if not worktags:
+        return default
+    if key in worktags:
+        return worktags[key] or default
+    target = key.replace('_', ' ').replace('-', ' ').lower()
+    for stored, value in worktags.items():
+        if stored.replace('_', ' ').replace('-', ' ').lower() == target:
+            return value or default
+    return default
+
+
+def identity_text(value):
+    """
+    Normalise one identity component: blank-insensitive, case-insensitive.
+
+    Public because the importer compares the same fields the same way when
+    looking for near-duplicates -- see
+    :func:`finance.importers._near_duplicate_key`. Two normalisations that
+    disagreed would let a line be "the same" to one and "different" to the
+    other, which is precisely the disagreement that double-counts a charge.
+    """
+    if value is None:
+        return ''
+    return re.sub(r'\s+', ' ', str(value)).strip().lower()
+
+
+def workday_fingerprint(accounting_date, net_amount, operational_transaction,
+                        supplier, employee, memo, worktags):
+    """
+    A content hash of everything Workday tells us about one journal line.
+
+    Operational Transaction is *not* unique in a real export -- a single
+    supplier invoice routinely covers a dozen lines -- so it cannot be the
+    duplicate guard on its own. Two lines are the same line only if every
+    exported field agrees, and even then they may be two genuinely separate
+    charges (two identical Spotify subscriptions in one month). The importer
+    resolves that ambiguity with :attr:`WorkdayTransaction.fingerprint_ordinal`;
+    this function's only job is to say what "the same line" means.
+
+    Kept as a free function rather than a method because a data migration
+    works on historical models, which carry no custom methods. Any migration
+    that has to recompute fingerprints must import this one implementation --
+    two copies that drifted would silently split a row's history in half.
+    """
+    parts = [
+        accounting_date.isoformat() if hasattr(accounting_date, 'isoformat') else accounting_date,
+        # Quantised so '19.99' and '19.990' cannot disagree.
+        str(Decimal(net_amount or 0).quantize(Decimal('0.01'))),
+        operational_transaction, supplier, employee, memo,
+    ]
+    parts.extend(worktag_value(worktags, key) for key in FINGERPRINT_WORKTAGS)
+    # Unit separator: a control character no Workday field can contain, so
+    # ('ab', 'c') and ('a', 'bc') cannot collide.
+    joined = '\x1f'.join(identity_text(part) for part in parts)
+    return hashlib.sha256(joined.encode('utf-8')).hexdigest()
+
+
+def org_code_matches(value, code):
+    """
+    True when a Workday worktag value denotes ``code``.
+
+    The value arrives either bare ("315-AG") or with a trailing description
+    ("226-AG Lens & Light Club"), so a prefix match is needed -- but a plain
+    ``startswith`` would also match a hypothetical "315-AGX", hence the
+    separator check.
+    """
+    value = (value or '').strip().upper()
+    if not value:
+        return False
+    target = (code or '').strip().upper()
+    if not target:
+        return False
+    if value == target:
+        return True
+    return any(value.startswith(target + sep) for sep in (' ', ':', '-', '\t'))
+
+
+MONTH_CHOICES = tuple(
+    (n, datetime.date(2000, n, 1).strftime('%B')) for n in range(1, 13))
+
+
+class FinanceSettings(models.Model):
+    """
+    The handful of finance settings that are institutional policy rather than
+    program logic. One row, edited from the admin.
+
+    These were module constants read from ``settings.py``, which meant a
+    fiscal-year change or a Workday renumber needed a developer and a deploy.
+    Neither is a code change in any meaningful sense.
+    """
+    fiscal_year_start_month = models.PositiveSmallIntegerField(
+        choices=MONTH_CHOICES, default=7, verbose_name="Fiscal year starts in",
+        help_text="WPI's runs July–June, so FY26 is Jul 2025 – Jun 2026 and is named for "
+                  "the year it ends in. Changing this re-files every transaction ever "
+                  "recorded into different fiscal years, so change it only if the "
+                  "institution genuinely moves its year.")
+    student_org_workday_fund = models.PositiveIntegerField(
+        default=810, verbose_name="Student organization fund",
+        help_text="The Workday fund number that marks a client as a student organization "
+                  "(810 for 810-FD). Everything else billing through Workday is treated as "
+                  "a department. Drives the client-type breakdown on the dashboard.")
+    fiscal_years_back = models.PositiveSmallIntegerField(
+        default=6, verbose_name="Past years in the picker",
+        help_text="How many previous fiscal years the filter bar offers.")
+    fiscal_years_forward = models.PositiveSmallIntegerField(
+        default=1, verbose_name="Future years in the picker",
+        help_text="How many upcoming fiscal years to offer, for encumbrances and awards "
+                  "booked ahead of time.")
+    digest_client_days = models.PositiveSmallIntegerField(
+        default=14, verbose_name="Billing digest: waiting on client after (days)",
+        help_text="The weekly billing digest lists a bill the client has not answered this many days "
+                  "after it was last emailed, so you can email it again.")
+    digest_approval_days = models.PositiveSmallIntegerField(
+        default=21, verbose_name="Billing digest: waiting on approval after (days)",
+        help_text="The weekly billing digest lists an ISD still waiting for the client to approve it "
+                  "this many days after it was recorded.")
+
+    class Meta:
+        verbose_name = "Finance Configuration"
+        verbose_name_plural = "Finance Configuration"
+
+    def __str__(self):
+        return "Finance configuration"
+
+    def save(self, *args, **kwargs):
+        """ Force this onto row 1, whatever the caller thought it was doing. """
+        # One row, always. A second would make "the configuration" ambiguous.
+        self.pk = 1
+        # ...so objects.create() on an already-configured site is an edit of
+        # that row, not an insert that collides with it.
+        kwargs.pop('force_insert', None)
+        return super(FinanceSettings, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """ Refuse: half the app reads these values on every request. """
+        raise ValidationError(
+            "The finance configuration cannot be deleted. Edit the values instead.")
+
+    @classmethod
+    def load(cls):
+        """ The configuration row, created with defaults if it is missing. """
+        return cls.objects.get_or_create(pk=1)[0]
+
+
+# ---------------------------------------------------------------------------
+# Cached table reads
+#
+# A handful of settings and vocabularies are consulted on paths hot enough that
+# a query each time would be silly -- fiscal_year_for() runs on every row of
+# every page. They are read once, kept here, and dropped by a post_save signal
+# (see finance/apps.py) the moment the admin changes one.
+# ---------------------------------------------------------------------------
+
+_CACHE = {}
+
+#: How long, in seconds, a worker trusts its copy of a table. Saving a row
+#: clears the copy in the worker that saved it at once; each other worker runs
+#: its own copy of this module and hears nothing, so this is how long an admin
+#: edit can take to reach all of them.
+CACHE_SECONDS = 60
+
+
+def reset_finance_cache(*keys):
+    """ Forget cached table reads. No arguments clears everything. """
+    for key in (keys or list(_CACHE)):
+        _CACHE.pop(key, None)
+
+
+def _cached(key, build, default):
+    """
+    ``build()`` once, remembered under ``key``.
+
+    A missing table is not an error: this module is imported before its own
+    migrations have run, and ``manage.py migrate`` on an empty database would
+    otherwise fail on the first fiscal-year calculation.
+    """
+    held = _CACHE.get(key)
+    now = time.monotonic()
+    if held is None or now - held[0] >= CACHE_SECONDS:
+        try:
+            held = (now, build())
+        except Exception:
+            return default
+        _CACHE[key] = held
+    return held[1]
+
+
+def finance_settings():
+    """ The live :class:`FinanceSettings` row, or the defaults if there is none. """
+    # The fallback is built only when it is needed. Built as the argument to
+    # _cached, it was a model instance made and thrown away on every call --
+    # and fiscal_year_for() calls this for every row of every page.
+    config = _cached('config', lambda: FinanceSettings.load(), None)
+    return config if config is not None else FinanceSettings(pk=1)
+
+
+def fiscal_year_start_month():
+    """
+    The month a fiscal year begins, 1-12.
+
+    Configurable rather than fixed at July: WPI has moved it before, and
+    every date-to-year calculation in the app funnels through here.
+    """
+    return finance_settings().fiscal_year_start_month
+
+
+def fiscal_year_for(date):
+    """ Return the integer fiscal year containing ``date`` (FY26 -> 2026). """
+    if date is None:
+        return None
+    return date.year + 1 if date.month >= fiscal_year_start_month() else date.year
+
+
+def fiscal_year_bounds(fiscal_year):
+    """ Return ``(first_day, last_day)`` inclusive for the given fiscal year. """
+    first_month = fiscal_year_start_month()
+    start = datetime.date(fiscal_year - 1, first_month, 1)
+    if first_month == 1:
+        end = datetime.date(fiscal_year - 1, 12, 31)
+    else:
+        end = datetime.date(fiscal_year, first_month, 1) - datetime.timedelta(days=1)
+    return start, end
+
+
+def local_day(value):
+    """ The local date of a datetime, or a date as it is. """
+    if isinstance(value, datetime.datetime):
+        return timezone.localdate(value) if timezone.is_aware(value) else value.date()
+    return value
+
+
+def _local_midnight(day):
+    """ The moment a local day begins. """
+    return timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+
+
+def started_between(first=None, last=None, field='datetime_start'):
+    """
+    The filter for what started from local day ``first`` to ``last`` inclusive.
+    Either may be ``None`` for no limit on that side.
+
+    Compares the stored moment with the moments those days begin and end,
+    rather than using a ``__date`` lookup. That lookup makes the database
+    convert every row's time zone, and MySQL can only do so with its time-zone
+    tables loaded. Without them it matches nothing and raises no error.
+    """
+    limits = Q()
+    if first is not None:
+        limits &= Q(**{'%s__gte' % field: _local_midnight(first)})
+    if last is not None:
+        limits &= Q(**{'%s__lt' % field: _local_midnight(last + datetime.timedelta(days=1))})
+    return limits
+
+
+def refund_window(fiscal_year):
+    """
+    ``(first_day, last_day)`` of the purchases a refund dated in
+    ``fiscal_year`` can give money back for: that year and the one before,
+    since the credit for a June purchase often lands in July.
+    """
+    return fiscal_year_bounds(fiscal_year - 1)[0], fiscal_year_bounds(fiscal_year)[1]
+
+
+def current_fiscal_year():
+    """ The fiscal year we are in today, in local time. """
+    return fiscal_year_for(timezone.localdate())
+
+
+def books_start_date():
+    """
+    The first day fund balances are counted from, or ``None`` with no lines yet.
+
+    Always the start of the fiscal year of the earliest imported line, and
+    never set by hand: every line imported is in the books and is settled, so
+    an install that imported FY26 onwards has books from July 2025, and
+    importing an older export moves them back to meet it.
+    """
+    earliest = WorkdayTransaction.objects.order_by('accounting_date').values_list(
+        'accounting_date', flat=True).first()
+    if earliest is None:
+        return None
+    return fiscal_year_bounds(fiscal_year_for(earliest))[0]
+
+
+def fiscal_year_choices(back=None, forward=None):
+    """ Descending list of ``(fy, "FY26 (Jul 2025 - Jun 2026)")`` tuples for filters. """
+    config = finance_settings()
+    back = config.fiscal_years_back if back is None else back
+    forward = config.fiscal_years_forward if forward is None else forward
+    now = current_fiscal_year()
+    out = []
+    for fy in range(now + forward, now - back - 1, -1):
+        start, end = fiscal_year_bounds(fy)
+        out.append((fy, "FY%s (%s %s – %s %s)" % (
+            str(fy)[-2:], start.strftime('%b'), start.year, end.strftime('%b'), end.year)))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Enumerations
+#
+# Only three things stay hard-coded here, and all three are code rather than
+# data:
+#
+# * TransactionStatus is a state machine. ``settle()``, ``clean()`` and a
+#   database CheckConstraint all branch on these two values, so adding a third
+#   from the admin would change nothing without code to go with it.
+# * ClientType is *derived* from the linked event's billing fund. It is never
+#   stored or chosen, so there is nothing to configure.
+# * FundBehaviour is what the year-end close and the balance page branch on.
+#   The funds themselves are rows anyone can add; how money in one behaves at
+#   June 30 is one of three things SGA does, and a fourth would need code.
+#
+# Everything a Treasurer might reasonably want to add or rename -- spend
+# categories, fund sources, revenue sources, auto-suggest rules, the partition
+# codes -- lives in the editable tables further down.
+# ---------------------------------------------------------------------------
+
+class TransactionStatus(models.TextChoices):
+    """
+    Whether an entry is money that has moved or money merely reserved.
+
+    Pending covers encumbrances and slices of a split that is not finished
+    yet; Settled means the entry is final. A bank line counts as reconciled
+    only once every slice on it is Settled and they add up exactly.
+    """
+    PENDING = 'pending', 'Pending'
+    SETTLED = 'settled', 'Settled'
+
+
+class ClientType(models.TextChoices):
+    """ Derived from the linked event's billing org; never entered by hand. """
+    STUDENT_ORG = 'student_org', 'Student Organization'
+    DEPARTMENT = 'department', 'Department'
+    UNKNOWN = 'unknown', 'Unknown'
+
+
+class FundBehaviour(models.TextChoices):
+    """
+    What happens to money in a fund, and when it arrives.
+
+    SGA pays clubs three ways, and they disagree about both questions:
+
+    * **Carries forward** -- LNL's own money (Legacy) and Projection's yearly
+      mandatory transfer into 315-AG. Whatever is left on June 30 is next
+      year's opening balance.
+    * **Returns to SGA** -- the annual budget. Deposited before any of it is
+      spent; whatever is unspent at year end goes back, so a positive balance
+      on June 30 is owed rather than owned, and an overspend has to be covered
+      from money that carries.
+    * **Reimbursed after spending** -- funding requests. LNL spends first and
+      SGA pays back what was actually spent, never the award. The balance runs
+      negative between the two, and that negative is money owed *to* LNL.
+    """
+    CARRIES = 'carries', 'Carries forward'
+    RETURNS = 'returns', 'Unspent returns to SGA at year end'
+    REIMBURSED = 'reimbursed', 'Reimbursed by SGA after spending'
+
+
+class FundingKind(models.TextChoices):
+    """
+    The two ways SGA grants money line by line, both kept as a
+    :class:`FundingRequest`.
+
+    * **A funding request** -- one purpose, numbered like A.27.16, paid back
+      after the spending.
+    * **A budget** -- the whole fiscal year, one per year, deposited at the
+      start of it. Each line has a four-digit number of its own, and each line
+      is Event Production or Projection on its own.
+
+    Everything else -- lines, burndowns, encumbrances, refunds, closing -- is
+    the same for both, which is why a budget is a kind of request rather than
+    a model of its own.
+    """
+    REQUEST = 'request', 'Funding request'
+    BUDGET = 'budget', 'Budget'
+
+
+class DrawsOn(models.TextChoices):
+    """
+    Whose lines spending from a fund has to name: a funding request's, a
+    budget's, or nobody's. See :attr:`FundSource.draws_on`. The values are
+    :class:`FundingKind`'s, so a fund draws on a line when its ``draws_on`` is
+    the line's request's ``kind``.
+    """
+    NOTHING = '', 'Nothing'
+    REQUEST = 'request', 'Funding requests'
+    BUDGET = 'budget', 'Budgets'
+
+
+#: What one line of each kind is called, in errors and labels.
+LINE_WORDS = {DrawsOn.REQUEST: 'funding request line', DrawsOn.BUDGET: 'budget line'}
+
+
+def line_charge_problem(fund, line, paying_back=False):
+    """
+    Why spending from ``fund`` can't be charged to ``line``, or ``None``.
+
+    A fund that draws on funding requests is charged to a funding request's
+    lines and nothing else; one that draws on budgets, to a budget's lines; any
+    other fund to no line at all. ``line`` may be ``None``: then the question
+    is whether the fund needed one. ``paying_back`` is money SGA took back,
+    which names the request or budget instead of a line.
+
+    The same words on every form and in the model, so a refusal reads the same
+    wherever it comes from.
+    """
+    draws = fund.draws_on if fund is not None else DrawsOn.NOTHING
+    if line is None:
+        if draws and not paying_back:
+            if draws == DrawsOn.BUDGET:
+                return ("%s money has to name the budget line it comes out of." % fund)
+            return "%s money has to name the funding request line it comes out of." % fund
+        return None
+    kind = line.funding_request.kind
+    if draws == kind:
+        return None
+    word = LINE_WORDS.get(kind, 'line')
+    if not draws:
+        return ("%s is a %s, and only a fund that draws on %s can be charged to one — %s does "
+                "not. Change the fund, or clear this." % (
+                    line.label, word, DrawsOn(kind).label.lower(), fund or "no fund"))
+    return ("%s is a %s, but %s is charged to %ss. Pick a %s, or change the fund."
+            % (line.label, word, fund, LINE_WORDS[draws], LINE_WORDS[draws]))
+
+
+def event_passthrough_category():
+    """
+    The :class:`SpendCategory` for costs billed straight to an event, if one is
+    flagged. ``None`` simply means the Treasurer picks a category as usual.
+    """
+    return _cached(
+        'event_passthrough',
+        lambda: SpendCategory.objects.filter(is_event_passthrough=True, is_active=True).first(),
+        None)
+
+
+def spend_categories_by_name():
+    """
+    ``{normalised name: <SpendCategory>}`` for every category still offered.
+
+    LNL writes the category into the Workday memo by hand -- "Velcro restock,
+    consumables, (A.27.16)" -- so the queue has to be able to turn the word
+    somebody typed back into the row it names. Keyed on a normalised form so
+    "Equipment - Non Capital", "equipment non capital" and "EquipmentNonCapital"
+    all arrive at the same place, and on the slug as well, because that is what
+    the URL filters use and what a Treasurer sees beside the name in the admin.
+    """
+    def build():
+        out = {}
+        for row in SpendCategory.objects.active():
+            for key in (normalise_term(row.name), normalise_term(row.slug)):
+                # First row to claim a key keeps it: sort order decides, so a
+                # collision resolves the same way twice running.
+                if key and key not in out:
+                    out[key] = row
+        return out
+    return _cached('category_names', build, {})
+
+
+def spend_category_named(text):
+    """ The :class:`SpendCategory` a piece of text names outright, or ``None``. """
+    return spend_categories_by_name().get(normalise_term(text))
+
+
+def default_fund_source():
+    """
+    The fund to fill an expense in with when nothing identifies one, or ``None``.
+
+    Which fund that is belongs in the admin rather than here: it is LNL's
+    bookkeeping convention, and the club that inherits this code may not share
+    it. See :attr:`FundSource.is_default` for why one exists at all.
+    """
+    return _cached(
+        'default_fund',
+        lambda: FundSource.objects.active().filter(is_default=True).first(),
+        None)
+
+
+def student_org_workday_fund():
+    """
+    The Workday fund that marks a client as a student organization (810-FD).
+
+    A :class:`FinanceSettings` field rather than a constant: it is a number
+    Workday assigns, and Workday renumbers things.
+    """
+    return finance_settings().student_org_workday_fund
+
+
+def client_of(event):
+    """
+    The organisation a show is billed to, or ``None``.
+
+    ``billing_org`` is the answer when somebody set it; otherwise the first
+    client attached to the event stands in for it.
+    """
+    if event is None:
+        return None
+    return event.billing_org or event.org.first()
+
+
+def client_type_for(event):
+    """
+    Classify an event's payer as a student org or a university department.
+
+    The Workday fund is the signal, and it can hang off either the event
+    (``Event2019`` carries its own) or the org billing for it, so both are
+    tried before giving up. Anything that cannot be placed is
+    :attr:`ClientType.UNKNOWN` rather than being guessed into a bucket -- a
+    department miscounted as a student org would distort the revenue split on
+    the dashboard.
+
+    Deliberately a free function rather than a method. The same question is
+    asked from two directions -- of a slice, through
+    :attr:`ParsedTransaction.client_type`, and of a bare event, by the
+    dashboard calculators -- and it used to be answered by two separate
+    implementations of the same four rules. Two copies of a classification rule
+    is two answers the day one of them is updated, and the symptom would be a
+    dashboard that disagrees with the ledger about who paid for something.
+    """
+    if event is None:
+        return ClientType.UNKNOWN
+    fund = getattr(event, 'workday_fund', None)
+    if fund is None:
+        org = client_of(event)
+        fund = getattr(org, 'workday_fund', None) if org else None
+    return _client_type_of_fund(fund)
+
+
+def client_type_for_multibill(bill):
+    """
+    Classify a multi-bill's payer, as :func:`client_type_for` classifies an
+    event's: by the Workday fund of its *Bill to*, or, with none set, as its
+    first event's client.
+    """
+    if bill is None:
+        return ClientType.UNKNOWN
+    if bill.org_id is None:
+        events = sorted(bill.events.all(), key=lambda event: event.pk)
+        return client_type_for(events[0]) if events else ClientType.UNKNOWN
+    return _client_type_of_fund(getattr(bill.org, 'workday_fund', None))
+
+
+def changes_client_type(org, fund):
+    """
+    Whether putting ``fund`` on file for ``org`` would turn a student org into
+    a department, or the other way round.
+
+    The fund on file is what classifies the client's events that have no fund
+    of their own (:func:`client_type_for`), so one show paid from another
+    department's fund must not reclassify the rest of them.
+    """
+    held = getattr(org, 'workday_fund', None)
+    return (held is not None and fund is not None
+            and _client_type_of_fund(held) != _client_type_of_fund(fund))
+
+
+def _client_type_of_fund(fund):
+    """ A student org for SGA's student-org fund, a department for any other, unknown for none. """
+    if fund is None:
+        return ClientType.UNKNOWN
+    return (ClientType.STUDENT_ORG if fund == student_org_workday_fund()
+            else ClientType.DEPARTMENT)
+
+
+def _services_of(event):
+    """ The service categories (Lighting, Sound, ...) an event booked. """
+    # Event2019 keeps services in ServiceInstance rows...
+    instances = getattr(event, 'serviceinstance_set', None)
+    if instances is not None:
+        names = list(instances.values_list('service__category__name', flat=True))
+        if names:
+            return sorted(set(n for n in names if n))
+    # ...while the legacy Event model has direct FKs.
+    legacy = []
+    for attr, label in (('lighting', 'Lighting'), ('sound', 'Sound'), ('projection', 'Projection')):
+        if getattr(event, attr, None) is not None:
+            legacy.append(label)
+    return legacy
+
+
+# ---------------------------------------------------------------------------
+# Editable vocabularies
+#
+# These replace what used to be TextChoices classes. They share a shape --
+# a human name, a stable slug, a display order and an active flag -- so the
+# admin, the forms and the URL filters can treat them identically.
+#
+# The slug is what appears in querystrings (``?category=consumables``) and what
+# code refers to when it needs a specific row. Renaming a category is therefore
+# free; changing its slug is the breaking move, so the admin marks it as such.
+# ---------------------------------------------------------------------------
+
+class VocabularyQuerySet(models.QuerySet):
+    """ Adds :meth:`active` to every editable lookup table. """
+
+    def active(self):
+        """
+        Only the terms still being offered for new records.
+
+        Retired terms stay attached to the rows that already use them, which
+        is the whole point of retiring rather than deleting -- last year's
+        ledger still has to read correctly.
+        """
+        return self.filter(is_active=True)
+
+
+class Vocabulary(models.Model):
+    """ Shared behaviour for the small editable lookup tables. """
+    name = models.CharField(max_length=96, unique=True)
+    slug = models.SlugField(
+        max_length=48, unique=True,
+        help_text="Stable key used in links and by the importer. Safe to leave alone; "
+                  "changing it will break saved links and bookmarks.")
+    sort_order = models.PositiveIntegerField(
+        default=0, help_text="Lower numbers appear first in dropdowns.")
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to retire an option. Existing records keep it; it just "
+                  "stops being offered for new ones.")
+
+    objects = VocabularyQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+        ordering = ('sort_order', 'name')
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        """ Derive the slug from the name the first time, then leave it alone. """
+        if not self.slug:
+            self.slug = slugify(self.name)[:48]
+        return super(Vocabulary, self).save(*args, **kwargs)
+
+
+class SpendCategory(Vocabulary):
+    """ What LNL spent money on -- the categories on the dashboard pie. """
+    color = models.CharField(
+        max_length=7, default='#BAB0AC', verbose_name="Chart colour",
+        validators=[RegexValidator(r'^#[0-9A-Fa-f]{6}$',
+                                   "Use a six-digit hex colour such as #4E79A7.")],
+        help_text="Used for this category everywhere it appears in a chart.")
+    description = models.TextField(blank=True)
+    is_event_passthrough = models.BooleanField(
+        default=False, verbose_name="Use for costs billed to an event",
+        help_text="The category an expense gets when it names the event it was "
+                  "incurred for -- a sub-rental hired for one show, passed straight "
+                  "through. Filled in automatically so the Treasurer does not have to "
+                  "pick a category that says nothing the linked event does not.")
+
+    class Meta(Vocabulary.Meta):
+        abstract = False
+        verbose_name = "LNL Spend Category"
+        verbose_name_plural = "LNL Spend Categories"
+
+
+class FundSource(Vocabulary):
+    """ Which pot of money paid for something. """
+    description = models.TextField(blank=True)
+    workday_fund_codes = models.CharField(
+        max_length=192, blank=True, verbose_name="Workday fund codes",
+        help_text="Comma-separated Fund codes from the export that mean this bucket and "
+                  "only this bucket. A line whose Fund matches is filled in automatically, "
+                  "so only list a code when it genuinely identifies this fund -- 810-FD is "
+                  "on all of LNL's spending and says nothing about whose money it was. "
+                  "Leave blank and this fund is never chosen for you.")
+    draws_on = models.CharField(
+        max_length=16, choices=DrawsOn.choices, blank=True, default=DrawsOn.NOTHING,
+        verbose_name="Charged to lines of",
+        help_text="Money SGA grants line by line has to burn down one of those lines, or the "
+                  "balance silently drifts. Spending from a fund set to funding requests can't "
+                  "be saved without a funding request line, and spending from one set to budgets "
+                  "without a budget line; no other fund may name either. SGA's own payments "
+                  "into and out of the fund name the request or budget they're for.")
+    is_default = models.BooleanField(
+        default=False, verbose_name="Fill this in when nothing else says",
+        help_text="The fund an expense is filled in with when neither the memo nor the "
+                  "Fund worktag identifies one. This is a stated default, not a reading of "
+                  "the export, and the queue labels it as such -- but leaving the one "
+                  "required box on every row blank is what made settling a typing job. "
+                  "Tick it on exactly one fund.")
+    behaviour = models.CharField(
+        max_length=16, choices=FundBehaviour.choices, default=FundBehaviour.CARRIES,
+        verbose_name="At year end",
+        help_text="What happens to this money on June 30. Legacy and the Projection mandatory "
+                  "transfer carry forward; the SGA budget's unspent balance goes back to SGA; "
+                  "a funding request is reimbursed after the spending, so its balance runs "
+                  "negative until SGA pays.")
+    account = models.ForeignKey(
+        'PartitionCode', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='funds', verbose_name="Held in",
+        help_text="The Workday account this money sits in. The carry-forward fund held in an "
+                  "account is that account's own money: a line nothing else identifies is "
+                  "settled to it, and it absorbs the account's opening balance.")
+    workday_tracking_values = models.CharField(
+        max_length=255, blank=True, verbose_name="Workday Tracking values",
+        help_text="Comma-separated values of the Tracking worktag that mean this fund, e.g. "
+                  "\"SGA Funding Request\". Exports from FY27 on carry it, and a line whose "
+                  "Tracking matches has this fund filled in.")
+
+    class Meta(Vocabulary.Meta):
+        abstract = False
+        verbose_name = "Fund Source"
+
+    @property
+    def requires_funding_request(self):
+        """ Whether spending from this fund has to name a funding request's line. """
+        return self.draws_on == DrawsOn.REQUEST
+
+    @property
+    def draws_on_budget(self):
+        """ Whether spending from this fund has to name a budget's line. """
+        return self.draws_on == DrawsOn.BUDGET
+
+    @property
+    def draws_on_lines(self):
+        """ Whether spending from this fund has to name a request's or a budget's line. """
+        return bool(self.draws_on)
+
+    @property
+    def line_word(self):
+        """ What one of the lines this fund draws on is called: "budget line", "funding request line". """
+        return LINE_WORDS.get(self.draws_on, '')
+
+    @property
+    def carries_forward(self):
+        """ Whether what is left on June 30 is next year's opening balance. """
+        return self.behaviour == FundBehaviour.CARRIES
+
+    @property
+    def returns_to_sga(self):
+        """ Whether an unspent balance at year end is owed back to SGA. """
+        return self.behaviour == FundBehaviour.RETURNS
+
+    @property
+    def is_reimbursed(self):
+        """ Whether SGA pays this money back after LNL has spent it. """
+        return self.behaviour == FundBehaviour.REIMBURSED
+
+
+def workday_fund_map():
+    """
+    ``{'220-FD': <FundSource>}`` -- which bucket each Workday Fund code means.
+
+    Which code maps where is WPI's business, not ours, so it is typed into the
+    admin rather than compiled in. Consulted once per queue row, hence cached.
+
+    Only codes that identify one bucket on their own belong here. 810-FD is the
+    agency fund the whole account sits in, so it appears on every LNL line and
+    is deliberately mapped nowhere; see :func:`suggestions.suggest_fund_source`.
+    """
+    def build():
+        out = {}
+        for source in FundSource.objects.active().exclude(workday_fund_codes=''):
+            for code in source.workday_fund_codes.split(','):
+                code = code.strip().upper()
+                # First fund to claim a code keeps it, so a typo in a later row
+                # cannot silently re-point an established mapping.
+                if code and code not in out:
+                    out[code] = source
+        return out
+    return _cached('fund_codes', build, {})
+
+
+def fund_source_for_workday_fund(value):
+    """
+    The fund bucket a Workday Fund worktag names, or ``None``.
+
+    Workday writes the code with its description attached ("810-FD Agency"), so
+    a configured code matches when it is the leading token or is contained in
+    the value -- the code itself is what identifies it.
+    """
+    haystack = (value or '').strip().upper()
+    if not haystack:
+        return None
+    for code, source in workday_fund_map().items():
+        if haystack == code or haystack.startswith(code + ' ') or code in haystack:
+            return source
+    return None
+
+
+def fund_tracking_map():
+    """
+    ``{normalised Tracking value: <FundSource>}``, from each fund's list.
+
+    Workday's Tracking worktag says which pot a line was charged to in words
+    rather than codes -- "SGA Funding Request", "Student Org Legacy Funds" -- so
+    it is matched on :func:`normalise_term`, which forgives the spacing and
+    punctuation those words arrive with.
+    """
+    def build():
+        out = {}
+        for source in FundSource.objects.active().exclude(workday_tracking_values=''):
+            for value in source.workday_tracking_values.split(','):
+                key = normalise_term(value)
+                # First fund to claim a value keeps it, as with fund codes.
+                if key and key not in out:
+                    out[key] = source
+        return out
+    return _cached('fund_tracking', build, {})
+
+
+def fund_source_for_tracking(value):
+    """ The fund a Workday Tracking worktag names outright, or ``None``. """
+    return fund_tracking_map().get(normalise_term(value))
+
+
+def account_own_funds():
+    """
+    ``{'226-AG': <FundSource>}`` -- the money each account holds as its own.
+
+    An account's own fund is the carry-forward fund held in it: Legacy in
+    226-AG, the mandatory transfer in 315-AG. It is what an account's opening
+    balance belongs to when nothing says otherwise, and what a line carrying no
+    other clue is filed to. Two carry-forward funds in one account is allowed;
+    the one ticked as the default wins, then the one listed first.
+    """
+    def build():
+        out = {}
+        funds = (FundSource.objects.active()
+                 .filter(behaviour=FundBehaviour.CARRIES, account__isnull=False)
+                 .select_related('account')
+                 .order_by('-is_default', 'sort_order', 'name'))
+        for source in funds:
+            out.setdefault(source.account.code, source)
+        return out
+    return _cached('own_funds', build, {})
+
+
+def own_fund_for_account(code):
+    """ The fund that is account ``code``'s own money, or ``None``. """
+    if not code:
+        return None
+    return account_own_funds().get(code)
+
+
+class RevenueSource(Vocabulary):
+    """
+    Where non-event revenue came from: SGA's three kinds of payment, a donation, gear sold, cash.
+
+    Most of these say which fund the money goes into as well, because SGA pays
+    each kind of money into its own pot: a budget deposit is the budget, a
+    reimbursement repays the funding-request fund that spent it, and the
+    mandatory transfer is Projection's own money. :attr:`credits_fund` records
+    that, so picking the source fills the fund in and a mismatch is refused.
+    A source that names no fund -- a donation, an asset sale -- is the account's
+    own money like any other income.
+    """
+    description = models.TextField(blank=True)
+    credits_fund = models.ForeignKey(
+        FundSource, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='revenue_sources', verbose_name="Goes into",
+        help_text="The fund this kind of income always adds to. Picking the source fills it in, "
+                  "and putting the money anywhere else is refused. When the fund draws on "
+                  "funding requests, the income has to name the request it reimburses. Leave "
+                  "blank for income that is simply the account's own money.")
+
+    class Meta(Vocabulary.Meta):
+        abstract = False
+        verbose_name = "Non-Event Revenue Source"
+
+    @property
+    def repays_funding_requests(self):
+        """ Whether this is SGA paying back what a funding request spent. """
+        return self.credits_fund is not None and self.credits_fund.requires_funding_request
+
+
+def revenue_sources_by_fund():
+    """
+    ``{fund pk: [<RevenueSource>, ...]}`` for every active source that names a fund.
+
+    Read once per queue row -- a line whose fund Workday names is offered the
+    one kind of income that goes there -- so it is cached like the fund maps.
+    """
+    def build():
+        out = {}
+        for source in (RevenueSource.objects.active().filter(credits_fund__isnull=False)
+                       .select_related('credits_fund')):
+            out.setdefault(source.credits_fund_id, []).append(source)
+        return out
+    return _cached('revenue_by_fund', build, {})
+
+
+def reimbursement_source():
+    """
+    The revenue source for SGA repaying a funding request, or ``None``.
+
+    The first active source whose fund draws on funding requests. There is one
+    in the seed data; a Treasurer who retires it gets nothing filled in rather
+    than something wrong.
+    """
+    for sources in revenue_sources_by_fund().values():
+        for source in sources:
+            if source.repays_funding_requests:
+                return source
+    return None
+
+
+def deposit_source():
+    """
+    The revenue source for SGA depositing a budget, or ``None``: the first
+    active source whose fund draws on budgets.
+    """
+    for sources in revenue_sources_by_fund().values():
+        for source in sources:
+            if source.credits_fund.draws_on_budget:
+                return source
+    return None
+
+
+def source_given_back(kind):
+    """
+    The income that money going back to SGA undoes, for a :class:`FundingKind`:
+    a budget's deposit, or a funding request's reimbursement. ``None`` when
+    that source has been retired.
+    """
+    return deposit_source() if kind == FundingKind.BUDGET else reimbursement_source()
+
+
+class PartitionCode(models.Model):
+    """
+    The organisation codes that say which side of the Event Production /
+    Projection partition a Workday line belongs to *by default*.
+
+    These were constants until the column they live in turned out to differ
+    from what the spec implied, which is precisely why they belong in a table:
+    a ledger renumber or a new sub-organisation should not need a deploy.
+
+    They were also a hard lock, and that was wrong. Which account paid for
+    something and which activity it was for are different questions. LNL buys
+    Projection equipment out of the main 226-AG account whenever SGA funds it
+    through a funding request, because the reimbursement comes back into 226-AG;
+    the money is 226-AG money and the expense is a Projection expense, both at
+    once. A lock made that unrecordable, so the correct entry was impossible and
+    the wrong one was mandatory.
+
+    What survives is the asymmetry. 315-AG is funded by SGA directly for
+    Projection, so money on it leaving the Projection side is the direction that
+    would breach the isolation the university cares about; that crossing has to
+    be explained in writing. The other direction is ordinary business and only
+    gets a warning.
+    """
+    code = models.CharField(
+        max_length=32, unique=True,
+        help_text="The organisation code as Workday writes it, e.g. 226-AG. "
+                  "A trailing description in the export is ignored when matching.")
+    is_projection = models.BooleanField(
+        default=False, verbose_name="Projection side",
+        help_text="Checked: money on this code is Projection spending unless told "
+                  "otherwise. Unchecked: Event Production unless told otherwise. This is "
+                  "the starting position, not a rule -- see the field below.")
+    crossing_requires_reason = models.BooleanField(
+        default=False, verbose_name="Counting it on the other side needs an explanation",
+        help_text="Off: moving money off this side is allowed and merely shows a warning, "
+                  "which is right for the main account -- a Projection purchase paid out of "
+                  "it and reimbursed by SGA is normal. On: it is still allowed, but the "
+                  "entry cannot be saved without saying why. Turn this on for the account "
+                  "SGA funds for Projection directly.")
+    worktag = models.CharField(
+        max_length=48, default='student_organization',
+        help_text="Which Workday worktag carries this code. Real exports put it in "
+                  "Student Organization, not Ledger Account.")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('code',)
+        verbose_name = "Partition Code"
+
+    def __str__(self):
+        return "%s → %s%s" % (
+            self.code, 'Projection' if self.is_projection else 'Event Production',
+            ' (crossing needs a reason)' if self.crossing_requires_reason else '')
+
+
+def reset_partition_cache():
+    """ Kept as its own name because tests that create codes call it directly. """
+    reset_finance_cache('codes')
+
+
+def partition_codes():
+    """
+    The partition codes as plain dicts, cached.
+
+    They are consulted on every save and once per row on the queue, so the
+    handful of codes is held in memory rather than queried each time.
+    """
+    return _cached(
+        'codes',
+        lambda: [{'code': p.code, 'is_projection': p.is_projection, 'worktag': p.worktag,
+                  'crossing_requires_reason': p.crossing_requires_reason}
+                 for p in PartitionCode.objects.all()],
+        [])
+
+
+def partition_worktag_keys():
+    """ Which worktags to look in, in the order the codes name them. """
+    keys = []
+    for entry in partition_codes():
+        if entry['worktag'] not in keys:
+            keys.append(entry['worktag'])
+    return keys or [DEFAULT_PARTITION_WORKTAG]
+
+
+class ServiceColor(models.Model):
+    """
+    The colour a service category is drawn in on the dashboard.
+
+    Points at the events app's own ``Category`` rather than storing its name,
+    so renaming "Sound" does not silently turn that slice grey. A category with
+    no row here falls back to the qualitative ramp, which is why adding a new
+    service is not a code change either -- assigning it a colour is optional.
+    """
+    category = models.OneToOneField('events.Category', on_delete=models.CASCADE,
+                                    related_name='finance_color')
+    color = models.CharField(
+        max_length=7, verbose_name="Chart colour",
+        validators=[RegexValidator(r'^#[0-9A-Fa-f]{6}$', "Use a hex colour such as #4E79A7.")],
+        help_text="Hex, e.g. #4E79A7.")
+
+    class Meta:
+        ordering = ('category__name',)
+        verbose_name = "Service Colour"
+
+    def __str__(self):
+        return "%s → %s" % (self.category, self.color)
+
+
+# LNL's three long-standing service lines, so a fresh install draws them in
+# their familiar colours without anyone configuring anything. Any ServiceColor
+# row wins over this, and a category not named here simply takes the next
+# colour off the qualitative ramp.
+DEFAULT_SERVICE_COLORS = {
+    'Lighting': '#EDC948',
+    'Sound': '#4E79A7',
+    'Projection': '#B07AA1',
+}
+
+
+def service_colors():
+    """ ``{category name: hex}``: the defaults, overridden by any admin rows. """
+    def build():
+        colors = dict(DEFAULT_SERVICE_COLORS)
+        colors.update({row.category.name: row.color
+                       for row in ServiceColor.objects.select_related('category')})
+        return colors
+
+    return _cached('service_colors', build, dict(DEFAULT_SERVICE_COLORS))
+
+
+class ColumnAlias(models.Model):
+    """
+    An extra spelling of a Workday CSV column.
+
+    :data:`finance.importers.COLUMN_ALIASES` holds the spellings we have
+    actually seen, and stays in code because the canonical names on the left of
+    it are referenced throughout the importer. What is *not* code is Workday
+    deciding to relabel a column -- when that happens the fix is a row here
+    rather than a deploy.
+    """
+    canonical = models.CharField(
+        max_length=64, verbose_name="Importer field",
+        help_text="The name the importer knows the column by, e.g. student_organization. "
+                  "Pick from the list on the Workday transaction admin if unsure.")
+    alias = models.CharField(
+        max_length=128, unique=True, verbose_name="Header in the export",
+        help_text="The column heading as Workday now writes it. Case, punctuation and "
+                  "extra spaces are ignored when matching.")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('canonical', 'alias')
+        verbose_name = "CSV Column Alias"
+        verbose_name_plural = "CSV Column Aliases"
+
+    def __str__(self):
+        return "%s → %s" % (self.alias, self.canonical)
+
+
+def column_aliases():
+    """ ``{normalised alias: canonical}`` from the table, cached. """
+    return _cached(
+        'column_aliases',
+        lambda: {re.sub(r'[^a-z0-9]+', ' ', row.alias.lower()).strip(): row.canonical
+                 for row in ColumnAlias.objects.all()},
+        {})
+
+
+class SuggestionRule(models.Model):
+    """
+    One "if the Workday line looks like this, suggest that category" rule.
+
+    These were three hard-coded tables -- GL account prefixes, supplier names
+    and memo keywords. All three were really WPI's chart of accounts and LNL's
+    vendor list, which change without any code changing, so they live here now.
+
+    Rules are tried in ``priority`` order and the first match wins, which is why
+    a specific rule ("chain motor") must outrank a general one ("repair").
+    """
+    LEDGER_ACCOUNT = 'ledger_account'
+    SPEND_CATEGORY = 'spend_category'
+    SUPPLIER = 'supplier'
+    MEMO = 'memo'
+
+    FIELD_CHOICES = (
+        (LEDGER_ACCOUNT, 'Workday ledger account'),
+        (SPEND_CATEGORY, "Workday's own spend category"),
+        (SUPPLIER, 'Supplier or employee name'),
+        (MEMO, 'Memo text'),
+    )
+
+    # How the pattern is compared. This used to be implied by the column
+    # — ledger accounts matched their start, everything else matched
+    # anywhere — which left "the finest code Workday gives us" and "a word
+    # that happens to appear in some prose" indistinguishable to whatever
+    # consumed the result. Saying it out loud is what lets a match be trusted
+    # enough to fill a box in rather than merely offer a chip to click.
+    EXACT = 'exact'
+    STARTS = 'starts'
+    CONTAINS = 'contains'
+    WORD = 'word'
+
+    MODE_CHOICES = (
+        (EXACT, 'Is exactly — the whole value, e.g. "Rent - Equipment"'),
+        (STARTS, 'Starts with — e.g. the account number 71100'),
+        (CONTAINS, 'Contains — a guess about wording'),
+        (WORD, 'Contains the whole word — a guess about wording'),
+    )
+
+    # A code Workday assigned is a fact about the line; a word found inside
+    # prose is an inference about it. Only the first is filled in for the
+    # Treasurer; the second is offered for them to accept.
+    LOOKUP_MODES = (EXACT, STARTS)
+
+    CONFIDENCE_CHOICES = (
+        ('high', 'High — pre-select it confidently'),
+        ('medium', 'Medium'),
+        ('low', 'Low — offer it as a guess'),
+    )
+
+    match_field = models.CharField(
+        max_length=24, choices=FIELD_CHOICES, default=SPEND_CATEGORY,
+        help_text="Which part of the imported line to look at.")
+    match_mode = models.CharField(
+        max_length=12, choices=MODE_CHOICES, default=EXACT, verbose_name="Match how",
+        help_text="Exact and starts-with count as lookups: what they find is filled into "
+                  "the queue's form, because the export itself said it. Contains "
+                  "counts as a guess and is only ever offered as a chip to click.")
+    pattern = models.CharField(
+        max_length=128,
+        help_text="Text to look for. Case-insensitive; surrounding spaces are ignored.")
+    spend_category = models.ForeignKey(
+        SpendCategory, on_delete=models.CASCADE, related_name='suggestion_rules',
+        help_text="The category to suggest when this rule matches.")
+    confidence = models.CharField(max_length=8, choices=CONFIDENCE_CHOICES, default='high')
+    priority = models.PositiveIntegerField(
+        default=100,
+        help_text="Lower numbers are checked first. Put specific rules above general ones.")
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=192, blank=True)
+
+    objects = VocabularyQuerySet.as_manager()
+
+    class Meta:
+        ordering = ('priority', 'pk')
+        verbose_name = "Spend Category Suggestion Rule"
+
+    def __str__(self):
+        return "%s %s %r → %s" % (
+            self.get_match_field_display(),
+            self.get_match_mode_display().split(' ')[0].lower(),
+            self.pattern, self.spend_category)
+
+    @property
+    def is_lookup(self):
+        """
+        Whether a match is evidence rather than inference.
+
+        An exact or starts-with hit on a code means the export itself said so,
+        and that is what earns the right to fill the form in. A "contains" hit
+        is a guess about English, so it stays a suggestion to click.
+        """
+        return self.match_mode in self.LOOKUP_MODES
+
+    def subject(self, transaction):
+        """ The text on ``transaction`` that this rule examines. """
+        if self.match_field == self.LEDGER_ACCOUNT:
+            return transaction.ledger_account or ''
+        if self.match_field == self.SPEND_CATEGORY:
+            return transaction.worktag('spend_category') or ''
+        if self.match_field == self.SUPPLIER:
+            return transaction.payee or ''
+        return transaction.memo or ''
+
+    def matches(self, transaction):
+        """ True when this rule applies to the given :class:`WorkdayTransaction`. """
+        pattern = (self.pattern or '').strip().lower()
+        if not pattern:
+            return False
+        subject = self.subject(transaction).strip().lower()
+        if not subject:
+            return False
+
+        if self.match_mode == self.EXACT:
+            return subject == pattern
+        if self.match_mode == self.STARTS:
+            return subject.startswith(pattern)
+        if self.match_mode == self.WORD:
+            # Whole-word so "gel" doesn't fire on "Angela".
+            return re.search(r'\b%s' % re.escape(pattern), subject) is not None
+        return pattern in subject
+
+
+# ---------------------------------------------------------------------------
+# Project tags
+# ---------------------------------------------------------------------------
+
+def nested_option_label(text, depth):
+    """
+    ``text`` set at ``depth`` in a nested dropdown::
+
+        NEL26 — New Equipment List 2026
+            └ D60-LUSTR — D60 Lustr Fixtures
+
+    The one format every nested picker in the finance pages uses -- projects
+    under their parent, and funding request lines under their request -- so
+    the two read as the same kind of list.
+
+    Non-breaking spaces because HTML collapses ordinary leading whitespace
+    inside ``<option>``.
+    """
+    indent = '\xa0' * (4 * depth)
+    marker = '└ ' if depth else ''
+    return '%s%s%s' % (indent, marker, text)
+
+
+@reversion.register()
+class ProjectTag(MPTTModel):
+    """
+    A self-referential grouping used to answer "what did this thing really cost
+    us, across every fiscal year and funding source?"
+
+    Parent nodes are projects (*New Equipment List 2026*); children are the
+    individual assets bought under them (*D60 Lustrs*).
+    """
+    glyphicon = 'tags'
+
+    name = models.CharField(max_length=128)
+    parent = TreeForeignKey('self', on_delete=models.PROTECT, null=True, blank=True,
+                            related_name='children', verbose_name="Parent project",
+                            help_text="Leave blank to create a top-level project")
+    description = models.TextField(blank=True)
+    is_projection = models.BooleanField(
+        default=False, verbose_name="Projection project",
+        help_text="Projects belonging to the Projection partition")
+    archived = models.BooleanField(default=False)
+
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class MPTTMeta:
+        order_insertion_by = ['name']
+
+    class Meta:
+        verbose_name = "Project Tag"
+        # Django supplies add/change/delete/view_projecttag automatically.
+        permissions = (
+            ('manage_projecttag', 'Create and edit project tags'),
+        )
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def indented_label(self):
+        """
+        Option label for every project picker, nested by depth.
+
+        Kept on the model so the forms and the raw ledger filter cannot drift
+        apart; :func:`nested_option_label` is the format.
+        """
+        return nested_option_label(self.name, getattr(self, 'level', 0) or 0)
+
+    def get_absolute_url(self):
+        """ This tag's branch of the project explorer. """
+        return reverse('finance:projects-detail', args=[self.pk])
+
+    # -- rollups ------------------------------------------------------------
+    # NB: ``self.transactions`` is the reverse manager for slices tagged
+    # *directly* to this node. The rollup below deliberately has its own name so
+    # it doesn't shadow it.
+    def rollup_transactions(self, include_descendants=True):
+        """ All allocation slices tagged to this node (and optionally below it). """
+        if not include_descendants:
+            return ParsedTransaction.objects.filter(project_tag=self)
+
+        # MPTT caches tree_id/lft/rght on the instance, and they go stale the
+        # moment anything else in the forest is written -- adding an unrelated
+        # root is enough. Walking stale bounds returns the wrong descendants and
+        # silently reports the wrong cost, so re-read them first. One small
+        # query is a fair price for a figure people make purchasing decisions on.
+        node = self
+        if self.pk is not None:
+            try:
+                node = type(self)._default_manager.get(pk=self.pk)
+            except type(self).DoesNotExist:
+                node = self
+
+        nodes = node.get_descendants(include_self=True)
+        return ParsedTransaction.objects.filter(project_tag__in=nodes)
+
+    def total_cost(self, include_descendants=True, fiscal_year=None):
+        """
+        The "true fully-loaded cost" of this node: expenses net of refunds,
+        expressed as a positive number.
+        """
+        qs = self.rollup_transactions(include_descendants)
+        if fiscal_year:
+            start, end = fiscal_year_bounds(fiscal_year)
+            qs = qs.filter(effective_date__range=(start, end))
+        return -money(qs.aggregate(t=Sum('amount'))['t'])
+
+
+def project_tag_costs(fiscal_year=None):
+    """
+    Every project tag's cost, in two queries instead of two per tag.
+
+    :meth:`ProjectTag.total_cost` is the right shape for one node and the wrong
+    shape for a page full of them: it re-reads the node to refresh its MPTT
+    bounds and then aggregates, so the explorer's sidebar -- which shows the
+    whole forest -- cost a pair of queries for every row on it.
+
+    The arithmetic is identical, and the result is if anything fresher: the
+    bounds come from a single read of the tree taken now, rather than from
+    whatever each instance happened to be carrying.
+
+    :returns: ``(direct, rollup)``, two ``{tag pk: cost}`` maps. ``direct`` is
+        what was tagged straight to that node; ``rollup`` is that plus
+        everything beneath it. Both are positive figures, net of refunds,
+        matching :meth:`ProjectTag.total_cost`. A tag with no spending is
+        absent from both -- callers should default to zero.
+    """
+    entries = ParsedTransaction.objects.exclude(project_tag__isnull=True)
+    if fiscal_year:
+        start, end = fiscal_year_bounds(fiscal_year)
+        entries = entries.filter(effective_date__range=(start, end))
+    raw = {row['project_tag']: row['t']
+           for row in entries.values('project_tag').annotate(t=Sum('amount'))}
+
+    direct = {pk: -money(total) for pk, total in raw.items()}
+
+    # The whole forest, including archived nodes: an archived child's spending
+    # still counted towards its parent under total_cost(), and a rollup that
+    # quietly stopped counting it would report a lower cost for the project
+    # than the project actually incurred.
+    nodes = list(ProjectTag.objects.values_list('pk', 'tree_id', 'lft', 'rght'))
+
+    trees = {}
+    for pk, tree_id, lft, rght in nodes:
+        trees.setdefault(tree_id, []).append((pk, lft, rght))
+
+    rollup = {}
+    for members in trees.values():
+        for pk, lft, rght in members:
+            # MPTT nested sets: everything under a node has an ``lft`` between
+            # that node's own bounds, so containment is a comparison rather
+            # than a query.
+            total = ZERO
+            for other_pk, other_lft, _ in members:
+                if lft <= other_lft <= rght:
+                    total += direct.get(other_pk, ZERO)
+            if total:
+                rollup[pk] = total
+    return direct, rollup
+
+
+# ---------------------------------------------------------------------------
+# Funding requests (SGA's one-off awards, reimbursed after the spending)
+# ---------------------------------------------------------------------------
+
+#: The decimal shape every money annotation in this module declares. Django
+#: needs to be told, because a ``Subquery`` has no field of its own to infer
+#: from and a ``Coalesce`` over mixed types refuses to guess.
+MONEY_FIELD = models.DecimalField(max_digits=12, decimal_places=2)
+
+
+def _money_subquery(queryset, group_by, column='amount'):
+    """
+    A correlated ``SUM`` as a subquery, for annotating a parent row.
+
+    Written as a subquery rather than a join because two ``Sum``\\ s over
+    different reverse relations in one query multiply each other out: joining
+    a request to its lines *and* to the allocations under those lines repeats
+    every award once per allocation, so ``total_awarded`` silently reads as a
+    multiple of itself. One subquery per figure keeps each ``SUM`` over exactly
+    the rows it is about.
+    """
+    return Coalesce(
+        Subquery(queryset.values(group_by).annotate(t=Sum(column)).values('t')[:1],
+                 output_field=MONEY_FIELD),
+        Value(ZERO), output_field=MONEY_FIELD)
+
+
+def _count_subquery(queryset, group_by):
+    """ A correlated ``COUNT`` as a subquery, for the reason :func:`_money_subquery` gives. """
+    return Coalesce(
+        Subquery(queryset.values(group_by).annotate(n=Count('pk')).values('n')[:1],
+                 output_field=models.IntegerField()),
+        Value(0), output_field=models.IntegerField())
+
+
+class FundingRequestQuerySet(models.QuerySet):
+    """ Annotations for the funding request listings and burndown bars. """
+
+    def with_totals(self):
+        """
+        Pre-compute awarded, spent and reimbursed, for pages that show many requests.
+
+        Every figure is a property that aggregates, and an aggregate ignores
+        ``prefetch_related`` entirely -- so the listing pages were issuing
+        roughly eight queries per request while carrying a prefetch that was
+        never read. See :attr:`FundingRequest.total_awarded`.
+        """
+        lines = FRLineItem.objects.filter(funding_request=OuterRef('pk'))
+        return self.annotate(
+            _awarded_total=_money_subquery(lines, 'funding_request', 'amount_awarded'),
+            _requested_total=_money_subquery(lines, 'funding_request', 'amount_requested'),
+            _line_count=_count_subquery(lines, 'funding_request'),
+            _waiting_count=_count_subquery(lines.filter(amount_awarded__isnull=True),
+                                           'funding_request'),
+            _requested_missing=_count_subquery(lines.filter(amount_requested__isnull=True),
+                                               'funding_request'),
+            _deposited_total=_money_subquery(
+                ParsedTransaction.objects.filter(funding_request=OuterRef('pk'), amount__gt=0),
+                'funding_request'),
+            _spent_total=_money_subquery(
+                ParsedTransaction.objects.filter(
+                    fr_line_target__funding_request=OuterRef('pk')),
+                'fr_line_target__funding_request'),
+            _charged_total=_money_subquery(
+                ParsedTransaction.objects.filter(
+                    fr_line_target__funding_request=OuterRef('pk'),
+                    parent_transaction__isnull=False),
+                'fr_line_target__funding_request'),
+            _received_total=_money_subquery(
+                ParsedTransaction.objects.filter(funding_request=OuterRef('pk')),
+                'funding_request'))
+
+    def with_lines(self):
+        """
+        Prefetch the line items with their own spend already annotated.
+
+        The plain ``line_items__allocations`` prefetch does not help:
+        :attr:`FRLineItem.spent` aggregates, and an aggregate does not read a
+        prefetch cache. Going through
+        :meth:`FRLineItemQuerySet.with_spend` puts the figure in SQL where the
+        property can find it.
+        """
+        return self.prefetch_related(
+            Prefetch('line_items',
+                     queryset=FRLineItem.objects.with_spend().select_related('category')
+                                                .order_by('sort_order', 'pk')))
+
+    def requests(self):
+        """ Funding requests only, without the budgets. """
+        return self.filter(kind=FundingKind.REQUEST)
+
+    def budgets(self):
+        """ Budgets only. """
+        return self.filter(kind=FundingKind.BUDGET)
+
+
+#: SGA's number for a funding request: ``A.27.16``. The letter is the body
+#: that heard it, which depends on the size of the ask; the middle figure is
+#: the fiscal year (FY2027 is 27); the last counts up within that body and
+#: year. So A.27.16 and F.27.16 are two different requests, not one request
+#: written two ways -- see :func:`finance.suggestions.near_miss_funding_request`
+#: for what the queue does when a memo's letter and lnldb's disagree.
+#:
+#: SGA's numbering sometimes goes wrong and hands out ``?.27.16`` instead of a
+#: letter. That is still the request's number -- it is what SGA's own memos
+#: quote -- so it is accepted as written, and names no body.
+SGA_REFERENCE = re.compile(r'^([AEFS?])\.(\d{2})\.(\d+)$')
+
+#: Who each letter means: A, F and S by the size of the ask, smallest first --
+#: nearly every request is heard by one of those -- then the rare Exec. SGA's
+#: Cabinet and chair-exec hear requests too, almost never; their letters are
+#: not known, so they are not accepted until one is seen.
+SGA_BODIES = {
+    'A': 'Appropriations Committee',
+    'F': 'Financial Board',
+    'S': 'Senate',
+    'E': 'Exec',
+}
+
+
+def normalise_sga_reference(value):
+    """
+    Strip whitespace and upper-case a request number so it can be compared.
+
+    Treasurers write the same reference as "F.26.6", "f.26.6" and "F. 26. 6";
+    all three are the one stored on the funding request.
+    """
+    return re.sub(r'\s+', '', (value or '')).upper()
+
+
+#: A budget line's number as SGA gives it: four digits, e.g. 4521. Budgets
+#: have no request number of their own; each of their lines has one of these.
+BUDGET_LINE_NUMBER = re.compile(r'^\d{4}$')
+
+#: A fiscal year written into a name: FY27, FY 27, fy2027.
+FISCAL_YEAR_IN_TEXT = re.compile(r'\bFY\s*(\d{4}|\d{2})\b', re.IGNORECASE)
+
+
+def check_request_ids(rows):
+    """
+    Refuse two of a budget's lines sharing a Request ID, which is how a memo
+    names a line. ``rows`` is every line being saved, as ``(Request ID, name)``.
+
+    Asked of a whole form rather than of each line, because two lines can swap
+    their IDs, or a new line take a removed one's, in a single save.
+    """
+    seen = {}
+    for number, name in rows:
+        if not number:
+            continue
+        if number in seen:
+            raise ValidationError(
+                "“%s” and “%s” both have the Request ID %s. Each line of a budget needs its own."
+                % (seen[number], name, number))
+        seen[number] = name
+
+
+def budget_name(fiscal_year):
+    """ The name a new budget starts with: ``FY27 SGA Budget``. """
+    return "FY%s SGA Budget" % str(fiscal_year)[-2:]
+
+
+def fiscal_years_named(text):
+    """ Every fiscal year ``text`` names, as four-digit years: "FY27 SGA Budget" -> [2027]. """
+    years = []
+    for written in FISCAL_YEAR_IN_TEXT.findall(text or ''):
+        years.append(int(written) if len(written) == 4 else 2000 + int(written))
+    return years
+
+
+@reversion.register(follow=['line_items', 'budget_categories'])
+class FundingRequest(models.Model):
+    """
+    SGA money granted line by line: an out-of-cycle funding request, or the
+    year's budget (see :class:`FundingKind`). The parent of a set of line items.
+    """
+    glyphicon = 'inbox'
+
+    kind = models.CharField(
+        max_length=16, choices=FundingKind.choices, default=FundingKind.REQUEST,
+        db_index=True, verbose_name="Type",
+        help_text="A funding request is for one purpose and paid back after the spending; a "
+                  "budget covers the whole fiscal year and is deposited at its start.")
+    name = models.CharField(max_length=192)
+    reference = models.CharField(
+        max_length=64, blank=True, verbose_name="SGA reference #",
+        help_text="As SGA numbers it: the body that approved it (A for Appropriations "
+                  "Committee, F for Financial Board, S for Senate, E for Exec), the fiscal "
+                  "year, and the request's number -- e.g. A.27.16. When SGA's number came "
+                  "with ? for the letter, enter it that way.")
+    fiscal_year = models.PositiveIntegerField(default=current_fiscal_year, db_index=True)
+    date_submitted = models.DateField(null=True, blank=True)
+    date_approved = models.DateField(null=True, blank=True)
+    is_projection = models.BooleanField(default=False, verbose_name="Projection request")
+    closed = models.BooleanField(
+        default=False, help_text="Closed requests are hidden from the dashboard burndown")
+    notes = models.TextField(blank=True)
+    owed_at_books_start = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
+        verbose_name="Owed by SGA when the books started",
+        help_text="Only for a request whose spending began before the subledger's books start: "
+                  "what SGA still owed LNL for it on that day, spent and not yet reimbursed. A "
+                  "negative figure is what SGA had overpaid. Leave at zero when every charge "
+                  "against the request is in the ledger.")
+
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    objects = FundingRequestQuerySet.as_manager()
+
+    class Meta:
+        ordering = ('-fiscal_year', 'name')
+        verbose_name = "Funding Request"
+        # Django supplies add/change/delete/view_fundingrequest automatically.
+        permissions = (
+            ('manage_fundingrequest', 'Create and edit funding requests'),
+        )
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        """ This request's detail page, line items and all. """
+        return reverse('finance:fr-detail', args=[self.pk])
+
+    @property
+    def is_budget(self):
+        """ Whether this is the year's SGA budget rather than a funding request. """
+        return self.kind == FundingKind.BUDGET
+
+    @property
+    def has_money(self):
+        """
+        Whether anything is charged to its lines or SGA has paid for it. Its
+        type is fixed from then on: the money was charged to the fund that
+        draws on that type.
+        """
+        if self.pk is None:
+            return False
+        return (ParsedTransaction.objects.filter(fr_line_target__funding_request=self).exists()
+                or self.sga_payments.exists())
+
+    def clean(self):
+        """
+        Hold a request's number to SGA's format, and a budget to its year.
+
+        A request's number is how a Workday memo names it, so one written any
+        other way is one the queue can never match a charge to. The year in it
+        is checked against the request's own because the two are the same fact
+        written twice, and a disagreement means one of them is a typo. A budget
+        has no number -- its lines do -- and there is one a year, whose name
+        says which.
+        """
+        super(FundingRequest, self).clean()
+        if self.pk is not None:
+            saved = (FundingRequest.objects.filter(pk=self.pk)
+                     .values('kind', 'is_projection').first())
+            if saved is not None and saved['kind'] != self.kind and self.has_money:
+                raise ValidationError({'kind': (
+                    "Money is already charged to this %s or paid for it by SGA, so it can't "
+                    "become a %s." % (FundingKind(saved['kind']).label.lower(),
+                                      FundingKind(self.kind).label.lower()))})
+            if (saved is not None and not self.is_budget
+                    and saved['is_projection'] != self.is_projection and self.has_money):
+                # Every entry took its side from the request when it was saved.
+                raise ValidationError({'is_projection': (
+                    "Money is already charged to this request or paid for it by SGA, and each "
+                    "entry took its side from the request, so the side can't change.")})
+        if self.is_budget:
+            self._clean_budget()
+            return
+        self.reference = normalise_sga_reference(self.reference)
+        if not self.reference:
+            return
+        match = SGA_REFERENCE.match(self.reference)
+        if match is None:
+            raise ValidationError({'reference': (
+                "SGA numbers requests like A.27.16: A, F, S or E for the body that "
+                "approved it (or ? when SGA's number had no letter), the fiscal year, then "
+                "the request's number.")})
+        if self.fiscal_year and int(match.group(2)) != int(self.fiscal_year) % 100:
+            raise ValidationError({'reference': (
+                "%s is an FY%s number, but this request is for FY%s. Fix whichever "
+                "one is wrong." % (self.reference, match.group(2),
+                                   str(self.fiscal_year)[-2:]))})
+
+    def _clean_budget(self):
+        """
+        One budget a year, named for its own year. A budget has no number,
+        no side and nothing owed when the books started: its lines carry the
+        number and the side, and SGA deposits it rather than paying it back.
+        """
+        self.reference = ''
+        self.is_projection = False
+        self.owed_at_books_start = ZERO
+        errors = {}
+        year = int(self.fiscal_year) if self.fiscal_year else None
+        if year is not None:
+            others = FundingRequest.objects.budgets().filter(fiscal_year=year).exclude(pk=self.pk)
+            existing = others.first()
+            if existing is not None:
+                errors['fiscal_year'] = (
+                    "There is already a budget for FY%s: %s. A year has one budget; edit that "
+                    "one instead." % (str(year)[-2:], existing.name))
+            named = fiscal_years_named(self.name)
+            if not named:
+                errors['name'] = ("Put the fiscal year in the name, e.g. %s."
+                                  % budget_name(year))
+            elif any(other != year for other in named):
+                errors['name'] = (
+                    "The name says FY%s, but this budget is for FY%s. Fix whichever one is "
+                    "wrong." % (str([y for y in named if y != year][0])[-2:], str(year)[-2:]))
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def approving_body(self):
+        """
+        Which part of SGA heard this request, read off its number, or ``''``.
+
+        ``''`` for a ``?`` number too: SGA's mistake left nothing to read.
+        """
+        match = SGA_REFERENCE.match(normalise_sga_reference(self.reference))
+        return SGA_BODIES.get(match.group(1), '') if match else ''
+
+    @property
+    def total_awarded(self):
+        """
+        Everything SGA granted across this request's lines.
+
+        Uses :meth:`FundingRequestQuerySet.with_totals` when the row was loaded
+        through it. Every listing asks this of every request, and the
+        aggregate below cannot be prefetched away -- the same trap
+        :attr:`FRLineItem.spent` avoids.
+        """
+        annotated = getattr(self, '_awarded_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.line_items.aggregate(t=Sum('amount_awarded'))['t'])
+
+    # -- requested and approved -------------------------------------------
+    # A line's approved amount is blank while it is pending SGA approval,
+    # which is not the same as SGA approving nothing: $0 is a line SGA
+    # denied. So the totals add up the lines SGA has decided and count the
+    # pending ones, and only a request with every line pending has an
+    # approved total of "not known yet". The requested amount works the same
+    # way: it is blank on lines entered before it was asked for.
+
+    @property
+    def total_requested(self):
+        """ What LNL asked SGA for, across the lines that say. """
+        annotated = getattr(self, '_requested_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.line_items.aggregate(t=Sum('amount_requested'))['t'])
+
+    @property
+    def line_count(self):
+        annotated = getattr(self, '_line_count', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.count()
+
+    @property
+    def waiting_count(self):
+        """ How many lines are pending SGA approval: no approved amount. """
+        annotated = getattr(self, '_waiting_count', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.filter(amount_awarded__isnull=True).count()
+
+    @property
+    def requested_missing_count(self):
+        """ How many lines have no requested amount. """
+        annotated = getattr(self, '_requested_missing', None)
+        if annotated is not None:
+            return annotated
+        return self.line_items.filter(amount_requested__isnull=True).count()
+
+    @property
+    def approved_known(self):
+        """ Whether SGA has decided at least one line, so the approved total means something. """
+        return not (self.line_count and self.waiting_count == self.line_count)
+
+    @property
+    def requested_known(self):
+        """ Whether at least one line says what was requested. """
+        return not (self.line_count and self.requested_missing_count == self.line_count)
+
+    @property
+    def total_spent(self):
+        """
+        Positive figure. Refunds against these lines reduce it automatically.
+
+        Prefers the ``with_totals()`` annotation, as :attr:`total_awarded` does.
+        """
+        annotated = getattr(self, '_spent_total', None)
+        if annotated is not None:
+            return -money(annotated)
+        return -money(ParsedTransaction.objects.filter(
+            fr_line_target__funding_request=self).aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def total_remaining(self):
+        """
+        Approved less spent. Negative means the request is overspent; ``None``
+        while SGA has decided none of its lines, as nothing is left of nothing
+        yet decided.
+        """
+        if not self.approved_known:
+            return None
+        return self.total_awarded - self.total_spent
+
+    @property
+    def percent_spent(self):
+        """
+        Spend as a 0-100 integer, for the burndown bar.
+
+        Clamped, so an overspend reads as a full bar; the overage itself is
+        reported separately rather than as a percentage over 100.
+        """
+        awarded = self.total_awarded
+        if not awarded:
+            return 0
+        return max(0, min(100, int(round(self.total_spent / awarded * 100))))
+
+    @property
+    def is_overspent(self):
+        """ Whether this request has been charged more than was approved. """
+        remaining = self.total_remaining
+        return remaining is not None and remaining < 0
+
+    # -- what SGA owes for it ----------------------------------------------
+    # SGA reimburses what was actually spent, never the award, and only once
+    # the spending has happened. So the figure that matters is spending that
+    # has reached Workday -- an encumbrance is money not yet spent and nothing
+    # SGA will pay for -- set against what SGA has paid in, net of anything it
+    # took back.
+
+    @property
+    def total_charged(self):
+        """
+        Spending against this request that has reached Workday, net of refunds.
+
+        :attr:`total_spent` less what is only encumbered. Positive.
+        """
+        annotated = getattr(self, '_charged_total', None)
+        if annotated is not None:
+            return -money(annotated)
+        return -money(ParsedTransaction.objects.filter(
+            fr_line_target__funding_request=self,
+            parent_transaction__isnull=False).aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def total_received(self):
+        """
+        What SGA has paid LNL for this request, less anything it took back.
+
+        Reimbursements are positive entries naming the request, and money SGA
+        reclaims -- a payment made twice, say -- is a negative one, so the sum
+        is the net.
+        """
+        annotated = getattr(self, '_received_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.sga_payments.aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def awaiting_sga(self):
+        """
+        What SGA still owes LNL for this request. Negative means SGA overpaid.
+
+        Whatever was owed when the books started, plus the spending since,
+        less what SGA has paid.
+        """
+        return money(self.owed_at_books_start) + self.total_charged - self.total_received
+
+    # -- a budget's deposit ------------------------------------------------
+    # SGA deposits a budget before the spending, and takes back whatever is
+    # unspent at year end. Both are SGA's payments naming the budget, the
+    # same box a reimbursement uses for a request: money in is the deposit,
+    # money out is money returned.
+
+    @property
+    def total_deposited(self):
+        """ What SGA has deposited for this budget. """
+        annotated = getattr(self, '_deposited_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.sga_payments.filter(amount__gt=0).aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def total_returned(self):
+        """ What has gone back to SGA from this budget. Positive. """
+        return self.total_deposited - self.total_received
+
+    @property
+    def left_in_account(self):
+        """ Deposited, less returned, less what has reached Workday. Negative is overspent. """
+        return self.total_received - self.total_charged
+
+    @property
+    def year_over(self):
+        """ Whether the fiscal year this is for has ended. """
+        return int(self.fiscal_year) < current_fiscal_year()
+
+    @property
+    def deposit_status(self):
+        """ The line under a budget's Deposited figure. """
+        deposited, returned, left = self.total_deposited, self.total_returned, self.left_in_account
+        if not deposited and not returned:
+            return "Not deposited yet"
+        if self.year_over and left > 0:
+            return "%s goes back to SGA" % dollars(left)
+        if returned:
+            return "Returned %s to SGA" % dollars(returned)
+        approved = self.total_awarded
+        if deposited < approved:
+            return "%s of %s deposited" % (dollars(deposited), dollars(approved))
+        return "Deposited"
+
+    @property
+    def budget_status(self):
+        """
+        What is left of a budget's deposit means, in the balance page's words
+        for SGA's budget fund (:attr:`finance.balances.FundRow.status`).
+        """
+        left = self.left_in_account
+        if not any((self.total_deposited, self.total_returned, self.total_charged)):
+            return "Nothing in or out yet"
+        if left > 0:
+            return "Goes back to SGA" if self.year_over else "Left to spend this year"
+        if left < 0:
+            return "Overspent -- cover it from money that carries forward"
+        return "The rest went back to SGA" if self.total_returned else "Fully spent"
+
+    @property
+    def reimbursement_status(self):
+        """ :attr:`awaiting_sga` in words. """
+        awaiting = self.awaiting_sga
+        if awaiting > 0:
+            return "Awaiting %s from SGA" % dollars(awaiting)
+        if awaiting < 0:
+            return "SGA overpaid by %s" % dollars(-awaiting)
+        if self.total_charged or self.total_received or self.owed_at_books_start:
+            return "Fully reimbursed"
+        return "Nothing spent yet"
+
+    def unreimbursed_since(self, books_start=None):
+        """
+        The date of the oldest charge SGA has not yet paid for, or ``None``.
+
+        Payments are taken to settle the oldest charges first, which is how a
+        receivable ages: whatever is still owed is the most recent spending,
+        and the date returned is when the oldest of that was spent. Money owed
+        when the books started counts as spent the day before they did.
+        """
+        if self.awaiting_sga <= 0:
+            return None
+        charges = []
+        opening = money(self.owed_at_books_start)
+        if opening > 0:
+            start = books_start or books_start_date()
+            if start is not None:
+                charges.append((start - datetime.timedelta(days=1), opening))
+        for date, amount in (ParsedTransaction.objects
+                             .filter(fr_line_target__funding_request=self,
+                                     parent_transaction__isnull=False)
+                             .order_by('effective_date', 'pk')
+                             .values_list('effective_date', 'amount')):
+            # Expenses are negative; a refund is a positive one that un-spends.
+            charges.append((date, -money(amount)))
+        paid = self.total_received + max(-opening, ZERO)
+        for date, amount in sorted(charges, key=lambda c: c[0]):
+            if amount <= 0:
+                paid -= amount
+                continue
+            if paid >= amount:
+                paid -= amount
+                continue
+            return date
+        return None
+
+    @property
+    def short_label(self):
+        """
+        The year and the number, which are what a memo quotes::
+
+            FY26 · F.26.6 A Term Films
+
+        Every funding request picker starts from this, so a request reads the
+        same wherever it is offered: as the heading its lines sit under in a
+        line picker (:class:`finance.forms.FRLineChoiceField`), as the whole
+        option in the request box beside one, and as the front of
+        :attr:`picker_label`.
+
+        A budget is ``FY27 · Budget``: there is one a year, so that says which.
+        """
+        if self.is_budget:
+            return "FY%s · Budget" % str(self.fiscal_year)[-2:]
+        name = "%s %s" % (self.reference, self.name) if self.reference else self.name
+        return "FY%s · %s" % (str(self.fiscal_year)[-2:], name)
+
+    @property
+    def picker_label(self):
+        """
+        How this request reads in the reimbursement picker.
+
+        The year and what SGA still owes are on it because a reimbursement
+        names the request it repays, and the one still owed money is nearly
+        always the one being repaid. A budget says what SGA has deposited for
+        it instead, as SGA deposits a budget rather than paying it back.
+        """
+        if self.is_budget:
+            return "%s — %s" % (self.short_label, self.deposit_status.lower())
+        return "%s — %s" % (self.short_label, self.reimbursement_status.lower())
+
+
+@reversion.register(follow=['funding_request'])
+class BudgetCategory(models.Model):
+    """
+    A group of a budget's lines, named by the Treasurer.
+
+    A budget can run to a hundred lines, many of them alike, so the
+    Treasurer makes categories for each budget and nests its lines under them,
+    one level deep, the way a project's parts sit under it. They are nothing
+    to do with :class:`SpendCategory`, which says what money was spent on
+    across the whole ledger; a line has one of each.
+    """
+    funding_request = models.ForeignKey(FundingRequest, on_delete=models.CASCADE,
+                                        related_name='budget_categories')
+    name = models.CharField(max_length=96)
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="Order")
+
+    class Meta:
+        ordering = ('sort_order', 'name', 'pk')
+        verbose_name = "Budget Category"
+        verbose_name_plural = "Budget Categories"
+        constraints = [
+            models.UniqueConstraint(fields=('funding_request', 'name'),
+                                    name='finance_budget_category_name_unique'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class FRLineItemQuerySet(models.QuerySet):
+    """ Annotations for the funding request pickers and burndown bars. """
+
+    def with_spend(self):
+        """ Pre-compute what each line has spent, for pickers that show it. """
+        return self.annotate(_allocated_total=Coalesce(
+            Sum('allocations__amount'),
+            Value(Decimal('0.00')),
+            output_field=models.DecimalField(max_digits=12, decimal_places=2)))
+
+    def chargeable(self):
+        """
+        Lines SGA has approved money for. A line pending SGA approval, or
+        one SGA denied ($0), has nothing to charge to.
+        """
+        return self.filter(amount_awarded__gt=0)
+
+
+@reversion.register(follow=['funding_request'])
+class FRLineItem(models.Model):
+    """
+    A single line inside a funding request or a budget. Balances are live.
+
+    Registered with reversion in its own right: :class:`FundingRequest` follows
+    ``line_items``, and reversion refuses to serialise a followed model it does
+    not know about. Following the parent back means editing one line records the
+    whole request, so a version can be restored as a complete set.
+    """
+    funding_request = models.ForeignKey(FundingRequest, on_delete=models.CASCADE,
+                                        related_name='line_items')
+    name = models.CharField(max_length=192)
+    description = models.TextField(
+        blank=True,
+        help_text="What this line covers, in the words used on the SGA request")
+    amount_requested = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Requested",
+        help_text="What LNL asked SGA for on this line.")
+    # Blank is a line pending SGA approval, which is not the same as $0: a
+    # line SGA denied. See FundingRequest.approved_known.
+    amount_awarded = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Approved",
+        help_text="What SGA approved. Leave blank while the line is pending SGA approval; enter 0 "
+                  "if SGA denied it.")
+    lnl_spend_category = models.ForeignKey(
+        SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='fr_line_items', verbose_name="Expected spend category")
+    sort_order = models.PositiveIntegerField(default=0)
+
+    # -- budget lines only ---------------------------------------------------
+    # The line's own number from SGA, which SGA calls its Request ID. Kept as
+    # ``number`` here: ``request_id`` would read as a key to a request.
+    number = models.CharField(
+        max_length=4, blank=True, verbose_name="Request ID",
+        validators=[RegexValidator(BUDGET_LINE_NUMBER.pattern,
+                                   "A budget line's Request ID is four digits, like 4521.")],
+        help_text="A budget line's four-digit Request ID, as SGA gives it. Workday memos quote "
+                  "it: Velcro restock, consumables, (4521).")
+    is_projection = models.BooleanField(
+        default=False, verbose_name="Projection",
+        help_text="A budget line's side. A funding request's lines are on its request's side.")
+    category = models.ForeignKey(
+        BudgetCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='lines',
+        help_text="The category a budget line is nested under.")
+    undergraduates = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Undergraduates who benefited",
+        help_text="SGA's Budget Report Form asks for it for each line.")
+
+    objects = FRLineItemQuerySet.as_manager()
+
+    class Meta:
+        ordering = ('sort_order', 'pk')
+        verbose_name = "Funding Request Line Item"
+
+    def __str__(self):
+        return "%s – %s" % (self.funding_request.name, self.name)
+
+    def clean(self):
+        """
+        Keep a line on its side once anything is charged to it. Each entry took
+        its side from the line when it was saved, and moving them all would
+        reach into settled entries, closed years included.
+        """
+        super(FRLineItem, self).clean()
+        if self.pk is None:
+            return
+        saved = FRLineItem.objects.filter(pk=self.pk).values_list('is_projection', flat=True).first()
+        if saved is not None and saved != self.is_projection and self.allocations.exists():
+            raise ValidationError({'is_projection': (
+                "Money is already charged to this line, and each entry took its side from the "
+                "line, so the side can't change.")})
+
+    @property
+    def spent(self):
+        """
+        Positive figure. Expenses are stored negative and refunds positive, so a
+        return credit mathematically restores this line's balance for free.
+
+        Uses :meth:`FRLineItemQuerySet.with_spend` if the row was loaded through
+        it: the allocation picker puts this figure on every option, which would
+        otherwise be a query per line per form per row of the queue.
+        """
+        annotated = getattr(self, '_allocated_total', None)
+        if annotated is not None:
+            return -money(annotated)
+        return -money(self.allocations.aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def is_budget_line(self):
+        """ Whether this line is a budget's. """
+        return self.funding_request.is_budget
+
+    @property
+    def side_is_projection(self):
+        """
+        The side spending charged to this line is on: a budget line's own, a
+        funding request line's request's.
+        """
+        if self.funding_request.is_budget:
+            return self.is_projection
+        return self.funding_request.is_projection
+
+    @property
+    def is_waiting(self):
+        """ Whether the line is pending SGA approval: no approved amount yet. """
+        return self.amount_awarded is None
+
+    @property
+    def is_turned_down(self):
+        """ Whether SGA denied the line: approved at $0. """
+        return self.amount_awarded is not None and money(self.amount_awarded) == ZERO
+
+    @property
+    def remaining(self):
+        """
+        What is left on this line. Negative means it is overspent; ``None``
+        while it is pending SGA approval, as there is nothing to be left of yet.
+        """
+        if self.amount_awarded is None:
+            return None
+        return self.amount_awarded - self.spent
+
+    @property
+    def percent_spent(self):
+        """ Spend on this line as a clamped 0-100 integer. """
+        if not self.amount_awarded:
+            return 0
+        return max(0, min(100, int(round(self.spent / self.amount_awarded * 100))))
+
+    @property
+    def is_overspent(self):
+        """ Whether more has been charged here than was approved. """
+        remaining = self.remaining
+        return remaining is not None and remaining < 0
+
+    @property
+    def overspent_by(self):
+        """ How far over, as a positive figure; zero when within what was approved. """
+        return -self.remaining if self.is_overspent else Decimal('0.00')
+
+    @property
+    def balance_label(self):
+        """ ``$120.00 left``, or ``OVER by $29.00`` rather than a negative. """
+        if self.is_waiting:
+            return "pending SGA approval"
+        remaining = self.remaining
+        if remaining < 0:
+            return "OVER by %s" % dollars(-remaining)
+        return "%s left" % dollars(remaining)
+
+    @property
+    def label(self):
+        """ A budget line leads with its number: ``4521 Gaff tape``. """
+        return "%s %s" % (self.number, self.name) if self.number else self.name
+
+    @property
+    def nested_label(self):
+        """
+        How this line reads in a line picker, indented under its request::
+
+            FY26 · F.26.6 A Term Films
+                └ Film Rights — $5000.00 left
+
+        The request heading carries the year, so the line itself only has to
+        say what it is for and what is left -- the remaining balance because
+        pushing a line past its award is easy to do without noticing. A budget
+        line leads with its Request ID, under its category's heading::
+
+            FY27 · Budget · Consumables
+                └ 4521 Gaff tape — $120.00 left
+        """
+        return nested_option_label('%s — %s' % (self.label, self.balance_label), 1)
+
+    @property
+    def picker_label(self):
+        """
+        How this line reads on its own, where its request is not beside it --
+        a suggestion offered under the box, say.
+
+        The fiscal year and the remaining balance are both on the label because
+        both are things you can get wrong without noticing: charging FY26 money
+        to an FY25 request, or pushing a line past its award.
+        """
+        return "%s · %s — %s" % (self.funding_request.short_label, self.label,
+                                 self.balance_label)
+
+
+class LineTotals(object):
+    """
+    The figures of a set of lines -- a budget's, one side of it, one category
+    of it -- under the same names :class:`FundingRequest` gives its own, so a
+    template shows either without knowing which it has.
+
+    ``lines`` should come through :meth:`FRLineItemQuerySet.with_spend`, or
+    each line's spend is a query of its own.
+    """
+
+    def __init__(self, lines):
+        self.lines = list(lines)
+        self.line_count = len(self.lines)
+        self.waiting_count = sum(1 for line in self.lines if line.is_waiting)
+        self.requested_missing_count = sum(1 for line in self.lines
+                                           if line.amount_requested is None)
+        self.total_requested = sum((money(line.amount_requested) for line in self.lines
+                                    if line.amount_requested is not None), ZERO)
+        self.total_awarded = sum((money(line.amount_awarded) for line in self.lines
+                                  if line.amount_awarded is not None), ZERO)
+        self.total_spent = sum((line.spent for line in self.lines), ZERO)
+
+    approved_known = FundingRequest.approved_known
+    total_remaining = FundingRequest.total_remaining
+    requested_known = FundingRequest.requested_known
+    percent_spent = FundingRequest.percent_spent
+    is_overspent = FundingRequest.is_overspent
+
+
+# ---------------------------------------------------------------------------
+# Table A: the immutable bank truth
+# ---------------------------------------------------------------------------
+
+class WorkdayTransactionQuerySet(models.QuerySet):
+    """
+    Closes the back door in the immutability guarantee.
+
+    ``Model.delete()`` and ``Model.save()`` are overridden below, but Django's
+    queryset ``.delete()`` and ``.update()`` never call them -- so without this
+    a single ``objects.filter(...).update(...)`` could silently rewrite the
+    bank's record of events.
+    """
+    def delete(self):
+        """ Refuse. :meth:`hard_delete` is the deliberate way to do this. """
+        raise ValidationError(
+            "WorkdayTransaction rows are immutable. Use .hard_delete() if you genuinely "
+            "need to undo a bad import.")
+
+    def update(self, **kwargs):
+        """ Refuse: a bulk update would bypass every guard on the model. """
+        raise ValidationError(
+            "WorkdayTransaction rows are immutable. Correct the record in Workday and "
+            "re-import, or adjust its entries instead.")
+
+    def hard_delete(self):
+        """
+        Deliberate escape hatch for backing out a bad import. Cascades to the
+        allocation slices, so it really does undo the whole thing.
+        """
+        return super(WorkdayTransactionQuerySet, self).delete()
+
+    def with_allocation(self):
+        """
+        Annotate the reconciliation state in SQL.
+
+        Without this, asking each row whether it is reconciled costs three
+        queries apiece (an aggregate and two exists checks), because aggregates
+        ignore ``prefetch_related``. On a few hundred bank lines that alone was
+        several hundred queries per dashboard render.
+        """
+        return self.annotate(
+            _allocated=summed_money('slices__amount'),
+            _slice_count=Count('slices'),
+            _pending_count=Count('slices', filter=Q(slices__status=TransactionStatus.PENDING)),
+        )
+
+    def unreconciled(self):
+        """
+        Bank lines that still need a human: no slices at all, slices that don't
+        add up to the bank amount, or slices left Pending.
+        """
+        return self.with_allocation().exclude(
+            Q(_slice_count__gt=0) & Q(_pending_count=0) & Q(_allocated=models.F('net_amount')))
+
+    def reconciled(self):
+        """ The exact complement of :meth:`unreconciled`: done, and balanced. """
+        return self.with_allocation().filter(
+            Q(_slice_count__gt=0) & Q(_pending_count=0) & Q(_allocated=models.F('net_amount')))
+
+
+WorkdayTransactionManager = models.Manager.from_queryset(WorkdayTransactionQuerySet)
+
+
+class WorkdayTransaction(models.Model):
+    """
+    A single line from a Workday journal export. Written *only* by the
+    importer and read-only forever after -- this is the bank's version of
+    events, and the subledger is not allowed to rewrite history.
+
+    Mutable interpretation lives on :class:`ParsedTransaction`.
+    """
+    glyphicon = 'university'
+
+    operational_transaction = models.CharField(
+        max_length=128, blank=True, db_index=True, verbose_name="Operational Transaction",
+        help_text="Workday's reference for the document this line belongs to. One invoice "
+                  "covers many lines, and journal entries carry none at all, so this is a "
+                  "grouping label -- not an identifier.")
+    accounting_date = models.DateField(db_index=True)
+    net_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Net amount",
+        help_text="Workday 'Credit Minus Debit'. Positive = revenue, negative = expense.")
+
+    supplier = models.CharField(max_length=255, blank=True)
+    employee = models.CharField(max_length=255, blank=True)
+    memo = models.TextField(blank=True, help_text="Journal Line Memo + Header Memo, concatenated")
+
+    worktags_json = models.JSONField(
+        default=dict, blank=True, verbose_name="Workday worktags",
+        help_text="Remaining Workday columns (fund, cost center, ledger account, "
+                  "spend category, program...) kept verbatim for auto-suggest and audit")
+
+    # -- identity -----------------------------------------------------------
+    # See workday_fingerprint() for what goes into the hash, and
+    # finance.importers for how the ordinal is assigned.
+    row_fingerprint = models.CharField(
+        max_length=64, blank=True, db_index=True, editable=False,
+        verbose_name="Row fingerprint",
+        help_text="Content hash of the exported line: date, amount, payee, memo and worktags")
+    fingerprint_ordinal = models.PositiveIntegerField(
+        default=1, editable=False, verbose_name="Occurrence",
+        help_text="Which occurrence of an otherwise identical line this is. Two genuinely "
+                  "separate charges that Workday exports identically are occurrence 1 and 2.")
+
+    # Import provenance
+    imported_on = models.DateTimeField(auto_now_add=True)
+    imported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name='workday_imports')
+    source_file = models.CharField(max_length=255, blank=True)
+
+    objects = WorkdayTransactionManager()
+
+    class Meta:
+        ordering = ('-accounting_date', '-pk')
+        verbose_name = "Workday Transaction"
+        permissions = (
+            ('import_workdaytransaction', 'Import Workday CSV exports'),
+        )
+        constraints = (
+            # The duplicate guard, at the level that actually holds: a given
+            # line may exist as occurrence 1, 2, 3... but each occurrence only
+            # once, so re-uploading a file cannot double the ledger even if two
+            # people upload it at the same moment.
+            models.UniqueConstraint(
+                fields=('row_fingerprint', 'fingerprint_ordinal'),
+                name='finance_workday_line_occurrence_once'),
+        )
+
+    def __str__(self):
+        return "%s – %s (%s)" % (self.reference, self.description, self.net_amount)
+
+    def get_absolute_url(self):
+        """ The detail page for this bank line and its slices. """
+        return reverse('finance:txn-detail', args=[self.pk])
+
+    # -- identity -----------------------------------------------------------
+    def compute_fingerprint(self):
+        """
+        The content hash that decides whether this row is already in the ledger.
+
+        Derived from the fields Workday itself fills in, never from anything
+        LNL adds afterwards, so re-importing an overlapping export recognises
+        rows it has already seen. See :func:`workday_fingerprint`.
+        """
+        return workday_fingerprint(
+            self.accounting_date, self.net_amount, self.operational_transaction,
+            self.supplier, self.employee, self.memo, self.worktags_json)
+
+    def assign_identity(self, ordinal=None):
+        """
+        Fill in the fingerprint, and the occurrence number if not supplied.
+
+        The importer works out ordinals for a whole file at once, because it
+        alone can tell "this file lists the charge twice" from "this file is a
+        re-upload". A one-off insert (the admin, a test, a shell) has no such
+        context, so it simply takes the next free occurrence.
+
+        "Next free" is one past the highest occurrence on file, not one past
+        the count of them: after a ``hard_delete()`` of anything but the last
+        copy those two disagree, and counting would hand back a number a
+        surviving row already holds.
+        """
+        self.row_fingerprint = self.compute_fingerprint()
+        if ordinal is not None:
+            self.fingerprint_ordinal = ordinal
+        else:
+            highest = WorkdayTransaction.objects.filter(
+                row_fingerprint=self.row_fingerprint).aggregate(
+                    top=models.Max('fingerprint_ordinal'))['top']
+            self.fingerprint_ordinal = (highest or 0) + 1
+        return self
+
+    # -- immutability -------------------------------------------------------
+    def save(self, *args, **kwargs):
+        """ Allow the initial insert; refuse every subsequent write. """
+        if self.pk is not None and not kwargs.pop('_allow_update', False):
+            raise ValidationError(
+                "WorkdayTransaction rows are immutable. Correct the record in Workday and "
+                "re-import, or adjust its entries instead.")
+        if not self.row_fingerprint:
+            self.assign_identity()
+        return super(WorkdayTransaction, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """ Refuse. Delete the slices instead, or use the queryset escape hatch. """
+        raise ValidationError(
+            "WorkdayTransaction rows are immutable and cannot be deleted. Delete its "
+            "entries if you need to settle it again.")
+
+    # -- convenience --------------------------------------------------------
+    @property
+    def description(self):
+        """
+        The best short label this row can offer.
+
+        Who was paid, failing that the start of the memo, failing that an
+        honest admission -- a Workday line is not guaranteed to carry either.
+        """
+        return self.payee or (self.memo[:60] if self.memo else "(no description)")
+
+    @property
+    def document_type(self):
+        """
+        What kind of Workday document this line came off.
+
+        The Operational Transaction reads "Internal Service Delivery:
+        25090179-ISD" or "Expense Report: 25061136-EXP", so the part before the
+        colon names the document. Journal entry lines have no Operational
+        Transaction at all and are identified by having a journal instead.
+        """
+        reference = (self.operational_transaction or '').strip()
+        if ':' in reference:
+            return reference.split(':', 1)[0].strip()
+        if reference:
+            return reference
+        return "Journal Entry" if self.journal_reference else ''
+
+    @property
+    def payee(self):
+        """
+        Who the money went to or came from, as far as the export says.
+
+        Internal Service Deliveries -- LNL billing a department, catering,
+        campus shipping -- carry neither a Supplier nor an Employee, because
+        both sides are WPI. Falling through to "(no payee)" told the Treasurer
+        nothing; naming the document type at least says what kind of movement
+        it is, and the memo carries the rest.
+        """
+        named = self.supplier or self.employee
+        if named:
+            return named
+        return self.document_type or ''
+
+    @property
+    def fiscal_year(self):
+        """ The fiscal year Workday posted this line in. """
+        return fiscal_year_for(self.accounting_date)
+
+    @property
+    def is_revenue(self):
+        """ Money in. The sign is the bank's, and is not ours to argue with. """
+        return self.net_amount > 0
+
+    def worktag(self, key, default=''):
+        """ Case/format tolerant lookup into ``worktags_json``. """
+        return worktag_value(self.worktags_json, key, default)
+
+    @property
+    def journal_reference(self):
+        """
+        The journal's own number, e.g. ``25090054-JE``.
+
+        Workday exports the journal as a sentence -- "25090054-JE - Worcester
+        Polytechnic Institute - WPI - 08/31/2025" -- and only the first field
+        identifies anything.
+        """
+        journal = self.worktag('journal')
+        return journal.split(' - ')[0].strip() if journal else ''
+
+    @property
+    def reference(self):
+        """
+        What to call this line on screen.
+
+        Journal entry lines carry no Operational Transaction at all, so falling
+        back to the journal number keeps every row nameable.
+        """
+        return self.operational_transaction or self.journal_reference or "(no reference)"
+
+    @property
+    def ledger_account(self):
+        """ Workday's GL account, e.g. ``71100:Supplies``. """
+        return self.worktag('ledger_account')
+
+    @property
+    def partition_worktag(self):
+        """
+        The org code Workday assigned, e.g. ``226-AG Lens & Light Club``.
+
+        Which worktag holds it is configured per :class:`PartitionCode`, so a
+        deployment that files these somewhere other than Student Organization
+        needs no code change.
+        """
+        for worktag in partition_worktag_keys():
+            value = self.worktag(worktag)
+            if value:
+                return value
+        return ''
+
+    @property
+    def journal_line_memo(self):
+        """
+        The CSV's Journal Line Memo on its own.
+
+        Newer imports keep it as its own worktag. Rows imported before that
+        only have the concatenated ``memo``, so fall back to the part before
+        the separator that :func:`finance.importers.build_memo` joins on.
+        """
+        stored = self.worktag('journal_line_memo')
+        if stored:
+            return stored
+        return (self.memo or '').split(MEMO_SEPARATOR)[0].strip()
+
+    @property
+    def matched_partition_code(self):
+        """
+        The :class:`PartitionCode` row this line falls under, if any.
+
+        Which account the money came out of. It decides where a slice of this
+        line starts, and nothing more -- see :class:`PartitionCode` for why it
+        stopped being a lock.
+        """
+        for entry in partition_codes():
+            if org_code_matches(self.worktag(entry['worktag']), entry['code']):
+                return entry
+        return None
+
+    @property
+    def default_partition(self):
+        """ ``'projection'``, ``'event'``, or ``None`` when the code says nothing. """
+        match = self.matched_partition_code
+        if match is None:
+            return None
+        return 'projection' if match['is_projection'] else 'event'
+
+    @property
+    def defaults_to_projection(self):
+        """
+        Whether this line starts life on the Projection side.
+
+        A starting position only -- the org code the money left says where it
+        probably belongs, and the Treasurer has the final say.
+        """
+        match = self.matched_partition_code
+        return bool(match and match['is_projection'])
+
+    @property
+    def crossing_requires_reason(self):
+        """
+        Whether filing this line on the other side has to be justified.
+
+        True for the account SGA funds for Projection directly: money leaving
+        that side is the direction that would breach the isolation rule.
+        """
+        match = self.matched_partition_code
+        return bool(match and match.get('crossing_requires_reason'))
+
+    @property
+    def partition_code_label(self):
+        """ The org code itself, for messages and badges. """
+        match = self.matched_partition_code
+        return match['code'] if match else ''
+
+    # -- reconciliation -----------------------------------------------------
+    # Each of these prefers the annotation left by ``with_allocation()`` and
+    # falls back to its own query, so a single object still behaves correctly
+    # while a listing costs one query for the whole page.
+    @property
+    def allocated_amount(self):
+        """ How much of this line has been written up as ledger entries. """
+        cached = getattr(self, '_allocated', None)
+        if cached is not None:
+            return money(cached)
+        return money(self.slices.aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def unallocated_amount(self):
+        """ What's left to carve up. Zero means the line is ready to settle. """
+        return money(self.net_amount) - self.allocated_amount
+
+    @property
+    def is_fully_allocated(self):
+        """ Whether the slices account for the line to the cent. """
+        return self.unallocated_amount == ZERO
+
+    @property
+    def slice_count(self):
+        """ How many ledger entries have been written against this line. """
+        cached = getattr(self, '_slice_count', None)
+        if cached is not None:
+            return cached
+        return self.slices.count()
+
+    @property
+    def pending_slice_count(self):
+        """ How many of those entries are not settled yet. """
+        cached = getattr(self, '_pending_count', None)
+        if cached is not None:
+            return cached
+        return self.slices.exclude(status=TransactionStatus.SETTLED).count()
+
+    @property
+    def is_reconciled(self):
+        """
+        Whether this line is finished with.
+
+        All three conditions are required: something was written against it,
+        nothing is still pending, and the amounts balance exactly.
+        """
+        return (self.slice_count > 0
+                and self.pending_slice_count == 0
+                and self.is_fully_allocated)
+
+    @property
+    def is_split(self):
+        """ Whether this one charge was carved up into several entries. """
+        return self.slice_count > 1
+
+    @transaction.atomic
+    def settle(self):
+        """ Mark every slice settled. Refuses unless the split balances exactly. """
+        if not self.slices.exists():
+            raise ValidationError("Cannot settle a line with no entries.")
+        if not self.is_fully_allocated:
+            raise ValidationError(
+                "Cannot settle: the entries add up to %s but the line is %s (%s left to settle)."
+                % (self.allocated_amount, self.net_amount, self.unallocated_amount))
+        self.slices.update(status=TransactionStatus.SETTLED)
+        # update() skips save(), so django-reversion never saw a line settled:
+        # each entry's history stayed Pending, and whoever edited it next was
+        # shown settling it. Each entry goes into the revision already open --
+        # the request's, which wrote it when the queue has just filed it -- or
+        # into one of its own outside a request.
+        with reversion.create_revision():
+            if not reversion.get_comment():
+                reversion.set_comment("Settled")
+            for entry in self.slices.all():
+                reversion.add_to_revision(entry)
+
+
+# ---------------------------------------------------------------------------
+# Encumbrances
+# ---------------------------------------------------------------------------
+
+@reversion.register()
+class Encumbrance(models.Model):
+    """
+    Money set aside for one purchase before it reaches Workday.
+
+    The money itself is on its lines, which are ordinary
+    :class:`ParsedTransaction` rows with no bank line yet. One order paid
+    partly out of Legacy and partly off a funding request is one encumbrance
+    with two lines, each charged to its own fund. Every balance and burndown
+    reads the lines and never this row, so a line counts exactly as a
+    single-line encumbrance always has.
+
+    A line keeps pointing here after it is matched to a Workday line, so the
+    entry it became can say which encumbrance it came from.
+
+    It has no date of its own. Money is encumbered from the moment it is
+    logged until its Workday line is matched, so its open lines are dated the
+    day it was logged (:attr:`logged_on`) and count on every balance from then.
+    """
+    glyphicon = 'bookmark'
+
+    description = models.CharField(max_length=255, help_text="What the purchase is.")
+    receipt_file = models.FileField(upload_to='finance/receipts/%Y/%m/', null=True, blank=True,
+                                    verbose_name="Receipt or quote")
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name='encumbrances')
+
+    class Meta:
+        ordering = ('-created_on', '-pk')
+
+    def __str__(self):
+        return self.description
+
+    def get_absolute_url(self):
+        return reverse('finance:encumbrance-edit', args=[self.pk])
+
+    @property
+    def logged_on(self):
+        """ The day it was logged, which its open lines are dated; today before it is saved. """
+        return timezone.localdate(self.created_on) if self.created_on else timezone.localdate()
+
+    def open_lines(self):
+        """ The lines still waiting for their Workday charge, in the order they were written. """
+        return self.lines.filter(parent_transaction__isnull=True).order_by('pk')
+
+
+# ---------------------------------------------------------------------------
+# Table B: the mutable allocation slice
+# ---------------------------------------------------------------------------
+
+class ParsedTransactionQuerySet(models.QuerySet):
+    """ The filters behind the global filter bar and the ledger page. """
+
+    def for_fiscal_year(self, fiscal_year):
+        """ Entries dated inside one fiscal year; a falsy year means all of them. """
+        if not fiscal_year:
+            return self
+        start, end = fiscal_year_bounds(fiscal_year)
+        return self.filter(effective_date__range=(start, end))
+
+    def partition(self, is_projection):
+        """ The Event | Projection partition switch. ``None`` means no filter. """
+        if is_projection is None:
+            return self
+        return self.filter(is_projection=is_projection)
+
+    def revenue(self):
+        """
+        Money genuinely coming in.
+
+        Refunds are excluded despite being positive: a credit back on a
+        purchase is a reduction in spending, not income, and counting it as
+        income would overstate both sides of the dashboard at once.
+        """
+        return self.filter(amount__gt=0, refund_of__isnull=True)
+
+    def expenses(self):
+        """
+        Money going out, including the refunds that offset it and anything
+        still only encumbered. The ledger lists these. For what has actually
+        been spent, use :meth:`spending`.
+        """
+        return self.filter(Q(amount__lt=0) | Q(refund_of__isnull=False))
+
+    def spending(self):
+        """
+        Money that has left the account: :meth:`expenses` with a bank line.
+        An open encumbrance has none, because it hasn't been spent yet.
+        """
+        return self.expenses().filter(parent_transaction__isnull=False)
+
+
+@reversion.register()
+class ParsedTransaction(models.Model):
+    """
+    One allocation slice of internal meaning. Many slices may point at a single
+    :class:`WorkdayTransaction` (the split-purchase case), or at none at all
+    (an encumbrance logged before the bank feed catches up).
+
+    Four shapes, distinguished by :attr:`entry_type`:
+
+    * **Revenue**  -- ``amount > 0``, routes to an Event or a non-event source,
+      and names the fund it adds to -- and, when SGA is reimbursing a funding
+      request, the request.
+    * **Expense**  -- ``amount < 0``, routes to a fund/spend category/FR line,
+      and may name the event it was incurred for.
+    * **Refund**   -- ``amount > 0`` *and* ``refund_of`` set. A return credit.
+      It carries expense routing, not revenue routing, so that crediting money
+      back restores the budget line it originally came out of.
+    * **Encumbrance** -- no bank line yet. Money reserved for a purchase,
+      routed like an expense, and always Pending until the real charge is
+      matched to it.
+    """
+    glyphicon = 'list-alt'
+
+    parent_transaction = models.ForeignKey(
+        WorkdayTransaction, on_delete=models.CASCADE, null=True, blank=True, related_name='slices',
+        help_text="The bank line this slice belongs to. Blank while this is a pending encumbrance.")
+
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text="Positive = money in, negative = money out. Must be non-zero.")
+    status = models.CharField(max_length=16, choices=TransactionStatus.choices,
+                              default=TransactionStatus.PENDING, db_index=True)
+    is_projection = models.BooleanField(
+        default=False, db_index=True, verbose_name="Projection partition",
+        help_text="Which activity the money was for, which is not always which account paid. "
+                  "Starts from the org code on the bank line and from the funding request, "
+                  "and can be changed.")
+
+    # Denormalised so the ledger can sort/filter by date without joining, and so
+    # encumbrances (which have no bank line yet) still land in a fiscal year.
+    effective_date = models.DateField(db_index=True, default=timezone.localdate)
+
+    description = models.CharField(max_length=255, blank=True)
+    audit_explanation = models.TextField(
+        blank=True, help_text="Why this money moved. Shown to auditors.")
+    receipt_file = models.FileField(upload_to='finance/receipts/%Y/%m/', null=True, blank=True,
+                                    verbose_name="Receipt")
+
+    # -- Revenue routing (mutually exclusive with expense routing) ----------
+    # Except linked_event, which an expense may carry too: see SHARED_FIELDS.
+    linked_event = models.ForeignKey('events.BaseEvent', on_delete=models.PROTECT,
+                                     null=True, blank=True, related_name='subledger_entries',
+                                     verbose_name="Linked event")
+    # One payment for a bill that covered several shows. It stays one entry,
+    # and each show is credited with its share by price, as the bill is split:
+    # see finance.calculators.multibill_income.
+    linked_multibill = models.ForeignKey(
+        'MultiBilling', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='subledger_entries', verbose_name="Linked multi-bill",
+        help_text="A payment for a multi-bill. Each of its events is credited with its share, "
+                  "by price, as the bill is split.")
+    non_event_revenue_type = models.ForeignKey(
+        RevenueSource, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='entries', verbose_name="Non-event revenue type")
+
+    # -- Expense routing (mutually exclusive with revenue routing) ----------
+    # PROTECT rather than CASCADE: retiring a category from the admin must not
+    # be able to silently delete the money filed under it.
+    #
+    # fund_source is the exception, and belongs to both directions: money
+    # leaves a fund and money arrives in one. See SHARED_FIELDS below.
+    fund_source = models.ForeignKey(
+        FundSource, on_delete=models.PROTECT, null=True, blank=True, related_name='entries',
+        help_text="The pot this money came out of, or, for money coming in, the pot it adds to.")
+    lnl_spend_category = models.ForeignKey(
+        SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='entries', verbose_name="LNL spend category")
+    fr_line_target = models.ForeignKey(FRLineItem, on_delete=models.PROTECT, null=True, blank=True,
+                                       related_name='allocations', verbose_name="Funding request line")
+
+    # -- SGA's own payments -------------------------------------------------
+    # Spending against a request names one of its lines. SGA paying for that
+    # spending names the request itself: a reimbursement on the way in, and
+    # money SGA takes back -- a reimbursement paid twice -- on the way out. The
+    # two are kept apart so a request's spending and what SGA has paid for it
+    # can be set against each other.
+    funding_request = models.ForeignKey(
+        FundingRequest, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='sga_payments', verbose_name="SGA funding request",
+        help_text="SGA's own payment for a funding request: the request a reimbursement repays, "
+                  "or the one SGA took money back for. Spending against a request names one of "
+                  "its lines instead.")
+
+    # -- Refunds ------------------------------------------------------------
+    refund_of = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True,
+                                  related_name='refunds', verbose_name="Refund of",
+                                  help_text="The original purchase this credit reverses")
+
+    project_tag = models.ForeignKey(ProjectTag, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='transactions')
+
+    # Set on an encumbrance's lines, and kept once a line is matched, so the
+    # entry it became still says where it came from.
+    encumbrance = models.ForeignKey(
+        Encumbrance, on_delete=models.SET_NULL, null=True, blank=True, related_name='lines',
+        help_text="The encumbrance this entry was written as a line of.")
+    # On the row rather than read from its history: a bulk draw writes a line
+    # down several times in one revision, which keeps only the last of them.
+    held_before_match = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, editable=False,
+        help_text="What this encumbrance line held just before the charge that finished it, "
+                  "which is what undoing that charge puts back.")
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name='subledger_entries')
+
+    objects = ParsedTransactionQuerySet.as_manager()
+
+    # Field groups reused by the forms, the ledger column picker and the tests.
+    #
+    # linked_event belongs to neither side. On revenue it means "this is what
+    # the event earned"; on an expense it means "this cost was incurred for
+    # that event" -- a sub-rental billed straight through, where LNL hires a
+    # console for one show and the cost is that show's, not the club's. The
+    # sign of the amount already distinguishes the two readings.
+    #
+    # fund_source is shared for the same reason. Spending comes out of a fund
+    # and income goes into one, and the fund balances cannot be worked out
+    # without both: an SGA reimbursement lands in the funding-request fund and
+    # brings its balance back to zero, and the budget's annual deposit is what
+    # the year's budget spending draws down.
+    #
+    # funding_request is shared too. A reimbursement coming in names the
+    # request it repays; money SGA takes back going out names the request it
+    # was taken back from. Both are SGA's payments, not LNL's spending.
+    #
+    # linked_multibill is revenue only. A payment for a multi-bill names the
+    # bill in place of one event; costs for the shows still name each show.
+    REVENUE_FIELDS = ('non_event_revenue_type', 'linked_multibill')
+    EXPENSE_FIELDS = ('lnl_spend_category', 'fr_line_target')
+    SHARED_FIELDS = ('linked_event', 'fund_source', 'funding_request')
+
+    #: Routing a refund takes from the purchase it reverses. A refund charged
+    #: anywhere other than where the money went does not undo the spending:
+    #: the fund keeps the charge, the funding request line keeps the draw, and
+    #: only the grand total nets out. So a refund never has routing of its own
+    #: (see :meth:`_take_routing_from_purchase`).
+    REFUND_INHERITED = ('fund_source', 'lnl_spend_category', 'fr_line_target',
+                        'funding_request', 'linked_event', 'project_tag', 'is_projection')
+
+    class Meta:
+        ordering = ('-effective_date', '-pk')
+        verbose_name = "Subledger Entry"
+        verbose_name_plural = "Subledger Entries"
+        permissions = (
+            ('view_subledger', 'View the financial subledger'),
+            ('edit_subledger', 'Create and edit subledger entries'),
+            ('settle_subledger', 'Settle Workday lines'),
+            ('view_subledger_receipts', 'View uploaded receipts'),
+        )
+        constraints = [
+            # A zero-amount slice is always a data-entry mistake.
+            models.CheckConstraint(check=~Q(amount=0), name='finance_slice_amount_nonzero'),
+            # Encumbrances have no bank line yet, so they cannot be settled.
+            models.CheckConstraint(
+                check=Q(parent_transaction__isnull=False) | Q(status='pending'),
+                name='finance_encumbrance_must_be_pending'),
+            # Expenses and refunds may not be classified as non-event revenue,
+            # nor be a multi-bill's payment. linked_event is deliberately
+            # absent: an expense may name the event it was incurred for. See
+            # SHARED_FIELDS above.
+            models.CheckConstraint(
+                check=(Q(amount__gt=0, refund_of__isnull=True)
+                       | Q(non_event_revenue_type__isnull=True, linked_multibill__isnull=True)),
+                name='finance_no_revenue_routing_on_expense'),
+            # A multi-bill's payment names the bill, and nothing else that says
+            # where the money came from: its events take their shares from it.
+            models.CheckConstraint(
+                check=(Q(linked_multibill__isnull=True)
+                       | Q(linked_event__isnull=True, non_event_revenue_type__isnull=True)),
+                name='finance_multibill_payment_names_only_the_bill'),
+            # Revenue may not carry expense routing. fund_source is absent for
+            # the same reason linked_event is above: income goes into a fund.
+            models.CheckConstraint(
+                check=(Q(amount__lt=0)
+                       | Q(refund_of__isnull=False)
+                       | Q(lnl_spend_category__isnull=True, fr_line_target__isnull=True)),
+                name='finance_no_expense_routing_on_revenue'),
+            # A refund credits money back; it can never be negative.
+            models.CheckConstraint(
+                check=Q(refund_of__isnull=True) | Q(amount__gt=0),
+                name='finance_refund_must_be_positive'),
+            # Spending against a request names its line; SGA paying for that
+            # spending names the request. One entry is one or the other, or a
+            # reimbursement would also count as a draw on the award.
+            models.CheckConstraint(
+                check=Q(funding_request__isnull=True) | Q(fr_line_target__isnull=True),
+                name='finance_sga_payment_is_not_a_charge'),
+        ]
+
+    def __str__(self):
+        return "%s %s" % (self.get_entry_type_display(), money(self.amount))
+
+    def get_absolute_url(self):
+        """ This entry's own page, with its audit trail. """
+        return reverse('finance:entry-detail', args=[self.pk])
+
+    @property
+    def picker_label(self):
+        """
+        How this line reads in a dropdown that offers other people's rows.
+
+        ``__str__`` is "Expense -129.00", which is what the Refund-of picker
+        used to show: thirty options, all of them the word Expense and a
+        number, with nothing to say which purchase each one was. Picking the
+        right one meant opening the ledger in another tab.
+
+        So the label carries what actually identifies a purchase to the person
+        choosing -- when it was, who was paid, what it was for, and how much of
+        it is still refundable, since a partly-credited line is the single
+        easiest one to pick by mistake.
+        """
+        parts = []
+        if self.effective_date:
+            parts.append(date_format(self.effective_date, 'M j'))
+        who = self.payee_label
+        if who:
+            parts.append(who)
+        what = (self.description or '').strip()
+        # The payee is often repeated verbatim as the description; saying it
+        # twice in one option costs the width the amount needs.
+        if what and what.lower() != who.lower():
+            parts.append(what)
+
+        gross = abs(money(self.amount))
+        left = self.refundable_remaining
+        if self.amount is None or self.amount >= 0 or left == gross:
+            tail = dollars(gross)
+        elif left:
+            tail = "%s — %s left to refund" % (dollars(gross), dollars(left))
+        else:
+            tail = "%s — fully refunded" % dollars(gross)
+
+        parts.append(tail)
+        return " · ".join(parts)
+
+    @property
+    def payee_label(self):
+        """ Who the money went to, from the bank line when there is one. """
+        parent = self.parent_transaction
+        if parent is not None and parent.payee:
+            return parent.payee
+        return ''
+
+    @property
+    def encumbrance_label(self):
+        """
+        How an encumbrance line reads in a picker: the encumbrance, then the
+        line's own description when it says something more.
+        """
+        head = self.encumbrance.description if self.encumbrance_id else ''
+        own = (self.description or '').strip()
+        if head and own and own.lower() != head.lower():
+            return "%s · %s" % (head, own)
+        return head or own or "(no description)"
+
+    @property
+    def refundable_remaining(self):
+        """
+        How much of this expense has not been credited back yet.
+
+        Positive, and zero once the whole thing has been returned. Mirrors the
+        rule enforced in :meth:`clean`: refunds may not exceed the original.
+
+        Uses the ``_credited`` annotation when the row was loaded through the
+        refund picker's queryset. Every option in that dropdown asks this
+        question, and without the annotation a list of forty purchases is forty
+        extra aggregates -- the same trap :meth:`FRLineItem.spent` avoids.
+        """
+        if self.amount is None or self.amount >= 0:
+            return ZERO
+        annotated = getattr(self, '_credited', None)
+        if annotated is not None:
+            already = money(annotated)
+        elif self.pk:
+            already = money(self.refunds.aggregate(t=Sum('amount'))['t'])
+        else:
+            already = ZERO
+        return max(ZERO, -money(self.amount) - already)
+
+    # -- classification -----------------------------------------------------
+    REVENUE, EXPENSE, REFUND, ENCUMBRANCE = 'revenue', 'expense', 'refund', 'encumbrance'
+
+    @property
+    def entry_type(self):
+        """
+        What this row *is*, in the words the ledger uses for it.
+
+        An encumbrance is money reserved for a purchase that has not happened
+        yet, and it is not interchangeable with an expense: no money has left
+        the account, there is no bank line behind it, and it disappears again
+        when the real charge arrives. Calling it an Expense in the Type column
+        made the two impossible to tell apart in the one view where the whole
+        point is telling rows apart.
+
+        It is deliberately checked before the sign, because an encumbrance is
+        always negative and would otherwise read as an ordinary expense.
+        """
+        if self.refund_of_id is not None:
+            return self.REFUND
+        if self.parent_transaction_id is None:
+            return self.ENCUMBRANCE
+        return self.REVENUE if (self.amount or 0) > 0 else self.EXPENSE
+
+    ENTRY_TYPE_LABELS = {
+        REVENUE: 'Revenue',
+        EXPENSE: 'Expense',
+        REFUND: 'Refund',
+        ENCUMBRANCE: 'Encumbrance',
+    }
+
+    def get_entry_type_display(self):
+        """
+        The human label for :attr:`entry_type`.
+
+        Written out by hand rather than generated, because ``entry_type`` is
+        derived from the amount and the links rather than stored in a field
+        with choices, so Django's own ``get_FOO_display`` does not exist here.
+        """
+        return self.ENTRY_TYPE_LABELS[self.entry_type]
+
+    @property
+    def is_revenue(self):
+        """ Money in, as opposed to spending, a refund or an encumbrance. """
+        return self.entry_type == self.REVENUE
+
+    @property
+    def is_expense(self):
+        """
+        Everything that is not money coming in.
+
+        Refunds are contra-expenses and encumbrances are expenses that have not
+        happened yet; both carry expense routing, so both answer yes. Only the
+        Type column distinguishes them, and it does that through
+        :attr:`entry_type`.
+        """
+        return self.entry_type != self.REVENUE
+
+    @property
+    def is_encumbrance(self):
+        """ Money reserved for a purchase that has not reached Workday yet. """
+        return self.entry_type == self.ENCUMBRANCE
+
+    @property
+    def fiscal_year(self):
+        """
+        The fiscal year this entry falls in.
+
+        Taken from ``effective_date``, which for a slice of a bank line is the
+        date of the purchase rather than the date somebody got round to
+        filing it.
+        """
+        return fiscal_year_for(self.effective_date)
+
+    # -- inherited event metadata (zero double data entry) ------------------
+    @property
+    def client_type(self):
+        """
+        Student Org vs Department, inherited from the linked event's billing
+        org rather than re-keyed by the Treasurer.
+
+        The rule itself lives in :func:`client_type_for`, so this answer and
+        the dashboard's cannot drift apart. A multi-bill's payment is
+        classified by the bill's client, who paid it.
+        """
+        if self.linked_multibill_id:
+            return client_type_for_multibill(self.linked_multibill)
+        return client_type_for(self.linked_event)
+
+    @property
+    def client_type_display(self):
+        """ :attr:`client_type` as the words a person would read. """
+        return ClientType(self.client_type).label
+
+    @property
+    def event_services(self):
+        """
+        The service breakdown (Lighting, Sound, ...) inherited from the event,
+        or from every event on the multi-bill this pays.
+        """
+        if self.linked_multibill_id:
+            return sorted(set(name for event in self.linked_multibill.events.all()
+                              for name in _services_of(event)))
+        if self.linked_event is None:
+            return []
+        return _services_of(self.linked_event)
+
+    @property
+    def event_services_display(self):
+        """ The inherited service list as one comma-separated string. """
+        return ", ".join(self.event_services)
+
+    # -- validation ---------------------------------------------------------
+    def _normalise_blanks(self):
+        """
+        Collapse '' to None on the routing links so the DB constraints read
+        cleanly. These are foreign keys now, so a blank arrives as an empty
+        ``*_id`` rather than an empty string, but both are worth catching.
+        """
+        for field in ('non_event_revenue_type', 'linked_multibill', 'fund_source',
+                      'lnl_spend_category', 'funding_request'):
+            if getattr(self, '%s_id' % field, None) == '':
+                setattr(self, '%s_id' % field, None)
+
+    def _routing_attnames(self):
+        """ :attr:`REFUND_INHERITED` as the columns that hold them. """
+        return [self._meta.get_field(name).attname for name in self.REFUND_INHERITED]
+
+    def _take_routing_from_purchase(self):
+        """
+        Charge a refund exactly where its purchase was.
+
+        Read from the database rather than off ``refund_of``, which may be a
+        copy loaded before the purchase last changed. Applied on every save as
+        well as in ``clean()``, so no form, bulk action or shell write can move
+        a refund away from its purchase; :meth:`_carry_routing_to_refunds` takes
+        a change to the purchase to its refunds.
+        """
+        if self.refund_of_id is None:
+            return
+        routing = (ParsedTransaction.objects.filter(pk=self.refund_of_id)
+                   .values(*self._routing_attnames()).first())
+        for attname, value in (routing or {}).items():
+            setattr(self, attname, value)
+
+    def _newly_names_its_line(self):
+        """
+        Whether this save charges a line it wasn't on. A refund follows its
+        purchase, and an entry already on a line stays editable.
+        """
+        if self.refund_of_id is not None:
+            return False
+        if self.pk is None:
+            return True
+        saved = (ParsedTransaction.objects.filter(pk=self.pk)
+                 .values_list('fr_line_target_id', flat=True).first())
+        return saved != self.fr_line_target_id
+
+    def _carry_routing_to_refunds(self):
+        """ Move every refund of this purchase to wherever the purchase is now charged. """
+        attnames = self._routing_attnames()
+        for refund in self.refunds.all():
+            if any(getattr(refund, name) != getattr(self, name) for name in attnames):
+                refund.save()
+
+    def clean(self):
+        """
+        Enforce the rules that keep the ledger auditable.
+
+        Errors are collected per field and raised together rather than one at
+        a time, so a half-filled form comes back with everything wrong with it
+        marked at once. The amount is the exception: with no amount there is
+        no direction, and every rule below depends on knowing the direction.
+
+        Each rule has a heading comment below. The three original ones keep
+        the numbers ``test_models`` uses for them -- Rule 1, a split balances
+        before it settles; Rule 2, revenue and expense routing are mutually
+        exclusive; Rule 3, a refund reverses a real expense -- and the ones
+        added since (funding requests, the partition) are headed
+        by name.
+
+        Database constraints (see ``Meta``) back up the simplest of these --
+        a non-zero amount, routing on the right side, a positive refund, an
+        unmatched encumbrance left Pending -- because bulk actions and shell
+        writes never call ``full_clean()``. The rest hold wherever it runs:
+        every finance form and the admin.
+        """
+        self._normalise_blanks()
+        errors = {}
+
+        if self.amount is None or self.amount == 0:
+            errors['amount'] = "Amount must be non-zero."
+            raise ValidationError(errors)
+
+        # A refund's routing is its purchase's, so the rules below check that.
+        self._take_routing_from_purchase()
+
+        # -- Rule 2: revenue and expense routing are mutually exclusive -----
+        if self.entry_type == self.REVENUE:
+            for field in self.EXPENSE_FIELDS:
+                if getattr(self, field) is not None:
+                    errors[field] = "Revenue entries cannot carry expense routing."
+            if (self.linked_event is None and self.linked_multibill is None
+                    and self.non_event_revenue_type is None):
+                errors['linked_event'] = (
+                    "Revenue must link to an Event or a multi-bill, or be classified as "
+                    "non-event revenue.")
+            if self.linked_multibill is not None and self.linked_event is not None:
+                errors['linked_multibill'] = (
+                    "Pick either a linked Event or a multi-bill, not both. A multi-bill's "
+                    "payment counts towards each of its events already.")
+            elif self.linked_multibill is not None and self.non_event_revenue_type is not None:
+                errors['non_event_revenue_type'] = (
+                    "Pick either a multi-bill or a non-event revenue type, not both.")
+            elif self.linked_event is not None and self.non_event_revenue_type is not None:
+                errors['non_event_revenue_type'] = (
+                    "Pick either a linked Event or a non-event revenue type, not both.")
+        else:
+            for field in self.REVENUE_FIELDS:
+                if getattr(self, field) is not None:
+                    errors[field] = "Expense entries cannot carry revenue routing."
+
+        # -- Rule 3: refunds must point at a real expense ------------------
+        if self.refund_of_id is not None:
+            original = self.refund_of
+            if original.pk == self.pk:
+                errors['refund_of'] = "A transaction cannot be a refund of itself."
+            elif not original.is_expense:
+                errors['refund_of'] = "Refunds may only reverse an expense line."
+            else:
+                # You cannot get more money back than you spent. Anything beyond
+                # the original is revenue, and belongs on its own line.
+                already = money(original.refunds.exclude(pk=self.pk).aggregate(
+                    t=Sum('amount'))['t'])
+                refundable = -original.amount - already
+                if self.amount > refundable:
+                    errors['amount'] = (
+                        "That is more than is left to refund. The original expense was %s and "
+                        "%s has already been credited back, leaving %s."
+                        % (dollars(-original.amount), dollars(already), dollars(refundable)))
+        elif self.pk is not None:
+            # And the other way round: a purchase can't fall below what has
+            # come back against it -- re-split smaller, or retyped as money
+            # coming in -- or its fund and FR line get back more than was spent.
+            credited = money(self.refunds.aggregate(t=Sum('amount'))['t'])
+            if credited > ZERO and self.amount > 0:
+                errors['amount'] = (
+                    "%s has been credited back against this purchase, so it has to stay money "
+                    "going out. Remove the refund first." % dollars(credited))
+            elif credited > ZERO and -self.amount < credited:
+                errors['amount'] = (
+                    "%s has been credited back against this purchase, so it can't come to less "
+                    "than that. Reduce or remove the refund first." % dollars(credited))
+
+        # -- Funding request lines, and SGA's payments for them -------------
+        # A fund flagged requires_funding_request is money awarded for a named
+        # purpose, so spending from it has to burn down one of that request's
+        # lines; every other fund is forbidden from naming one, or an FR's
+        # balance would change without any award behind it.
+        #
+        # SGA's own payments into and out of that fund name the request rather
+        # than a line: what SGA reimbursed, or took back. Without the request a
+        # reimbursement is money in the fund that no request can be credited
+        # with, and what SGA still owes for each one cannot be worked out.
+        fund = self.fund_source
+        payment_for = self.funding_request
+        if self.entry_type == self.REVENUE:
+            # SGA pays each kind of money into its own pot, so the source of
+            # the income decides the fund. Filled in when blank; refused when
+            # it disagrees, because a reimbursement filed to Legacy leaves the
+            # request looking unpaid for ever.
+            source = self.non_event_revenue_type
+            if source is not None and source.credits_fund_id is not None:
+                if fund is None:
+                    self.fund_source = fund = source.credits_fund
+                elif fund.pk != source.credits_fund_id:
+                    errors['fund_source'] = "%s goes into %s, not %s." % (
+                        source, source.credits_fund, fund)
+            if fund is not None and fund.requires_funding_request and payment_for is None:
+                errors['funding_request'] = (
+                    "Money coming into %s has to name the request SGA is reimbursing. A "
+                    "supplier's credit is not a reimbursement: record it as a refund of the "
+                    "purchase instead." % fund)
+            elif fund is not None and fund.draws_on_budget and payment_for is None:
+                errors['funding_request'] = (
+                    "Money coming into %s has to name the budget SGA deposited it for. A "
+                    "supplier's credit is not a deposit: record it as a refund of the "
+                    "purchase instead." % fund)
+        else:
+            line = self.fr_line_target
+            problem = line_charge_problem(fund, line, paying_back=payment_for is not None)
+            if problem and line is None:
+                what = "budget" if fund.draws_on_budget else "request"
+                errors['fr_line_target'] = (
+                    "%s If SGA is taking money back, name the %s under SGA %s instead."
+                    % (problem, what, "budget" if fund.draws_on_budget else "funding request"))
+            elif problem:
+                errors['fr_line_target'] = problem
+            elif line is not None and not line.amount_awarded and self._newly_names_its_line():
+                errors['fr_line_target'] = (
+                    "%s is %s, so nothing can be charged to it."
+                    % (line.label, "pending SGA approval" if line.is_waiting else "denied by SGA"))
+
+        if payment_for is not None and 'funding_request' not in errors:
+            word = "budget" if payment_for.is_budget else "funding request"
+            noun = "budget" if payment_for.is_budget else "request"
+            if self.fr_line_target_id is not None:
+                errors['funding_request'] = (
+                    "This is charged to a %s line, which already names its %s. Name the %s "
+                    "here only for SGA's own payments." % (word, noun, noun))
+            elif fund is None or fund.draws_on != payment_for.kind:
+                errors['funding_request'] = (
+                    "Only money in a fund that draws on %ss can be SGA's payment for one%s. "
+                    "Change the fund, or clear this."
+                    % (word, " -- %s does not" % fund if fund is not None else ""))
+            elif self.parent_transaction_id is None:
+                errors['funding_request'] = (
+                    "SGA's money has to have reached Workday. An encumbrance cannot be a "
+                    "%s." % ("deposit or a return" if payment_for.is_budget
+                             else "reimbursement"))
+
+        # -- The partition -------------------------------------------------
+        # An SGA award was heard as either a Projection request or an Event
+        # Production one, and that decision is more specific than the account
+        # the money happened to leave from. So the award settles the side
+        # rather than arguing with it: buying Projection gear out of 226-AG on
+        # a Projection funding request is the normal way LNL does it.
+        self._apply_partition_default()
+        self._adopt_partition_from_funding_request()
+
+        parent = self.parent_transaction
+        if parent is not None and self.crosses_partition and parent.crossing_requires_reason:
+            if not (self.audit_explanation or '').strip():
+                errors['audit_explanation'] = (
+                    "This is %s money being counted as %s spending. That is allowed, but say "
+                    "why here -- %s is funded by SGA for Projection, so money leaving that "
+                    "side has to be explained." % (
+                        parent.partition_code_label,
+                        "Projection" if self.is_projection else "Event Production",
+                        parent.partition_code_label))
+
+        # -- Rule 1: a split must balance exactly before anything settles ---
+        if self.status == TransactionStatus.SETTLED:
+            if parent is None:
+                errors['status'] = (
+                    "An encumbrance cannot be settled until it is matched to an imported "
+                    "Workday transaction.")
+            else:
+                siblings = money(parent.slices.exclude(pk=self.pk).aggregate(
+                    t=Sum('amount'))['t'])
+                allocated = siblings + money(self.amount)
+                if allocated != money(parent.net_amount):
+                    errors['status'] = (
+                        "The entries add up to %s but the line is %s. Settle only once they "
+                        "add up to the line exactly."
+                        % (allocated, money(parent.net_amount)))
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Remember whether anyone actually chose a side.
+
+        ``is_projection`` is a plain boolean, so "Event Production" and "nobody
+        said" look identical on the instance. Rows loaded from the database
+        arrive positionally with every field filled, and are stated by
+        definition; a caller passing the keyword has stated it too. Everything
+        else gets the org code's answer -- see :meth:`_apply_partition_default`.
+        """
+        self._partition_was_stated = bool(args) or 'is_projection' in kwargs
+        super(ParsedTransaction, self).__init__(*args, **kwargs)
+
+    def state_partition(self):
+        """
+        Mark the side as deliberately chosen.
+
+        Called by any form that puts the tick box in front of a human. A form
+        that does not render it -- the split modal, which has no room for a
+        column nobody usually changes -- deliberately does not call this, so
+        its slices inherit the account's side instead.
+        """
+        self._partition_was_stated = True
+
+    def _apply_partition_default(self):
+        """
+        Start an unanswered new entry on the side its account belongs to. A
+        refund is on its purchase's side, whatever account the credit landed in.
+        """
+        if not self._state.adding or getattr(self, '_partition_was_stated', True):
+            return
+        if self.refund_of_id is not None:
+            return
+        if self.parent_transaction_id is None:
+            return
+        default = self.parent_transaction.default_partition
+        if default is not None:
+            self.is_projection = (default == 'projection')
+
+    def save(self, *args, **kwargs):
+        """
+        Settle the partition and the date before writing.
+
+        This runs on every write, including the ones that skip validation
+        entirely -- bulk actions, the shell, data migrations -- which is
+        exactly why the partition rules are applied here and not only in
+        ``clean()``. See the comment below for which of the two sources of a
+        partition is allowed to override a deliberate answer, and which is not.
+        """
+        self._normalise_blanks()
+        self._take_routing_from_purchase()
+        self._apply_partition_default()
+        # A funding request names its side explicitly, so it is applied here as
+        # well as in clean() -- bulk actions and shell writes skip full_clean(),
+        # and an award silently paid from the wrong partition corrupts two
+        # burndowns at once. The org code, by contrast, is only ever a starting
+        # position: overwriting a deliberate answer with it is the bug this
+        # replaced.
+        self._adopt_partition_from_funding_request()
+        if self.parent_transaction_id is not None and not self.effective_date:
+            self.effective_date = self.parent_transaction.accounting_date
+        adding = self._state.adding
+        result = super(ParsedTransaction, self).save(*args, **kwargs)
+        # Only spending that was already saved can have been refunded.
+        if not adding and self.amount is not None and money(self.amount) < 0:
+            self._carry_routing_to_refunds()
+        return result
+
+    def _adopt_partition_from_funding_request(self):
+        """
+        Take the side from the funding request, when there is one.
+
+        Through the line for spending, and directly for SGA's payment: a
+        reimbursement for a Projection request is Projection money coming back.
+        A budget line has a side of its own. A budget does not, so SGA's deposit
+        and money returned to SGA stay on the side of the account they moved in.
+        """
+        if self.fr_line_target_id is not None:
+            self.is_projection = self.fr_line_target.side_is_projection
+        elif self.funding_request_id is not None and not self.funding_request.is_budget:
+            self.is_projection = self.funding_request.is_projection
+
+    @property
+    def is_sga_return(self):
+        """
+        Money SGA took back for a funding request -- a payment it had made twice, say.
+
+        Filed on the expense side because money left the account, but it is
+        not LNL spending anything, so it carries no spend category of its own.
+        """
+        return (self.funding_request_id is not None and self.refund_of_id is None
+                and (self.amount or 0) < 0)
+
+    @property
+    def crosses_partition(self):
+        """
+        True when this entry sits on the opposite side from the account it was
+        paid out of. Legitimate and common; worth showing on screen.
+        """
+        parent = self.parent_transaction if self.parent_transaction_id else None
+        if parent is None:
+            return False
+        default = parent.default_partition
+        if default is None:
+            return False
+        return (default == 'projection') != bool(self.is_projection)
+
+    @property
+    def partition_note(self):
+        """ One sentence for the badge, or ``''`` when nothing crossed. """
+        if not self.crosses_partition:
+            return ''
+        return ("Paid out of %s but counted as %s spending."
+                % (self.parent_transaction.partition_code_label,
+                   "Projection" if self.is_projection else "Event Production"))
+
+
+# ---------------------------------------------------------------------------
+# Fund balances
+#
+# Workday is the double-entry system of record, and it reports one figure per
+# account -- 226-AG holds this much, 315-AG holds that. What it cannot say is
+# how much of that figure is Legacy and how much is this year's SGA budget, and
+# that split is the whole question at June 30, because the two behave
+# oppositely: one carries forward and the other goes back to SGA.
+#
+# So the subledger keeps the split, and proves it against Workday rather than
+# replacing it. Three small tables do it:
+#
+# * BalanceCheckpoint -- what Workday said an account held on a day. The first
+#   one anchors the arithmetic; every later one checks it.
+# * FundTransfer -- money moving between two funds inside one account, which
+#   Workday never sees because no cash moves: covering a budget overspend from
+#   Legacy, writing off a reimbursement SGA will not pay, the split of the
+#   opening balance on the day the books start.
+# * FiscalYearClose -- the record that a year was closed, with what it looked
+#   like at the time, so a late import that changes a closed year is noticed.
+#
+# The balances themselves are never stored. They are worked out from these and
+# the ledger every time (finance/balances.py), which is what lets a line
+# imported in August for a June purchase correct last year's closing balance
+# and next year's opening at once.
+# ---------------------------------------------------------------------------
+
+@reversion.register()
+class BalanceCheckpoint(models.Model):
+    """
+    What Workday reported one account holding at the end of one day.
+
+    The earliest checkpoint for an account anchors its cash: every other day's
+    balance is that figure plus or minus the imported lines in between. Every
+    later checkpoint is a test of that arithmetic, and a disagreement means
+    lines are missing from the ledger or a balance was copied down wrong.
+    """
+    glyphicon = 'piggy-bank'
+
+    account = models.ForeignKey(PartitionCode, on_delete=models.PROTECT,
+                                related_name='checkpoints')
+    as_of = models.DateField(
+        verbose_name="As of the end of",
+        help_text="The day Workday's figure is for. Lines dated that day are counted in it.")
+    balance = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Workday balance",
+        help_text="The account's balance exactly as Workday shows it.")
+    note = models.CharField(max_length=255, blank=True,
+                            help_text="Where the figure came from, if that is worth saying.")
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_checkpoints')
+    entered_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('account__code', '-as_of')
+        verbose_name = "Workday Balance"
+        constraints = (
+            # Two figures for one account on one day cannot both be right.
+            models.UniqueConstraint(fields=('account', 'as_of'),
+                                    name='finance_one_balance_per_account_per_day'),
+        )
+
+    def __str__(self):
+        return "%s on %s: %s" % (self.account.code, date_format(self.as_of, 'M j, Y'),
+                                 money(self.balance))
+
+
+@reversion.register()
+class FundTransfer(models.Model):
+    """
+    Money moving from one fund to another inside one Workday account.
+
+    No cash moves, so Workday never sees it, and the account's total is
+    unchanged by construction: one row takes the amount from one fund and gives
+    it to the other. That is the only double-entry idea this app needs, and it
+    needs it here because this is the only place money changes hands without a
+    bank line to show for it.
+    """
+    glyphicon = 'transfer'
+
+    #: What prompted it. Opening and year-end transfers are written by their
+    #: own pages, which find and replace them by this; a plain transfer is
+    #: anything a Treasurer records by hand.
+    TRANSFER, OPENING, YEAR_END = 'transfer', 'opening', 'year_end'
+    KIND_CHOICES = (
+        (TRANSFER, 'Transfer'),
+        (OPENING, 'Opening balance'),
+        (YEAR_END, 'Year-end close'),
+    )
+
+    account = models.ForeignKey(PartitionCode, on_delete=models.PROTECT,
+                                related_name='fund_transfers')
+    date = models.DateField(default=timezone.localdate)
+    amount = models.DecimalField(max_digits=12, decimal_places=2,
+                                 validators=[MinValueValidator(CENTS)])
+    from_fund = models.ForeignKey(FundSource, on_delete=models.PROTECT,
+                                  related_name='transfers_out', verbose_name="From")
+    to_fund = models.ForeignKey(FundSource, on_delete=models.PROTECT,
+                                related_name='transfers_in', verbose_name="To")
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=TRANSFER)
+    description = models.CharField(max_length=255,
+                                   help_text="Why the money moved. Shown to auditors.")
+    fiscal_year_close = models.ForeignKey(
+        'FiscalYearClose', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='transfers',
+        help_text="The close that wrote this, which takes it away again if reopened.")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_transfers')
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-date', '-pk')
+        verbose_name = "Fund Transfer"
+        constraints = (
+            models.CheckConstraint(check=Q(amount__gt=0),
+                                   name='finance_transfer_amount_positive'),
+            models.CheckConstraint(check=~Q(from_fund=models.F('to_fund')),
+                                   name='finance_transfer_between_two_funds'),
+        )
+
+    def __str__(self):
+        return "%s: %s from %s to %s" % (self.account.code, money(self.amount),
+                                         self.from_fund, self.to_fund)
+
+    def clean(self):
+        """ Refuse moving money to the fund it is already in. """
+        super(FundTransfer, self).clean()
+        if (self.from_fund_id and self.to_fund_id
+                and self.from_fund_id == self.to_fund_id):
+            raise ValidationError({'to_fund': "Pick two different funds."})
+
+    @property
+    def fiscal_year(self):
+        """ The fiscal year the transfer is dated in. """
+        return fiscal_year_for(self.date)
+
+
+@reversion.register()
+class FiscalYearClose(models.Model):
+    """
+    The record that a fiscal year's books were closed.
+
+    Closing locks nothing. Workday keeps posting into a year for weeks after it
+    ends, and refusing those lines would only push them into the wrong year. A
+    close is a dated statement instead: what each fund held, what Workday said,
+    and the year-end transfers made to square it. When the arithmetic later
+    disagrees with the snapshot, the balance page says so and by how much.
+    """
+    glyphicon = 'lock'
+
+    fiscal_year = models.PositiveIntegerField(unique=True)
+    closed_on = models.DateTimeField(auto_now_add=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                  null=True, blank=True, related_name='finance_year_closes')
+    snapshot = models.JSONField(
+        default=dict, blank=True,
+        help_text="Every account's cash and fund balances at the moment of closing.")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('-fiscal_year',)
+        verbose_name = "Fiscal Year Close"
+        permissions = (
+            ('close_fiscalyear', 'Close a fiscal year and record its year-end transfers'),
+        )
+
+    def __str__(self):
+        return "FY%s closed" % str(self.fiscal_year)[-2:]
+
+
+# ---------------------------------------------------------------------------
+# Bills
+#
+# What LNL has asked a client to pay for its work: a bill for one event, or a
+# multi-bill covering several with a single figure, and the emails that sent
+# them. They started out in the events app and moved here, because everything
+# after an event is reviewed for billing -- the bill, the client's worktag, the
+# ISD, the payment -- is the Treasurer's. The event keeps its price and its
+# review; finance keeps the bill.
+#
+# The tables kept their events_* names when the models moved (migration
+# 0003_bills_from_events), so no row was copied, and the names the events app
+# reaches them by -- event.billings, event.multibillings -- did not change.
+#
+# Bills, multi-bills and their charges are tracked by django-reversion, like
+# the ledger, so every change to one -- marked paid or unpaid, sent, its ISD
+# recorded or removed, its total recalculated -- is in its history, with who
+# made it. A deleted bill keeps the history it had, and the admin can recover it.
+# ---------------------------------------------------------------------------
+
+#: Why a bill was marked paid without a payment from Workday that covers it.
+#: Both kinds of bill carry it, and the *Mark paid* form asks for it then.
+PAID_NOTE_HELP = ("How it was paid, when no payment received in Workday covers it: cash, a check, or a bill "
+                  "from before the books start.")
+
+#: What a bill's *sent_on* means. A bill is usually sent by its email from
+#: lnldb, which records itself; this is for one that reached the client some
+#: other way.
+SENT_ON_HELP = "When the bill reached the client some other way than its email from lnldb."
+SENT_NOTE_HELP = "How the bill reached the client, such as handed over at a meeting."
+
+#: Workday's number for an Internal Service Delivery: digits, then "-ISD", as
+#: it appears when the ISD is created and again in the export's Operational
+#: Transaction column ("Internal Service Delivery: 25090179-ISD").
+ISD_NUMBER_FORMAT = re.compile(r'^\d+-ISD$')
+
+
+def normalise_isd_number(value):
+    """
+    An ISD number as Workday writes it: "25090179-isd" and "25090179" both
+    become "25090179-ISD". Spaces are dropped. Empty for nothing.
+    """
+    text = re.sub(r'\s+', '', value or '').upper()
+    if text.isdigit():
+        text += '-ISD'
+    return text
+
+
+class ISDRecord(models.Model):
+    """
+    What a bill was charged to in Workday: the worktag and fund, the amount,
+    and the number Workday gave the Internal Service Delivery (ISD), and when
+    it was created. Both kinds of bill carry it, and each also records who
+    recorded the ISD (``isd_entered_by``, declared on each model: the docs
+    build cannot describe a relation on an abstract model, which Django never
+    resolves).
+
+    The worktag can come before the ISD. When a client replies to the bill by
+    email instead of through its form, the Treasurer records the worktag here,
+    and the bill is ready for its ISD. The ISD number is unique across bills,
+    because the payment that arrives later names it and is matched by it.
+    """
+    worktag_charged = models.CharField(
+        max_length=20, blank=True, verbose_name="Worktag",
+        help_text="The worktag the ISD charges, such as 1234-CC.")
+    fund_charged = models.PositiveIntegerField(null=True, blank=True, verbose_name="Fund",
+                                               help_text="The Workday fund the ISD charges, such as 110.")
+    worktag_entered_on = models.DateField(
+        null=True, blank=True, help_text="When the Treasurer recorded the worktag, for a client who sent it "
+                                         "by email rather than through the bill's form.")
+    isd_number = models.CharField(
+        max_length=20, null=True, blank=True, unique=True, verbose_name="ISD number",
+        validators=[RegexValidator(ISD_NUMBER_FORMAT, "Workday's ISD numbers are digits, then -ISD, such as "
+                                                      "25090179-ISD.")],
+        help_text="The number Workday gave the Internal Service Delivery, such as 25090179-ISD.")
+    isd_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                     verbose_name="ISD amount", help_text="What the ISD charges.")
+    isd_entered_on = models.DateField(null=True, blank=True, verbose_name="ISD entered on")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def fund_label(self):
+        """ The fund as Workday writes it ("110-FD"), or ``''``. """
+        return '%s-FD' % self.fund_charged if self.fund_charged else ''
+
+    @property
+    def isd_differs(self):
+        """ Whether the ISD charges something other than what the bill now comes to. """
+        return (self.isd_number is not None and self.isd_amount is not None
+                and money(self.isd_amount) != money(self.amount))
+
+
+@reversion.register()
+class Billing(ISDRecord):
+    """ A bill for one event, sent to its client """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
+                                 help_text=PAID_NOTE_HELP)
+    sent_on = models.DateField(null=True, blank=True, verbose_name="Sent on", help_text=SENT_ON_HELP)
+    sent_note = models.CharField(max_length=200, blank=True, verbose_name="How it was sent",
+                                 help_text=SENT_NOTE_HELP)
+    event = models.ForeignKey('events.BaseEvent', on_delete=models.CASCADE, related_name="billings")
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    # Who recorded the ISD. Set by the page that records it, never typed: left
+    # out of forms and the admin, which would otherwise offer every user in a
+    # drop-down.
+    isd_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                       blank=True, editable=False, related_name='+',
+                                       verbose_name="ISD entered by")
+
+    def __str__(self):
+        out = "Bill for %s" % self.event.event_name
+        if self.date_paid:
+            out += " (PAID)"
+        return out
+
+    class Meta:
+        db_table = 'events_billing'
+        ordering = ("-date_billed", "date_paid")
+
+
+def default_rental_fee_percent():
+    """
+    The rental fee an event on the default pricelist would pay, as a percent.
+
+    15 when no pricelist is marked default, which is the figure
+    ``Event2019.rental_fee_total`` falls back to for an event with none.
+    """
+    from events.models import Pricelist
+
+    percent = (Pricelist.objects.filter(is_default_pricelist=True)
+               .values_list('rental_fee_percentage', flat=True).first())
+    return Decimal('15') if percent is None else Decimal(percent)
+
+
+def _cents_down(value):
+    """
+    Rounded down to the cent, towards zero.
+
+    The events app rounds an event's own fees, discounts and rental fee this
+    way, so a fee on a multi-bill comes out the same as that fee on one event.
+    """
+    return Decimal(value).quantize(CENTS, rounding=ROUND_DOWN)
+
+
+# Its events are left out of its history: django-reversion serialises them
+# through the polymorphic event manager, which cannot read an event back with
+# only its key. The page that changes them names them in the comment instead.
+@reversion.register(follow=['charges'], exclude=['events'])
+class MultiBilling(ISDRecord):
+    """
+    One bill covering several events, sent to one client.
+
+    ``amount`` is the total, and it is worked out rather than typed: the
+    events' prices plus the bill's own charges, laid out by :meth:`breakdown`.
+    It is still saved, because finance matches incoming payments against it
+    and splits it between the events, and that figure must not drift once the
+    client has it. :meth:`recalculate` brings it up to date, and only while the
+    bill is unpaid.
+    """
+    name = models.CharField(max_length=128, blank=True,
+                            help_text="What the bill is for, such as \"Fall films\". Shown on the "
+                                      "invoice and in the email's subject.")
+    description = models.TextField(blank=True, help_text="Shown on the invoice under the name.")
+    attach_event_invoices = models.BooleanField(
+        default=False, verbose_name="Add each event's invoice",
+        help_text="Follow the bill's invoice with each event's own itemized invoice. The download and "
+                  "every email get the same document.")
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
+                                 help_text=PAID_NOTE_HELP)
+    sent_on = models.DateField(null=True, blank=True, verbose_name="Sent on", help_text=SENT_ON_HELP)
+    sent_note = models.CharField(max_length=200, blank=True, verbose_name="How it was sent",
+                                 help_text=SENT_NOTE_HELP)
+    org = models.ForeignKey('events.Organization', on_delete=models.PROTECT, null=True,
+                            related_name='multibillings', verbose_name="Bill to")
+    events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',
+                                    db_table='events_multibilling_events')
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    # Who recorded the ISD. Set by the page that records it, never typed: left
+    # out of forms and the admin, which would otherwise offer every user in a
+    # drop-down.
+    isd_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                       blank=True, editable=False, related_name='+',
+                                       verbose_name="ISD entered by")
+
+    def __str__(self):
+        out = 'MultiBill: %s' % self.display_name
+        if self.date_paid:
+            out += ' (PAID)'
+        return out
+
+    class Meta:
+        db_table = 'events_multibilling'
+        ordering = ('-date_billed', 'date_paid')
+
+    @property
+    def display_name(self):
+        """ Its name, or what it covers when it has none: "3 events for SocComm". """
+        if self.name:
+            return self.name
+        count = len(self.events.all())
+        return '%s event%s for %s' % (count, '' if count == 1 else 's',
+                                      self.org.retname if self.org_id else 'no client')
+
+    def breakdown(self):
+        """
+        What the bill comes to, line by line, as a dict.
+
+        ``events`` is each event with its price (``cost_total``, what it would
+        be billed on its own), earliest first, and ``events_total`` their sum.
+        ``charges`` is each of the bill's own charges with its ``subtotal``,
+        its rental ``fee`` and its ``total``; a percentage is of the events'
+        total. ``rentals_total`` is the part of the charges that is hired-in
+        gear, fee included. ``total`` is what the bill comes to now, which is
+        what :meth:`recalculate` saves.
+        """
+        events = sorted(self.events.all(), key=lambda e: (e.datetime_start, e.pk))
+        rows = [{'event': event, 'client': event.org_to_be_billed, 'price': money(event.cost_total)}
+                for event in events]
+        events_total = sum((row['price'] for row in rows), ZERO)
+        charges, charges_total, rentals_total = [], ZERO, ZERO
+        for charge in self.charges.all():
+            subtotal, fee = charge.amounts(events_total)
+            charges.append({'charge': charge, 'subtotal': subtotal, 'fee': fee, 'total': subtotal + fee})
+            charges_total += subtotal + fee
+            if charge.kind == MultiBillingCharge.RENTAL:
+                rentals_total += subtotal + fee
+        return {'events': rows, 'events_total': events_total, 'charges': charges,
+                'charges_total': charges_total, 'rentals_total': rentals_total,
+                'total': events_total + charges_total}
+
+    def rental_charges_total(self):
+        """ The bill's own rentals, fees included, without pricing its events. """
+        return sum((sum(c.amounts(ZERO), ZERO) for c in self.charges.all()
+                    if c.kind == MultiBillingCharge.RENTAL), ZERO)
+
+    def recalculate(self):
+        """
+        Save the total the events and charges come to now. Returns whether it
+        changed.
+
+        Nothing happens once the bill is paid: the client paid the figure they
+        were sent, and a later change to an event's price must not rewrite it.
+        """
+        if self.date_paid is not None:
+            return False
+        total = self.breakdown()['total']
+        if self.amount is not None and money(self.amount) == total:
+            return False
+        self.amount = total
+        self.save(update_fields=['amount'])
+        return True
+
+
+@reversion.register()
+class MultiBillingCharge(models.Model):
+    """
+    A line on a multi-bill that is not one of its events.
+
+    A one-off charge or credit, gear hired in for the whole run, or a fee or
+    discount as a percentage of the events' total. Each is priced the way the
+    same charge on one event would be (see :func:`_cents_down`).
+    """
+    ONE_OFF, RENTAL, PERCENT = 'oneoff', 'rental', 'percent'
+    KIND_CHOICES = (
+        (ONE_OFF, "One-off charge or credit"),
+        (RENTAL, "Rental"),
+        (PERCENT, "Percentage fee or discount"),
+    )
+
+    multibilling = models.ForeignKey(MultiBilling, on_delete=models.CASCADE, related_name='charges')
+    kind = models.CharField(max_length=8, choices=KIND_CHOICES, default=ONE_OFF)
+    description = models.CharField(max_length=128)
+    quantity = models.PositiveSmallIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                     help_text="Negative for a credit.")
+    rental_fee_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="The rental fee added to a rental, fixed when the fee was added so a later "
+                  "change to the default pricelist does not reprice the bill.")
+    percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                  help_text="Of the events' total. Negative for a discount.")
+
+    class Meta:
+        ordering = ('pk',)
+        verbose_name = "Multi-bill charge"
+        constraints = (
+            models.CheckConstraint(
+                check=(Q(kind='percent', percent__isnull=False, unit_price__isnull=True)
+                       | (~Q(kind='percent') & Q(unit_price__isnull=False, percent__isnull=True))),
+                name='finance_multibill_charge_priced_by_kind'),
+            models.CheckConstraint(
+                check=Q(kind='rental') | Q(rental_fee_percent__isnull=True),
+                name='finance_multibill_charge_fee_on_rentals_only'),
+        )
+
+    def __str__(self):
+        return self.description
+
+    def amounts(self, events_total):
+        """ ``(subtotal, fee)`` this line adds to a bill whose events come to ``events_total``. """
+        if self.kind == self.PERCENT:
+            return _cents_down(events_total * self.percent / 100), ZERO
+        subtotal = money(self.unit_price * self.quantity)
+        fee = ZERO
+        if self.kind == self.RENTAL and self.rental_fee_percent:
+            fee = _cents_down(subtotal * self.rental_fee_percent / 100)
+        return subtotal, fee
+
+
+class BillingEmail(models.Model):
+    """ An email that sent a bill to its client """
+    billing = models.ForeignKey(Billing, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+                                            db_table='events_billingemail_email_to_users')
+    email_to_orgs = models.ManyToManyField('events.Organization',
+                                           db_table='events_billingemail_email_to_orgs')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
+                                                 self.billing.event.event_name)
+
+    class Meta:
+        db_table = 'events_billingemail'
+
+
+class MultiBillingEmail(models.Model):
+    """ An email that sent a multi-bill to its client """
+    multibilling = models.ForeignKey(MultiBilling, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+                                            db_table='events_multibillingemail_email_to_users')
+    email_to_orgs = models.ManyToManyField('events.Organization',
+                                           db_table='events_multibillingemail_email_to_orgs')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'MultiBilling email sent %s for %s' % (
+            self.sent_at if self.sent_at is not None else 'never',
+            ', '.join(map(lambda event: event.event_name, self.multibilling.events.all())))
+
+    class Meta:
+        db_table = 'events_multibillingemail'
+
+
+@reversion.register()
+class NoBillNeeded(models.Model):
+    """
+    The Treasurer's decision that an event reviewed for billing will not be
+    billed, and why.
+
+    An SGA-funded show with no rentals or one-off charges comes to $0, so the
+    Billing page suggests this for it, with SGA-funded as the reason. It is
+    only ever made by the Treasurer. Undoing it deletes the record, and the
+    event is ready to bill again.
+    """
+    SGA_FUNDED, NOT_APPLICABLE, LNL_EVENT, OTHER = 'sga-funded', 'not-applicable', 'lnl', 'other'
+    REASONS = (
+        (SGA_FUNDED, "SGA-funded"),
+        (NOT_APPLICABLE, "Billing not applicable"),
+        (LNL_EVENT, "LNL's own event"),
+        (OTHER, "Other"),
+    )
+
+    event = models.OneToOneField('events.BaseEvent', on_delete=models.CASCADE, related_name='no_bill_needed')
+    reason = models.CharField(max_length=16, choices=REASONS)
+    note = models.TextField(blank=True, help_text="Why, in a sentence. Needed when the reason is Other.")
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    decided_on = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "No bill needed"
+        verbose_name_plural = "No bill needed"
+        constraints = (
+            models.CheckConstraint(check=~Q(reason='other') | ~Q(note=''),
+                                   name='finance_no_bill_needed_other_has_a_note'),
+        )
+
+    def __str__(self):
+        return 'No bill needed for %s: %s' % (self.event.event_name, self.get_reason_display())
+
+
+def no_bill_needed_for(event):
+    """ An event's *No bill needed* record, or ``None``. """
+    try:
+        return event.no_bill_needed
+    except NoBillNeeded.DoesNotExist:
+        return None

@@ -143,9 +143,6 @@
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'confirmed-cal' %}active{% endif %}" href="{% url "events:confirmed-cal" %}">Confirmed</a>
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'open-cal' %}active{% endif %}" href="{% url "events:open-cal" %}">Open</a>
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unreviewed-cal' %}active{% endif %}" href="{% url "events:unreviewed-cal" %}">Unreviewed</a>
-        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unbilled-cal' %}active{% endif %}" href="{% url "events:unbilled-cal" %}">Unbilled</a>
-        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unpaid-cal' %}active{% endif %}" href="{% url "events:unpaid-cal" %}">Billed/UnPaid</a>
-        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'paid-cal' %}active{% endif %}" href="{% url "events:paid-cal" %}">Paid</a>
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'closed-cal' %}active{% endif %}" href="{% url "events:closed-cal" %}">Closed</a>
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'all-cal' %}active{% endif %}" href="{% url "events:all-cal" %}">All</a>
         <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'all-future-cal' %}active{% endif %}" href="{% url "events:all-future-cal" %}">All Future</a>

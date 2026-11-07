@@ -1,0 +1,24 @@
+{# The last step before a bill or a multi-bill is deleted. #}
+{% extends 'finance/base_titled.html' %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{{ cancel_url }}">&larr; {{ back_label }}</a>{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-body">
+                    {% if isd_warning %}<div class="alert alert-warning">{{ isd_warning }}</div>{% endif %}
+                    <p>Are you sure you want to delete {{ object }}?</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

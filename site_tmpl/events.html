@@ -59,9 +59,9 @@
                             <li><a href="{% url "events:confirmed" start end %}{% append_to_get page=1 %}">Confirmed</a></li>
                             <li><a href="{% url "events:open" start end %}{% append_to_get page=1 %}">Open</a></li>
                             <li><a href="{% url "events:unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
-                            <li><a href="{% url "events:unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
-                            <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
-                            <li><a href="{% url "events:paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
+                            <li><a href="{% url "finance:billing" %}?stage=ready">Unbilled</a></li>
+                            <li><a href="{% url "finance:billing" %}?stage=waiting-on-client">Billed/UnPaid</a></li>
+                            <li><a href="{% url "finance:billing" %}?stage=paid">Paid</a></li>
                             <li><a href="{% url "events:closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
                             <li><a href="{% url "events:all" start end %}{% append_to_get page=1 %}">All</a></li>
                         </ul>
@@ -196,19 +196,8 @@
                                     {% endpermission %}
                                 {% endif %}
                                 {% if event.reviewed and event.last_bill and not event.paid %}
-                                    {% permission request.user has 'events.bill_event' of event %}
-                                        <form class="form-inline" action="{% url 'events:bills:pay' event.id event.last_bill.id %}?next={{ request.get_full_path }}" method="post">
-                                            {% csrf_token %}
-                                            <span class="markpaidtask"><button class="btn btn-link" type="submit">Mark&nbsp;Paid</button></span>
-                                        </form>
-                                    {% endpermission %}
-                                {% endif %}
-                                {% if event.reviewed and event.last_bill and event.workday_fund and event.worktag and not event.entered_into_workday %}
-                                    {% permission request.user has 'events.bill_event' of event %}
-                                        <form class="form-inline" action="{% url 'events:workday-entered' event.id %}" method="post">
-                                            {% csrf_token %}
-                                            <span class="workdayenteredtask"><button class="btn btn-link" type="submit">Mark Entered Into Workday</button></span>
-                                        </form>
+                                    {% permission request.user has 'events.bill_event' %}
+                                        <span class="markpaidtask"><a class="btn btn-link" href="{% url 'finance:bill-paid' event.id event.last_bill.id %}?next={{ request.get_full_path|urlencode }}">Mark&nbsp;Paid…</a></span>
                                     {% endpermission %}
                                 {% endif %}
                             </td>
@@ -221,28 +210,6 @@
                                 {% else %}
                                     <span class="glyphicon glyphicon-minus"></span>
                                 {% endif %}
-                            </td>
-                        {% elif field.name == 'workday' %}
-                            <td class="workday">
-                                {% if event.entered_into_workday %}
-                                    <span class="glyphicon glyphicon-ok"></span>
-                                {% elif event.workday_fund and event.worktag %}
-                                    <span class="glyphicon glyphicon-refresh"></span>
-                                {% else %}
-                                    <span class="glyphicon glyphicon-remove"></span>
-                                {% endif %}
-                            </td>
-                        {% elif field.name == 'workday_fund' %}
-                            <td class="workday_fund">
-                                {{ event.workday_fund }}-FD
-                            </td>
-                        {% elif field.name == 'workday_memo' %}
-                            <td class="workday_memo">
-                                Lens and Lights services for {{ event.event_name }}
-                            </td>
-                        {% elif field.name == 'bill' %}
-                            <td class="bill">
-                                <a target="_blank" href="{% url 'events:bills:pdf' event.id %}">Bill PDF</a>
                             </td>
                         {% else %}
                             <td class="{{ field.name }}">{{ event|getattribute:field.name }}</td>

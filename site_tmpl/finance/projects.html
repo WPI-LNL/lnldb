@@ -1,0 +1,209 @@
+{# Page 5 -- project tag explorer: the whole forest on the left, one branch on the right. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+
+{% block fin_head_class %}hidden-print{% endblock %}
+{% block fin_title %}Projects{% endblock %}
+{% block fin_actions %}
+    {% permission request.user has 'finance.manage_projecttag' %}
+        <a href="{% url 'finance:project-new' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus"></span> New project
+        </a>
+    {% endpermission %}
+{% endblock %}
+
+{% block fin_content %}
+    <div class="fin-print-header">
+        <h3>
+            {% if selected %}{{ selected.name }}{% else %}Project Ledger{% endif %}
+        </h3>
+        <div>
+            Fully-loaded cost report &middot;
+            {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}all fiscal years{% endif %}
+            &middot; generated {% now "M j, Y" %}
+        </div>
+    </div>
+
+    <div class="fin-explorer">
+        {# ---- LEFT: hierarchical folder tree ---- #}
+        <div class="fin-tree hidden-print">
+            <div class="fin-panel-head">
+                <span>All projects</span>
+            </div>
+            {% for item in tree %}
+                <a href="{% url 'finance:projects-detail' item.node.pk %}?{{ filter_state.querystring }}"
+                   class="fin-tree-node {% if item.is_selected %}is-selected{% endif %} {% if item.is_ancestor %}is-ancestor{% endif %}"
+                   style="padding-left:{{ item.depth|indent_px|add:10 }}px;">
+                    <span>
+                        {% if item.node.is_leaf_node %}
+                            <span class="glyphicon glyphicon-tag fin-muted"></span>
+                        {% else %}
+                            <span class="glyphicon glyphicon-folder-open fin-muted"></span>
+                        {% endif %}
+                        {{ item.node.name }}
+                        {% if item.node.is_projection %}<span class="fin-tag is-projection">Projection</span>{% endif %}
+                    </span>
+                    <span class="fin-tree-cost">{{ item.cost|money }}</span>
+                </a>
+            {% empty %}
+                <div class="fin-empty">
+                    <span class="glyphicon glyphicon-inbox"></span>
+                    No projects yet.
+                </div>
+            {% endfor %}
+        </div>
+
+        {# ---- RIGHT: the filtered ledger for the selected node ---- #}
+        <div class="fin-explorer-main">
+            {% if selected %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">
+                        <span>
+                            {{ selected.name }}
+                            {% if selected.parent %}
+                                <span class="fin-muted fin-panel-note">
+                                    in <a href="{% url 'finance:projects-detail' selected.parent.pk %}">{{ selected.parent.name }}</a>
+                                </span>
+                            {% endif %}
+                        </span>
+                        <span class="hidden-print">
+                            <a href="?children={% if include_children %}0{% else %}1{% endif %}&amp;{{ filter_state.querystring }}"
+                               class="btn btn-default">
+                                {% if include_children %}Leave out sub-assets{% else %}Include sub-assets{% endif %}
+                            </a>
+                            <a href="?print=1&amp;{{ filter_state.querystring }}" class="btn btn-default"
+                               onclick="window.print();return false;">
+                                <span class="glyphicon glyphicon-print"></span> Print
+                            </a>
+                            {% permission request.user has 'finance.manage_projecttag' %}
+                                <a href="{% url 'finance:project-edit' selected.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
+                            {% endpermission %}
+                        </span>
+                    </div>
+                    <div class="fin-panel-body">
+                        {% if selected.description %}
+                            <p class="fin-muted">{{ selected.description }}</p>
+                        {% endif %}
+
+                        <div class="fin-stats fin-mb-0">
+                            <div class="fin-stat">
+                                <div class="fin-stat-label">Total cost</div>
+                                <div class="fin-stat-value">{{ lifetime_cost|money }}</div>
+                                <div class="fin-stat-sub">
+                                    all fiscal years &middot;
+                                    {% if include_children %}including sub-assets{% else %}this project only{% endif %}
+                                </div>
+                            </div>
+                            {% if filter_state.fiscal_year %}
+                                <div class="fin-stat">
+                                    <div class="fin-stat-label">
+                                        FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }} only
+                                    </div>
+                                    <div class="fin-stat-value">{{ total_cost|money }}</div>
+                                    <div class="fin-stat-sub">matches the ledger below</div>
+                                </div>
+                            {% endif %}
+                            <div class="fin-stat">
+                                <div class="fin-stat-label">Entries</div>
+                                <div class="fin-stat-value">{{ entries|length }}</div>
+                                <div class="fin-stat-sub">
+                                    {% if filter_state.fiscal_year %}in the current filter{% else %}all time{% endif %}
+                                </div>
+                            </div>
+                            {% if children %}
+                                <div class="fin-stat">
+                                    <div class="fin-stat-label">Sub-assets</div>
+                                    <div class="fin-stat-value">{{ children|length }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if children %}
+                    <div class="fin-panel">
+                        <div class="fin-panel-head">Sub-assets</div>
+                        <div class="fin-table-wrap">
+                            <table class="table fin-table">
+                                <thead><tr><th>Asset</th><th class="fin-num">Fully-loaded cost</th></tr></thead>
+                                <tbody>
+                                    {% for child in children %}
+                                        <tr>
+                                            <td><a href="{% url 'finance:projects-detail' child.node.pk %}?{{ filter_state.querystring }}">
+                                                {{ child.node.name }}</a></td>
+                                            <td class="fin-num">{{ child.cost|money }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="fin-panel">
+                    <div class="fin-panel-head">Entries</div>
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>FY</th>
+                                    <th>Description</th>
+                                    <th>Payee</th>
+                                    <th class="fin-num">Amount</th>
+                                    <th>Category</th>
+                                    <th>Fund</th>
+                                    <th>Project</th>
+                                    <th>Workday Ref</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in entries %}
+                                    <tr>
+                                        <td class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
+                                        <td>FY{{ entry.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
+                                        <td>
+                                            <a href="{% url 'finance:entry-detail' entry.pk %}">
+                                                {{ entry.description|default:"(untitled)" }}</a>
+                                            {% if entry.refund_of %}<span class="fin-tag is-info">Refund</span>{% endif %}
+                                        </td>
+                                        <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|or_dash }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
+                                        <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
+                                        <td>{{ entry.lnl_spend_category|or_dash }}</td>
+                                        <td>{{ entry.fund_source|or_dash }}</td>
+                                        <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% endif %}</td>
+                                        <td>{% if entry.parent_transaction %}<code>{{ entry.parent_transaction.reference }}</code>{% else %}<span class="fin-na">—</span>{% endif %}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="9">
+                                        <div class="fin-empty">
+                                            <span class="glyphicon glyphicon-inbox"></span>
+                                            Nothing tagged to this project in the current filter.
+                                        </div>
+                                    </td></tr>
+                                {% endfor %}
+                            </tbody>
+                            {% if entries %}
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="4" class="text-right">Total</th>
+                                        <th class="fin-num">{{ total_cost|money }}</th>
+                                        <th colspan="4"></th>
+                                    </tr>
+                                </tfoot>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="fin-panel">
+                    <div class="fin-empty">
+                        <span class="glyphicon glyphicon-inbox"></span>
+                        <strong>Pick a project from the tree.</strong>
+                                            </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

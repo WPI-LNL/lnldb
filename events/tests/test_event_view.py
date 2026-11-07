@@ -2,6 +2,7 @@ import logging
 import zoneinfo
 from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
@@ -10,6 +11,7 @@ from django.http import QueryDict
 from django.test import TestCase
 from django.test.client import RequestFactory
 from data.tests.util import ViewTestCase
+from finance.models import Billing
 from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
@@ -598,7 +600,7 @@ class EventBasicViewTest(ViewTestCase):
         valid_data['org'] = str(org.pk)
         self.e3.save()
 
-        models.Billing(date_billed=timezone.now().date(), event=self.e2, amount=100000.00)
+        Billing(date_billed=timezone.now().date(), event=self.e2, amount=100000.00)
         self.e2.org.add(org)
 
         # Check for unbilled events or delinquency
@@ -1561,355 +1563,6 @@ class EventBasicViewTest(ViewTestCase):
                              reverse("events:detail", args=[self.e.pk]))
         self.assertFalse(models.CCReport.objects.filter(event=self.e.pk, crew_chief=self.user).exists())
 
-    def test_bill_add(self):
-        self.setup()
-
-        # By default, user should not have permission to create bills
-        self.assertOk(self.client.get(reverse("events:bills:new", args=[self.e.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need permission for redirect
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:bills:new", args=[self.e.pk])))
-
-        # If event is closed redirect to detail page
-        self.e.closed = True
-        self.e.save()
-
-        self.assertRedirects(self.client.get(reverse("events:bills:new", args=[self.e.pk])),
-                             reverse("events:detail", args=[self.e.pk]))
-
-        self.e.closed = False
-        self.e.save()
-
-        # Check with valid input
-        data_email = {
-            "date_billed": timezone.now().date(),
-            "amount": 20.00,
-            "save-and-make-email": "Save and Make Email"
-        }
-
-        data_no_email = {
-            "date_billed": timezone.now().date(),
-            "amount": 30.00,
-            "save-and-return": "Save and Return"
-        }
-
-        self.assertRedirects(self.client.post(reverse("events:bills:new", args=[self.e.pk]), data_email),
-                             reverse("events:bills:email", args=[self.e.pk, 1]))
-
-        self.assertRedirects(self.client.post(reverse("events:bills:new", args=[self.e.pk]), data_no_email),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
-
-        self.assertTrue(models.Billing.objects.filter(amount=20.00).exists())
-        self.assertTrue(models.Billing.objects.filter(amount=30.00).exists())
-
-    def test_bill_edit(self):
-        self.setup()
-
-        self.e2.closed = True
-        self.e2.save()
-
-        bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=200.00)
-        another_bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=50.00)
-
-        # By default, user should not have permission to modify bills
-        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, bill.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, bill.pk])))
-
-        # If event is closed, redirect to detail page
-        self.assertRedirects(self.client.get(reverse("events:bills:edit", args=[self.e2.pk, another_bill.pk])),
-                             reverse("events:detail", args=[self.e2.pk]))
-
-        # Raise permission denied if for some reason event and bill pks do not match
-        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, another_bill.pk])), 403)
-
-        # Test valid input
-        valid_data = {
-            "date_billed": timezone.now().date(),
-            "amount": 500.00,
-            "save": "Save Changes"
-        }
-        self.assertRedirects(self.client.post(reverse("events:bills:edit", args=[self.e.pk, bill.pk]), valid_data),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
-
-        bill.refresh_from_db()
-        self.assertEqual(bill.amount, 500.00)
-
-    def test_bill_delete(self):
-        self.setup()
-
-        self.e2.closed = True
-        self.e2.save()
-
-        bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=200.00)
-        another_bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=400.00)
-
-        # By default, user should not have permission to delete bills
-        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])))
-
-        # If event is closed, redirect to the detail page
-        self.assertRedirects(self.client.get(reverse("events:bills:remove", args=[self.e2.pk, another_bill.pk])),
-                             reverse("events:detail", args=[self.e2.pk]))
-
-        # Raise permission denied if event and bill pks do not match and event is either closed or has been paid
-        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, another_bill.pk])), 403)
-
-        bill.date_paid = timezone.now().date()
-        bill.save()
-
-        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])), 403)
-
-        bill.date_paid = None
-        bill.save()
-
-        # Test POST
-        self.assertRedirects(self.client.post(reverse("events:bills:remove", args=[self.e.pk, bill.pk])),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
-
-        self.assertFalse(models.Billing.objects.filter(pk=bill.pk).exists())
-
-    def test_multibill_add(self):
-        self.setup()
-
-        self.e.reviewed = True
-        self.e.billed_in_bulk = True
-        self.e.billing_org = self.org
-        self.e.save()
-
-        self.e2.reviewed = True
-        self.e2.billed_in_bulk = True
-        self.e2.save()
-
-        # By default, user should not have permission to create multibills
-        self.assertOk(self.client.get(reverse("events:multibillings:new")), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:multibillings:new")))
-
-        # Test POST
-        data_email = {
-            "events": [str(self.e.pk), str(self.e2.pk)],
-            "date_billed": timezone.now().date(),
-            "amount": 500.00,
-            "save-and-make-email": "Save and Make Email"
-        }
-
-        data_no_email = {
-            "events": [str(self.e.pk), str(self.e2.pk)],
-            "date_billed": timezone.now().date(),
-            "amount": 400.00,
-            "save-and-return": "Save and Return"
-        }
-
-        # Throw error if events do not have same billing organization
-        self.assertOk(self.client.post(reverse("events:multibillings:new"), data_email))
-
-        self.e2.org.add(self.org)
-        self.e2.save()
-
-        self.assertRedirects(self.client.post(reverse("events:multibillings:new"), data_email),
-                             reverse("events:multibillings:email", args=[1]))
-
-        self.assertRedirects(self.client.post(reverse("events:multibillings:new"), data_no_email),
-                             reverse("events:multibillings:list"))
-
-        self.assertTrue(models.MultiBilling.objects.filter(amount=500.00).exists())
-        self.assertTrue(models.MultiBilling.objects.filter(amount=400.00).exists())
-
-    def test_multibill_edit(self):
-        self.setup()
-
-        multibill = models.MultiBilling.objects.create(date_billed=timezone.now().date(), amount=200.00)
-        multibill.events.add(self.e)
-        multibill.events.add(self.e2)
-
-        # By default, user should not have permission to edit multibills
-        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])))
-
-        # Check that if one or more event is closed we get permission denied
-        self.e2.closed = True
-        self.e2.save()
-
-        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])), 403)
-
-        self.e2.closed = False
-        self.e2.save()
-
-        # Check with valid input
-        valid_data = {
-            "date_paid": timezone.now().date(),
-            "amount": 400.00,
-            "save": "Save Changes"
-        }
-        self.assertRedirects(self.client.post(reverse("events:multibillings:edit", args=[multibill.pk]), valid_data),
-                             reverse("events:multibillings:list"))
-
-        multibill.refresh_from_db()
-        self.assertEqual(multibill.amount, 400.00)
-
-    def test_multibill_delete(self):
-        self.setup()
-
-        multibill = models.MultiBilling.objects.create(date_billed=timezone.now().date(), amount=1000.00)
-        multibill.events.add(self.e)
-        multibill.events.add(self.e2)
-
-        # By default, user should not have permission to delete multibills
-        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])))
-
-        # Check that if one or more events is closed, we get permission denied
-        self.e2.closed = True
-        self.e2.save()
-
-        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
-
-        self.e2.closed = False
-        self.e2.save()
-
-        # Check that if the bill has been paid we cannot delete it
-        multibill.date_paid = timezone.now().date()
-        multibill.save()
-
-        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
-
-        multibill.date_paid = None
-        multibill.save()
-
-        # Test POST
-        self.assertRedirects(self.client.post(reverse("events:multibillings:remove", args=[multibill.pk])),
-                             reverse("events:multibillings:list"))
-
-        self.assertFalse(models.MultiBilling.objects.filter(pk=multibill.pk).exists())
-
-    def test_pay(self):
-        self.setup()
-
-        b = self.e.billings.create(date_billed=timezone.now().date(), amount=3.14)
-
-        # random clicks wont work
-        self.assertOk(self.client.get(reverse('events:bills:pay', args=[self.e.pk, b.pk])), 405)
-
-        # User needs permission
-        self.assertOk(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        # If event is closed, redirect to detail page
-        self.e.closed = True
-        self.e.save()
-
-        self.assertRedirects(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk])),
-                             reverse("events:detail", args=[self.e.pk]))
-
-        self.e.closed = False
-        self.e.save()
-
-        # on success, redirects to event page
-        self.assertRedirects(self.client.post(reverse('events:bills:pay', args=[self.e.pk, b.pk])),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
-
-        # check it is actually paid
-        b.refresh_from_db()
-        self.assertIsNotNone(b.date_paid)
-        self.assertTrue(self.e.paid)
-
-        # If bill has already been paid, redirect to next page
-        self.assertRedirects(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk]) + "?next=/db/"),
-                             reverse("home"))
-
-    def test_billing_email(self):
-        self.setup()
-
-        b = self.e.billings.create(date_billed=timezone.now().date(), amount=75.95)
-
-        # User needs permission to create a billing email
-        self.assertOk(self.client.get(reverse("events:bills:email", args=[self.e.pk, b.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for the redirect
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:bills:email", args=[self.e.pk, b.pk])))
-
-        # Test valid data
-        valid_data = {
-            "subject": "Your Bill",
-            "message": "Thank you for choosing LNL! Now pay your bill.",
-            "email_to_users": str(self.user.pk),
-            "email_to_orgs": [],
-            "save": "Send Email"
-        }
-
-        self.assertRedirects(self.client.post(reverse("events:bills:email", args=[self.e.pk, b.pk]), valid_data),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
-
-    def test_multibilling_email(self):
-        self.setup()
-
-        b = self.e.multibillings.create(date_billed=timezone.now().date(), amount=1.50)
-
-        # User needs permission to create a billing email
-        self.assertOk(self.client.get(reverse("events:multibillings:email", args=[b.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:multibillings:email", args=[b.pk])))
-
-        # Test valid input
-        valid_data = {
-            "subject": "Your Bill",
-            "message": "Welcome back valued customer! Here's your bill.",
-            "email_to_users": str(self.user.pk),
-            "email_to_orgs": [],
-            "save": "Send Email"
-        }
-
-        self.assertRedirects(self.client.post(reverse("events:multibillings:email", args=[b.pk]), valid_data),
-                             reverse("events:multibillings:list"))
-
     def test_workday_entry(self):
         self.setup()
 
@@ -1931,7 +1584,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
                              reverse("events:detail", args=[self.e3.pk]))
 
-        bill = models.Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=5000.00)
+        bill = Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=5000.00)
         self.e3.closed = True
         self.e3.save()
 
@@ -1979,6 +1632,11 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), invalid_tag))
 
+        # A fund already on the event without a worktag is not a previous submission
+        self.e3.workday_fund = 110
+        self.e3.save()
+        mail.outbox = []
+
         valid_data = {
             "workday_fund": 810,
             "worktag": "1234-AB",
@@ -1996,10 +1654,18 @@ class EventBasicViewTest(ViewTestCase):
         # Check that user is automatically added to the associated users list for the organization if not already on it
         self.assertIn(self.user, self.org.associated_users.all())
 
+        # The Treasurer is told the worktag has arrived -- not that it was "updated"
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Worktag Received: 2019 Test Event")
+        self.assertEqual(mail.outbox[0].to, [settings.EMAIL_TARGET_T])
+        self.assertIn("Worktag: 1234-AB", mail.outbox[0].body)
+        self.assertNotIn("updated", mail.outbox[0].body)
+        mail.outbox = []
+
         revised_data = {
             "workday_fund": 810,
             "worktag": "5678-CC",
-            "workday_form_comments": "I made a few adjustments",
+            "workday_form_comments": "I made a few <b>adjustments</b>",
             "submit": "Pay"
         }
 
@@ -2007,50 +1673,17 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), revised_data),
                              reverse("events:detail", args=[self.e3.pk]))
 
-    def test_entered_into_workday(self):
-        self.setup()
+        # The Treasurer is told exactly what changed, with the client's text escaped
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Event Workday Info Updated")
+        self.assertIn("Worktag: 1234-AB → 5678-CC", mail.outbox[0].body)
+        self.assertIn("Comments: (blank) → I made a few &lt;b&gt;adjustments&lt;/b&gt;", mail.outbox[0].body)
+        self.assertNotIn("Funding source", mail.outbox[0].body)
+        self.assertNotIn("<b>adjustments", mail.outbox[0].alternatives[0][0])
 
-        # GET should not be permitted
-        self.assertOk(self.client.get(reverse("events:workday-entered", args=[self.e3.pk])), 405)
-
-        # User will need permission
-        self.assertOk(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        # Should redirect to event detail page - Event has not yet been reviewed
-        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        self.e3.reviewed = True
-        self.e3.closed = True
-        self.e3.save()
-
-        # Should redirect to event detail page - Event is closed
-        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        self.e3.closed = False
-        self.e3.save()
-
-        # Should redirect to event detail page - Event has not been billed
-        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        models.Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=26.33)
-
-        # Should now be able to mark as entered into workday
-        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
-                             reverse("events:awaitingworkday"))
-
-        # Check that we get no errors when trying to mark an event that has already been marked
-        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
-                             reverse("events:awaitingworkday"))
+        # The client's worktag on file follows the one they used last
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.worktag, "5678-CC")
 
 
 class EventListBasicViewTest(ViewTestCase):
@@ -2391,290 +2024,19 @@ class EventListBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("events:unreviewed-cal")))
 
-    def test_unbilled(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:unbilled')), 403)
-
+    def test_old_billing_lists_redirect(self):
+        # The billing lists became the finance app's Billing page. Their old addresses, with or without dates, and
+        # their calendars, open the matching tab.
         permission = Permission.objects.get(codename="bill_event")
         self.user.user_permissions.add(permission)
-
-        self.e.reviewed = True
-        self.e2.reviewed = True
-        self.e2019.reviewed = True
-        self.e.save()
-        self.e2.save()
-        self.e2019.save()
-
-        # Run generic tests
-        self.generic_list('events:unbilled')
-        self.base_cal_json('cal:api-unbilled')
-
-    def test_unbilled_cal(self):
-        # By default, should not have permission to view
-        self.assertOk(self.client.get(reverse("events:unbilled-cal")), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:unbilled-cal")))
-
-    def test_unbilled_semester(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:unbilled-semester')), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.e.reviewed = True
-        self.e.billed_in_bulk = True
-        self.e2.reviewed = True
-        self.e2.billed_in_bulk = True
-        self.e2019.reviewed = True
-        self.e2019.billed_in_bulk = True
-        self.e.save()
-        self.e2.save()
-        self.e2019.save()
-
-        # Run generic tests
-        self.generic_list('events:unbilled-semester')
-        self.base_cal_json('cal:api-unbilled-semester')
-
-    def test_unbilled_semester_cal(self):
-        # By default, should not have permission to view
-        self.assertOk(self.client.get(reverse("events:unbilled-semester-cal")), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:unbilled-semester-cal")))
-
-    def test_paid(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:paid')), 403)
-
-        permission = Permission.objects.get(codename="close_event")
-        self.user.user_permissions.add(permission)
-
-        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(), event=self.e,
-                                      amount=25.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(), event=self.e2,
-                                      amount=300.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(),
-                                      event=self.e2019, amount=0.00)
-
-        # Run generic tests
-        self.generic_list('events:paid')
-        self.base_cal_json('cal:api-paid')
-
-    def test_paid_cal(self):
-        # By default, should not have permission to view
-        self.assertOk(self.client.get(reverse("events:paid-cal")), 403)
-
-        permission = Permission.objects.get(codename="close_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:paid-cal")))
-
-    def test_unpaid(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:unpaid')), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=25.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=300.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
-        self.e.reviewed = True
-        self.e2.reviewed = True
-        self.e2019.reviewed = True
-        self.e.save()
-        self.e2.save()
-        self.e2019.save()
-
-        # Run generic tests
-        self.generic_list('events:unpaid')
-        self.base_cal_json('cal:api-unpaid')
-
-    def test_unpaid_cal(self):
-        # By default, should not have permission to view
-        self.assertOk(self.client.get(reverse("events:unpaid-cal")), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:unpaid-cal")))
-
-    def test_awaitingworkday(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:awaitingworkday')), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Only works with 2019 events
-        e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, workday_fund=900,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 1)), worktag="1234")
-        e2 = Event2019Factory.create(event_name="Other Event", test_event=True, reviewed=True, workday_fund=900,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 2, 1)), worktag="1234")
-
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
-
-        self.e2019.reviewed = True
-        self.e2019.workday_fund = 900
-        self.e2019.worktag = "1234"
-        self.e2019.save()
-
-        # Run generic tests
-        # Check that page loads ok (should not include either event)
-        resp = self.client.get(reverse("events:awaitingworkday"))
-        self.assertOk(resp)
-        self.assertNotContains(resp, "Test Event")
-        self.assertNotContains(resp, "Other Event")
-
-        # Check that even with proper date range we don't see sensitive or test events unless we have permission
-        self.assertNotContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                               "Test Event")
-
-        e1.sensitive = False
-        e1.save()
-
-        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                            "Test Event")
-
-        e1.sensitive = True
-        e1.save()
-
-        # Add view_hidden_event permission
-        permission = Permission.objects.get(codename="view_hidden_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                            "Test Event")
-
-        self.assertNotContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                               "Other Event")
-
-        e2.test_event = False
-        e2.save()
-
-        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                            "Other Event")
-
-        e2.test_event = True
-        e2.save()
-
-        # Add view_test_event permission
-        permission = Permission.objects.get(codename="view_test_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
-                            "Other Event")
-
-        # Test projection cookies
-        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
-                               "?projection=hide")
-        self.assertOk(resp)
-        self.assertNotContains(resp, "2019 Event")
-
-        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
-                               "?projection=only")
-        self.assertOk(resp)
-        self.assertContains(resp, "2019 Event")
-        self.assertNotContains(resp, "Test Event")
-
-        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']))
-        self.assertRedirects(resp, reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
-                             "?projection=only")
-
-    def test_unpaid_workday(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:unpaid-workday')), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Only works with 2019 events
-        e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, entered_into_workday=True,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 1)))
-        e2 = Event2019Factory.create(event_name="Other Event", reviewed=True, entered_into_workday=True,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 2, 1)), test_event=True)
-
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
-        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
-
-        self.e2019.reviewed = True
-        self.e2019.entered_into_workday = True
-        self.e2019.save()
-
-        # Run generic tests
-        # Check that page loads ok (should not include either event)
-        resp = self.client.get(reverse("events:unpaid-workday"))
-        self.assertOk(resp)
-        self.assertNotContains(resp, "Test Event")
-        self.assertNotContains(resp, "Other Event")
-
-        # Check that even with proper date range we don't see sensitive or test events unless we have permission
-        self.assertNotContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                               "Test Event")
-
-        e1.sensitive = False
-        e1.save()
-
-        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                            "Test Event")
-
-        e1.sensitive = True
-        e1.save()
-
-        # Add view_hidden_event permission
-        permission = Permission.objects.get(codename="view_hidden_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                            "Test Event")
-
-        self.assertNotContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                               "Other Event")
-
-        e2.test_event = False
-        e2.save()
-
-        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                            "Other Event")
-
-        e2.test_event = True
-        e2.save()
-
-        # Add view_test_event permission
-        permission = Permission.objects.get(codename="view_test_event")
-        self.user.user_permissions.add(permission)
-
-        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
-                            "Other Event")
-
-        # Test projection cookies
-        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
-                               "?projection=hide")
-        self.assertOk(resp)
-        self.assertNotContains(resp, "2019 Event")
-
-        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
-                               "?projection=only")
-        self.assertOk(resp)
-        self.assertContains(resp, "2019 Event")
-        self.assertNotContains(resp, "Test Event")
-
-        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']))
-        self.assertRedirects(resp, reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
-                             "?projection=only")
+        billing = reverse('finance:billing')
+        for old, tab in (('unbilled', 'ready'), ('unbilledsemester', 'ready#bulk'),
+                         ('unpaid', 'waiting-on-client'), ('workday', 'create-isd'),
+                         ('unpaidworkday', 'waiting-on-approval'), ('paid', 'paid')):
+            for suffix in ('', '2019-12-30/2020-02-02/', 'calendar/'):
+                resp = self.client.get('/db/events/%s/%s' % (old, suffix))
+                self.assertRedirects(resp, '%s?stage=%s' % (billing, tab), fetch_redirect_response=False)
+        self.assertOk(self.client.get(billing + '?stage=paid'))
 
     def test_closed(self):
         # By default, user should not have permission to view events

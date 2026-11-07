@@ -1,0 +1,373 @@
+{# Page 4 -- one bank line, its entries, and the modal that splits it. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+{% load static %}
+
+{% block fin_back %}
+    {% if can_edit and not txn.is_reconciled %}
+        <a class="fin-page-back hidden-print" href="{% url 'finance:queue' %}?{{ filter_state.querystring }}">&larr; Queue</a>
+    {% else %}
+        <a class="fin-page-back hidden-print" href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}">&larr; Ledger</a>
+    {% endif %}
+{% endblock %}
+{% block fin_title %}{{ txn.payee|default:"Workday line" }}{% endblock %}
+{% block fin_sub %}Workday line &middot; {{ txn.accounting_date|date:"M j, Y" }} &middot; {{ txn.net_amount|money }}{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        {# ---- LEFT: immutable Workday truth ---- #}
+        <div class="col-md-5">
+            <div class="fin-panel fin-immutable">
+                <div class="fin-panel-head">
+                    <span>
+                        <span class="glyphicon glyphicon-lock"></span> Workday record
+                    </span>
+                    <span class="fin-locked-note">read-only</span>
+                </div>
+                <div class="fin-panel-body">
+                    <dl class="fin-kv">
+                        <dt>Operational transaction</dt>
+                        <dd>
+                            {% if txn.operational_transaction %}
+                                <code>{{ txn.operational_transaction }}</code>
+                            {% else %}
+                                <span class="fin-muted">none — journal entry</span>
+                                {% if txn.journal_reference %}<code>{{ txn.journal_reference }}</code>{% endif %}
+                            {% endif %}
+                            {% if txn.fingerprint_ordinal > 1 %}
+                                <span class="fin-muted">&middot; occurrence {{ txn.fingerprint_ordinal }} of an identical pair</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>Accounting date</dt>
+                        <dd>{{ txn.accounting_date|date:"M j, Y" }}</dd>
+
+                        <dt>Net amount</dt>
+                        <dd class="{{ txn.net_amount|money_class }}">
+                            <strong>{{ txn.net_amount|money }}</strong>
+                            <span class="fin-muted">
+                                ({% if txn.net_amount > 0 %}revenue{% else %}expense{% endif %})
+                            </span>
+                        </dd>
+
+                        {% if txn.supplier %}<dt>Supplier</dt><dd>{{ txn.supplier }}</dd>{% endif %}
+                        {% if txn.employee %}<dt>Employee</dt><dd>{{ txn.employee }}</dd>{% endif %}
+                        {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
+
+                        <dt>Fiscal year</dt>
+                        <dd>FY{{ txn.fiscal_year|stringformat:"s"|slice:"2:" }}</dd>
+
+                        <dt>Imported</dt>
+                        <dd>
+                            {{ txn.imported_on|date:"M j, Y P" }}
+                            {% if txn.imported_by %}by {{ txn.imported_by }}{% endif %}
+                            {% if txn.source_file %}<br><span class="fin-muted">{{ txn.source_file }}</span>{% endif %}
+                        </dd>
+                    </dl>
+
+                    {% if txn.default_partition %}
+                        <div class="alert alert-info fin-mt-12 fin-mb-0">
+                            <strong>{{ txn.partition_code_label }}.</strong>
+                            Entries on this line start as
+                            {% if txn.defaults_to_projection %}Projection{% else %}Event
+                            Production{% endif %} spending.
+                            {% if txn.crossing_requires_reason %}
+                                Counting one on the other side has to be explained, because SGA
+                                funds this account for Projection directly.
+                            {% else %}
+                                Counting one on the other side is normal when SGA reimburses this
+                                account.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Same Workday record, so the same box. Folded, as they are looked up rather than read. #}
+                {% if worktags %}
+                    <details class="fin-panel-fold">
+                        <summary>Worktags</summary>
+                        <div class="fin-panel-body">
+                            <dl class="fin-kv">
+                                {% for key, value in worktags %}
+                                    <dt>{{ key }}</dt><dd>{{ value }}</dd>
+                                {% endfor %}
+                            </dl>
+                        </div>
+                    </details>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- RIGHT: editable subledger metadata ---- #}
+        <div class="col-md-7">
+            <div class="fin-split-summary">
+                <span>
+                    <span class="fin-stat-label">Left to settle</span>
+                    <div class="fin-remainder {% if is_balanced %}is-balanced{% else %}is-unbalanced{% endif %}"
+                         id="fin-remainder" data-target="{{ txn.net_amount }}">
+                        {{ unallocated|money }}
+                    </div>
+                </span>
+                <span class="text-right">
+                    <div class="fin-muted">
+                        {{ txn.allocated_amount|money }} of {{ txn.net_amount|money }} in entries
+                    </div>
+                    {% if is_balanced and can_settle and not txn.is_reconciled %}
+                        <form class="fin-inline" method="post" action="{% url 'finance:settle' txn.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="btn btn-primary fin-mt-8">
+                                Mark settled
+                            </button>
+                        </form>
+                        <div class="fin-muted">Pending entries keep this line in the queue until it is settled.</div>
+                    {% elif txn.is_reconciled %}
+                        <span class="fin-tag is-ok fin-mt-8 fin-block-inline">
+                            Settled
+                        </span>
+                    {% endif %}
+                </span>
+            </div>
+
+            {# ---- Existing allocations ---- #}
+            {% if slices %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">Entries ({{ slices|length }})</div>
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="fin-num">Amount</th>
+                                    <th>Routing</th>
+                                    <th>Project</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in slices %}
+                                    <tr>
+                                        <td><a href="{% url 'finance:entry-detail' entry.pk %}">
+                                            {{ entry.description|default:"(untitled)" }}</a></td>
+                                        <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
+                                        <td>
+                                            {% if entry.is_revenue %}
+                                                {% if entry.linked_event %}{{ entry.linked_event.event_name }}
+                                                {% elif entry.linked_multibill %}<a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a> <span class="fin-tag">Multi-bill</span>
+                                                {% else %}{{ entry.non_event_revenue_type }}{% endif %}
+                                                {% if entry.fund_source %}
+                                                    <span class="fin-muted">&middot; into {{ entry.fund_source }}</span>
+                                                {% endif %}
+                                                {% if entry.funding_request %}
+                                                    <span class="fin-muted">&middot; {% if entry.funding_request.is_budget %}deposit for{% else %}repays{% endif %}
+                                                        <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a></span>
+                                                {% endif %}
+                                            {% elif entry.is_sga_return %}
+                                                {% if entry.funding_request.is_budget %}Returned to SGA from{% else %}SGA took back money for{% endif %}
+                                                <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
+                                            {% else %}
+                                                {{ entry.lnl_spend_category|or_dash }}
+                                                {% if entry.fr_line_target %}
+                                                    <span class="fin-muted">&middot; {{ entry.fr_line_target.label }}</span>
+                                                {% endif %}
+                                                {% if entry.linked_event %}
+                                                    <span class="fin-muted">&middot; for {{ entry.linked_event.event_name }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}<span class="fin-na">—</span>{% endif %}</td>
+                                        <td>{{ entry|status_badge }}</td>
+                                        <td class="text-right">
+                                            {% if can_edit %}
+                                                <a href="{% url 'finance:entry-delete' entry.pk %}"
+                                                   class="btn btn-link text-danger fin-x" title="Remove this entry" aria-label="Remove this entry">&times;</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% comment %}
+                        The whole line at once, rather than deleting slices one
+                        at a time. Noticing a line was filed wrong is one
+                        thought; taking back four slices to act on it is four
+                        confirmations and a chance to stop halfway.
+                    {% endcomment %}
+                    {% if can_edit %}
+                        <div class="fin-panel-body fin-panel-actions">
+                            <form method="post" action="{% url 'finance:unreconcile' txn.pk %}"
+                                  onsubmit="return confirm('Remove all {{ slices|length }} entr{{ slices|length|pluralize:'y,ies' }} and put this line back in the queue?{% if from_encumbrance %} The money that came from an encumbrance goes back on it.{% endif %} The Workday record itself is not touched.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn-default">
+                                    <span class="glyphicon glyphicon-repeat"></span>
+                                    Undo settling
+                                </button>
+                                <span class="fin-muted">
+                                    Returns this line to the queue with no entries.{% if from_encumbrance %}
+                                    The money that came from an encumbrance goes back on it.{% endif %}
+                                </span>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ---- Split interface ---- #}
+    {% if can_edit %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">Split this purchase</div>
+            <div class="fin-panel-body">
+                <form method="post" id="fin-split-form">
+                    {% csrf_token %}
+                    {{ formset.management_form }}
+
+                    {% if formset.non_form_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% comment %}
+                        Every field SplitLineForm declares is rendered
+                        here, on both directions. A field the table left
+                        out was posted blank and saved over the slice:
+                        re-saving a split used to wipe the event an
+                        expense was incurred for, and every slice's
+                        audit note. "Incurred for event" is also how one
+                        rental invoice covering two shows gets divided
+                        between them.
+                    {% endcomment %}
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table" id="fin-split-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:120px;">Amount</th>
+                                    <th>Description</th>
+                                    {% if txn.net_amount > 0 %}
+                                        <th>Event, multi-bill or revenue type</th>
+                                        <th title="An SGA reimbursement goes into the funding-request fund and names the request it repays">Into fund / Request</th>
+                                    {% else %}
+                                        <th>Fund</th>
+                                        <th>Spend category</th>
+                                        <th title="Spending names a funding request's or budget's line; money SGA took back names the request or budget">SGA line</th>
+                                        <th>Incurred for event</th>
+                                    {% endif %}
+                                    <th>Project</th>
+                                    <th>Note</th>
+                                    <th class="fin-x-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for form in formset %}
+                                    <tr class="fin-split-row"{% if form.instance.pk %} data-saved{% endif %}>
+                                        {{ form.id }}
+                                        <td>{{ form.amount }}</td>
+                                        <td>{{ form.description }}</td>
+                                        {% if txn.net_amount > 0 %}
+                                            <td>
+                                                {{ form.linked_event }}
+                                                <div class="form-group fin-cell-group" title="{{ form.linked_multibill.help_text }}">{{ form.linked_multibill }}</div>
+                                                {{ form.non_event_revenue_type }}
+                                            </td>
+                                            <td>
+                                                {{ form.fund_source }}
+                                                <div class="form-group fin-cell-group">{{ form.funding_request }}</div>
+                                            </td>
+                                        {% else %}
+                                            <td>{{ form.fund_source }}</td>
+                                            <td>{{ form.lnl_spend_category }}</td>
+                                            <td>
+                                                {% comment %}
+                                                    The request box narrows the line
+                                                    picker under it, as on a queue row;
+                                                    the line is what is saved.
+                                                {% endcomment %}
+                                                <div class="form-group fin-cell-group">{{ form.fr_request }}</div>
+                                                <div class="form-group fin-cell-group">{{ form.fr_line_target }}</div>
+                                                <div class="form-group fin-cell-group" title="{{ form.allow_cross_year_fr.help_text }}">
+                                                    <label class="fin-inline-check">{{ form.allow_cross_year_fr }} Charge another year</label>
+                                                </div>
+                                                {% comment %}
+                                                    Spending names the line. The request
+                                                    SGA took money back for is only for
+                                                    money SGA took back, which has no
+                                                    line, so it is folded away rather than
+                                                    sitting under the line picker looking
+                                                    like a third copy of it. Still
+                                                    rendered, so a re-save keeps what it
+                                                    holds.
+                                                {% endcomment %}
+                                                <div class="form-group fin-cell-group">
+                                                    <details class="fin-sga-return"{% if form.funding_request.value %} open{% endif %}>
+                                                        <summary>SGA took money back?</summary>
+                                                        {{ form.funding_request }}
+                                                    </details>
+                                                </div>
+                                            </td>
+                                            <td>{{ form.linked_event }}</td>
+                                        {% endif %}
+                                        <td>{{ form.project_tag }}</td>
+                                        <td>{{ form.audit_explanation }}</td>
+                                        <td class="fin-row-remove">{% include 'finance/partials/_row_remove.html' %}</td>
+                                    </tr>
+                                    {% if form.errors %}
+                                        <tr class="fin-row-errors"><td colspan="9">
+                                            <div class="text-danger fin-small">
+                                                {% for field, errors in form.errors.items %}
+                                                    {% for error in errors %}
+                                                        <div>{{ field }}: {{ error }}</div>
+                                                    {% endfor %}
+                                                {% endfor %}
+                                            </div>
+                                        </td></tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% comment %}
+                        The split pays a multi-bill, and with it the payments
+                        filed against its events cover the bill, so marking
+                        it paid is offered, ticked. It is checked again when
+                        the split is saved.
+                    {% endcomment %}
+                    {% if bill_offer %}
+                        <input type="hidden" name="bill_offered" value="{{ bill_offer.bill.pk }}">
+                        <div class="checkbox fin-mark-paid fin-m-0 fin-mt-12">
+                            <label title="The payments received for its events, this one included, add up to the bill of {{ bill_offer.owed|money }}. Untick to leave it unpaid.">
+                                <input type="checkbox" name="mark_bill_paid" value="{{ bill_offer.bill.pk }}" checked>
+                                Mark {{ bill_offer.bill.display_name }} paid on {{ bill_offer.paid_on|date:"M j, Y" }}
+                            </label>
+                        </div>
+                    {% endif %}
+
+                    <div class="fin-form-row">
+                        <button type="button" class="btn btn-default" id="fin-add-split">
+                            <span class="glyphicon glyphicon-plus"></span> Add an entry
+                        </button>
+                        <span class="fin-muted" id="fin-split-hint">
+                            The entries must add up to exactly {{ txn.net_amount|abs_value|money }}.
+                        </span>
+                        {# Disabled until the remainder is exactly $0.00 #}
+                        <button type="submit" class="btn btn-primary fin-push" id="fin-split-save" disabled>
+                            Save split
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/split.js' %}"></script>
+<script src="{% asset 'js/row_remove.js' %}"></script>
+{% endblock %}

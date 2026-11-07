@@ -1,0 +1,71 @@
+{# Every multi-bill, newest first: what each covers, what it comes to, and where it stands. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:billing' %}">&larr; Billing</a>{% endblock %}
+{% block fin_title %}Multi-bills{% endblock %}
+{% block fin_actions %}
+    <a href="{% url 'finance:multibill-new' %}" class="btn btn-primary">
+        <span class="glyphicon glyphicon-plus"></span> New multi-bill
+    </a>
+{% endblock %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        {% if page.object_list %}
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                    <tr>
+                        <th>Multi-bill</th>
+                        <th>Bill to</th>
+                        <th>Events</th>
+                        <th>Billed</th>
+                        <th class="fin-num">Total</th>
+                        <th>Last sent</th>
+                        <th>Paid</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for bill in page.object_list %}
+                        <tr>
+                            <td><a href="{% url 'finance:multibill-detail' bill.pk %}">{{ bill.display_name }}</a></td>
+                            <td>{% if bill.org %}{{ bill.org.retname }}{% else %}<span class="fin-muted">not set</span>{% endif %}</td>
+                            <td>
+                                {% for event in bill.events.all %}{{ event.event_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </td>
+                            <td>{{ bill.date_billed|date:"M j, Y" }}</td>
+                            <td class="fin-num">{{ bill.amount|money }}</td>
+                            <td>
+                                {% if bill.last_sent %}{{ bill.last_sent|date:"M j, Y" }}{% if bill.sent_by_hand %} <small class="fin-muted">not by email</small>{% endif %}
+                                {% else %}<span class="text-warning">Never</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if bill.date_paid %}{{ bill.date_paid|date:"M j, Y" }}
+                                {% else %}<span class="fin-muted">Unpaid</span>{% endif %}
+                            </td>
+                            <td class="text-right fin-nowrap">
+                                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
+                                {% if not bill.date_paid and not bill.closed_events %}
+                                    <a href="{% url 'finance:multibill-paid' bill.pk %}?next={{ request.get_full_path|urlencode }}"
+                                       class="btn btn-default">Mark paid…</a>
+                                {% endif %}
+                                <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-link"><span class="glyphicon glyphicon-file"></span> PDF</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if page.has_other_pages %}
+                <div class="fin-panel-body">{% pager page %}</div>
+            {% endif %}
+        {% else %}
+            <div class="fin-empty">
+                <span class="glyphicon glyphicon-inbox"></span>
+                No multi-bills yet. A multi-bill covers several events with one invoice, such as a term of films.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

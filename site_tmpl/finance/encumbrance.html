@@ -1,0 +1,120 @@
+{# Page 3 -- add or change an encumbrance: money set aside for a purchase that has not reached Workday yet. #}
+{% extends 'finance/base_titled.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:ledger' %}">&larr; Ledger</a>{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="fin-panel">
+                <div class="fin-panel-body">
+                    <details class="fin-howto fin-mb-12">
+                        <summary>How this works</summary>
+                        <ul>
+                            <li>An encumbrance sets money aside against a budget now, before the charge reaches Workday.</li>
+                            <li>Give it a line for each fund the purchase is charged to. A line with no description uses the encumbrance's.</li>
+                            <li>It stays <span class="fin-tag is-warn">Pending</span> until its Workday line is imported. That line then offers it in the <a href="{% url 'finance:queue' %}">queue</a> under <em>Already encumbered?</em>. Match it there: settling the line the ordinary way charges the budget twice.</li>
+                        </ul>
+                    </details>
+                    <form method="post" enctype="multipart/form-data" id="fin-encumbrance-form">
+                        {% csrf_token %}
+                        {% crispy form %}
+
+                        {{ formset.management_form }}
+                        {% if formset.non_form_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% comment %}
+                            Every field EncumbranceLineForm declares is rendered
+                            here. One the table left out would be posted blank
+                            and saved over the line, as the split table warns.
+                        {% endcomment %}
+                        <div class="fin-panel-subhead">Lines</div>
+                        <div class="fin-table-wrap">
+                            <table class="table fin-table" id="fin-encumbrance-lines">
+                                <thead>
+                                    <tr>
+                                        <th style="width:110px;">Amount</th>
+                                        <th>Description</th>
+                                        <th>Fund</th>
+                                        <th>Spend category</th>
+                                        <th>SGA line</th>
+                                        <th>Incurred for event</th>
+                                        <th>Project</th>
+                                        <th title="Projection spending rather than Event Production">Projection</th>
+                                        <th class="fin-x-col"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for line in formset %}
+                                        {% include 'finance/partials/_encumbrance_line.html' with line=line %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {# Copied for each new line; it is outside the document, so nothing wires it up until then. #}
+                        <template id="fin-encumbrance-empty">
+                            {% include 'finance/partials/_encumbrance_line.html' with line=formset.empty_form %}
+                        </template>
+
+                        <div class="fin-form-row">
+                            <button type="button" class="btn btn-default" id="fin-add-line">
+                                <span class="glyphicon glyphicon-plus"></span> Add a line
+                            </button>
+                            <span class="fin-muted">Total <strong id="fin-encumbrance-total">$0.00</strong></span>
+                        </div>
+
+                        <div class="text-right">
+                            {% if instance %}
+                                {# Posts the form below: forms cannot nest. #}
+                                <button type="submit" form="fin-encumbrance-delete"
+                                        class="btn btn-danger pull-left">Delete</button>
+                            {% endif %}
+                            <a href="{% url 'finance:ledger' %}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if instance %}Save{% else %}Encumber funds{% endif %}
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if instance %}
+                        <form method="post" id="fin-encumbrance-delete"
+                              action="{% url 'finance:encumbrance-delete' instance.pk %}"
+                              onsubmit="return confirm('Delete this encumbrance? Its open lines stop counting as encumbered.');">
+                            {% csrf_token %}
+                        </form>
+                    {% endif %}
+
+                    {% if matched %}
+                        <hr>
+                        <p><strong>Already matched to Workday</strong></p>
+                        <p class="fin-muted">Open one to change it.</p>
+                        <table class="table fin-table">
+                            <tbody>
+                                {% for entry in matched %}
+                                    <tr>
+                                        <td><a href="{{ entry.get_absolute_url }}">{{ entry.description }}</a></td>
+                                        <td>{{ entry.fund_source|default:"" }}</td>
+                                        <td>{{ entry.parent_transaction.reference }}</td>
+                                        <td class="text-right">{{ entry.amount|money }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/encumbrance.js' %}"></script>
+<script src="{% asset 'js/row_remove.js' %}"></script>
+{% endblock %}

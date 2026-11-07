@@ -1,0 +1,66 @@
+"""
+App configuration for the financial subledger.
+
+The only real work here is wiring up cache invalidation; see
+:meth:`FinanceConfig.ready` for why the settings tables are cached at all.
+"""
+from django.apps import AppConfig
+from django.db.models.signals import post_delete, post_save
+
+
+class FinanceConfig(AppConfig):
+    """ Registers the finance app and its cache-invalidation signals. """
+    name = 'finance'
+    verbose_name = "Financial Subledger"
+    default_auto_field = 'django.db.models.AutoField'
+
+    def ready(self):
+        """
+        Drop the in-memory copies of the settings tables whenever one changes.
+
+        A few tables are read on paths hot enough to cache -- the partition
+        codes on every save, the fiscal year on every row of every page -- so
+        they are held in module state (see ``_cached`` in
+        :mod:`finance.models`). Without these signals an admin edit
+        would appear to do nothing until the next restart, which is a far worse
+        failure than the query it saves.
+
+        The receivers are connected with ``weak=False``. Each is a function
+        local to this method, so a weak reference would be all that held it
+        once this method returned, and it would be collected. In development
+        Django's own check of the receiver's arguments happens to keep it
+        alive, which is why that only ever showed with ``DEBUG`` off.
+
+        A signal only reaches the worker that saved the row. The others catch
+        up when their copy expires; see ``_cached``.
+        """
+        from finance import models as finance_models
+
+        # A model may back more than one cached read, and every one of them has
+        # to go when the table changes: renaming a spend category invalidates
+        # both the event pass-through row and the name index the queue turns a
+        # memo back into a category with.
+        cached_models = {
+            # A renamed code changes which fund is that account's own money.
+            'PartitionCode': ('codes', 'own_funds'),
+            'FinanceSettings': ('config',),
+            'ServiceColor': ('service_colors',),
+            'ColumnAlias': ('column_aliases',),
+            'SpendCategory': ('event_passthrough', 'category_names'),
+            # A source names the fund it pays into, and a renamed or retired
+            # fund changes which source that is.
+            'FundSource': ('fund_codes', 'default_fund', 'fund_tracking', 'own_funds',
+                           'revenue_by_fund'),
+            'RevenueSource': ('revenue_by_fund',),
+        }
+
+        for model_name, cache_keys in cached_models.items():
+            model = getattr(finance_models, model_name)
+
+            def _invalidate(sender, keys=cache_keys, **kwargs):
+                finance_models.reset_finance_cache(*keys)
+
+            post_save.connect(_invalidate, sender=model, weak=False,
+                              dispatch_uid='finance.cache_save.%s' % model_name)
+            post_delete.connect(_invalidate, sender=model, weak=False,
+                                dispatch_uid='finance.cache_delete.%s' % model_name)

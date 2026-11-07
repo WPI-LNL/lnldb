@@ -1,0 +1,47 @@
+{% comment %}
+    One line of a funding request or a budget on its edit form. Also rendered
+    as the empty row the "Add" buttons clone (formset.empty_form), so it must
+    hold nothing that depends on the line being saved -- the DELETE flag aside.
+
+    The first cell is a budget line's Request ID, indented under its category.
+    The id and the category key are hidden inputs in the always-visible last
+    cell; js/fr_lines.js fills the key and the order in from where the row
+    sits when the form is sent.
+{% endcomment %}
+<tr class="fin-fr-row"{% if f.instance.pk %} data-saved{% endif %}>
+    <td class="fin-budget-only fin-line-indent">{{ f.number }}</td>
+    <td>{{ f.name }}</td>
+    <td>{{ f.description }}</td>
+    <td><div class="fin-money"><span class="fin-money-sign">$</span>{{ f.amount_requested }}</div></td>
+    {% comment %}
+        Approved: a plain dollar box, and under it what the box means as it
+        stands -- blank is Pending SGA Approval, 0 is Denied. The tag sits
+        outside the box so the box never looks like a menu; js/fr_lines.js
+        updates it as the Treasurer types.
+    {% endcomment %}
+    <td>
+        <div class="fin-money"><span class="fin-money-sign">$</span>{{ f.amount_awarded }}
+            <div class="fin-approval-state">
+                <span class="fin-approval is-waiting"{% if f.approval_state != 'pending' %} hidden{% endif %}>Pending SGA Approval</span>
+                <span class="fin-approval is-turned-down"{% if f.approval_state != 'denied' %} hidden{% endif %}>Denied</span>
+            </div>
+        </div>
+    </td>
+    <td class="fin-budget-only fin-fr-check">{{ f.is_projection }}</td>
+    <td>{{ f.lnl_spend_category }}</td>
+    <td class="fin-request-only">{{ f.sort_order }}</td>
+    <td class="fin-budget-only">
+        <select class="fin-line-move" aria-label="Move this line to a category" title="Move this line to another category"></select>
+    </td>
+    <td class="fin-row-remove">
+        {{ f.id }}{{ f.category_key }}
+        {% include 'finance/partials/_row_remove.html' with form=f %}
+    </td>
+</tr>
+{% if f.errors %}
+    <tr class="fin-fr-errors fin-row-errors"><td colspan="10" class="text-danger fin-small">
+        {% for field, errors in f.errors.items %}
+            {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
+        {% endfor %}
+    </td></tr>
+{% endif %}

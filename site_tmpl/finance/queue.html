@@ -1,0 +1,522 @@
+{# Page 3 -- ingestion queue: upload, reconcile one line, or reconcile a batch. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+{% load static %}
+{% load bootstrap3 %}
+
+{% block fin_title %}Queue{% endblock %}
+{% block fin_actions %}
+    {% permission request.user has 'finance.edit_subledger' %}
+        <a href="{% url 'finance:encumbrance-new' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-plus"></span> Add encumbrance
+        </a>
+    {% endpermission %}
+    {% if can_import %}
+        <button type="button" class="btn {% if import_open %}btn-primary{% else %}btn-default{% endif %}" id="fin-import-toggle"
+                aria-expanded="{% if import_open %}true{% else %}false{% endif %}" aria-controls="fin-import-panel">
+            <span class="glyphicon glyphicon-cloud-upload"></span> Import an export
+        </button>
+    {% endif %}
+{% endblock %}
+
+{% block fin_content %}
+    {# ---- Summary ---- #}
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">Waiting to be settled</div>
+            <div class="fin-stat-value {% if queue_count %}text-warning{% else %}text-success{% endif %}">
+                {{ queue_count }}
+            </div>
+            <div class="fin-stat-sub">{{ queue_total|money }} in the queue</div>
+        </div>
+
+        {% if can_edit %}
+            <div class="fin-stat">
+                <div class="fin-stat-label">Filled in for you</div>
+                <div class="fin-stat-value {% if autofilled_count %}text-success{% endif %}">
+                    {{ autofilled_count }}
+                </div>
+                <div class="fin-stat-sub">boxes on this page</div>
+            </div>
+        {% endif %}
+    </div>
+
+    {% comment %}
+        Collapsed by default. Importing happens once a month; reconciling is
+        what this page is for, and a drop zone the height of three rows sitting
+        above the work is not a fair trade for one button. ?import=1, the Finance
+        menu's Import Workday Export, opens it: decided here rather than in
+        queue.js, so the link still works when the page it is clicked on is the
+        queue itself.
+    {% endcomment %}
+    {% if can_import %}
+        <div class="fin-panel fin-import-panel{% if not import_open %} is-folded{% endif %}" id="fin-import-panel">
+            <div class="fin-panel-body">
+                <form method="post" action="{% url 'finance:upload' %}"
+                      enctype="multipart/form-data" id="fin-upload-form">
+                    {% csrf_token %}
+                    <div class="fin-dropzone" id="fin-dropzone">
+                        <span class="glyphicon glyphicon-cloud-upload"></span>
+                        <strong>Drop a Workday export here</strong>
+                        <div class="fin-dropzone-hint">
+                            .csv or .xlsx &middot; <a href="#" id="fin-browse">browse for a file</a>
+                        </div>
+                        <div class="fin-dropzone-hint">
+                            Re-uploading the same export is safe &mdash; lines already imported
+                            are skipped.
+                        </div>
+                        <div id="fin-file-name" class="fin-dropzone-file"></div>
+                    </div>
+                    {{ upload_form.csv_file }}
+                    <div class="fin-import-actions">
+                        <label class="fin-inline-check">
+                            {{ upload_form.dry_run }} Preview only, don&rsquo;t save
+                        </label>
+                        <button type="submit" class="btn btn-primary" id="fin-upload-btn" disabled>
+                            Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ---- The queue ---- #}
+    {% for row in rows %}
+        <div class="fin-queue-row {% if row.is_revenue %}is-revenue{% else %}is-expense{% endif %}"
+             id="txn-{{ row.txn.pk }}">
+
+            <div class="fin-queue-head">
+                {% comment %}
+                    Only on expense rows. "The same settings" for money coming
+                    in means "the same event", which is a different question and
+                    is seldom true of a batch -- so a revenue row has nothing to
+                    offer this bar and does not pretend otherwise.
+                {% endcomment %}
+                {% if can_edit and not row.is_revenue %}
+                    <label class="fin-queue-select" title="Select to settle in bulk">
+                        <input type="checkbox" class="fin-queue-check" value="{{ row.txn.pk }}">
+                    </label>
+                {% elif can_edit %}
+                    <span class="fin-queue-select is-empty"></span>
+                {% endif %}
+
+                <div class="fin-queue-amount {{ row.txn.net_amount|money_class }}">
+                    {{ row.txn.net_amount|money }}
+                </div>
+
+                <div class="fin-queue-identity">
+                    <div class="fin-queue-payee">{{ row.txn.payee|default:"(no payee)" }}</div>
+                    <div class="fin-queue-meta">
+                        {{ row.txn.accounting_date|date:"M j, Y" }}
+                        <span class="fin-queue-sep">&middot;</span>{{ row.txn.reference }}
+                        {% if row.txn.memo %}
+                            <span class="fin-queue-sep">&middot;</span>{{ row.txn.memo|truncatechars:80 }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="fin-queue-tags">
+                    {% comment %}
+                        Which account the money left, not which side it will be
+                        filed under -- a 226-AG purchase can be Projection
+                        spending. See finance.models.PartitionCode.
+                    {% endcomment %}
+                    {% if row.txn.default_partition %}
+                        <span class="fin-tag{% if row.txn.defaults_to_projection %} is-projection{% endif %}"
+                              title="Paid out of {{ row.txn.partition_code_label }}. That sets the starting side; change Projection under More if the money was really for the other one.">
+                            {{ row.txn.partition_code_label }}
+                        </span>
+                    {% endif %}
+
+                    {% if row.partially_allocated and row.txn.is_fully_allocated %}
+                        <span class="fin-tag is-warn" title="Its entries add up to the line, but are still Pending.">
+                            Ready to settle
+                        </span>
+                    {% elif row.partially_allocated %}
+                        <span class="fin-tag is-warn" title="Part of this line already has entries.">
+                            {{ row.txn.unallocated_amount|money }} left
+                        </span>
+                    {% endif %}
+
+                    {% comment %}
+                        A request number the memo quotes that lnldb has never
+                        heard of. The fund is still filled in -- every SGA
+                        number is a funding request -- but which request is the
+                        open question. When lnldb has the same number under
+                        another body's letter, the tag names both, because a
+                        typo on one side is the likeliest story and only the
+                        Treasurer can say which.
+                    {% endcomment %}
+                    {% if row.suggestions.warning %}
+                        <span class="fin-tag is-alert" title="{{ row.suggestions.warning }}">
+                            <span class="glyphicon glyphicon-alert"></span>
+                            {% if row.suggestions.near_miss %}
+                                {{ row.suggestions.memo.reference }} or {{ row.suggestions.near_miss.reference }}?
+                            {% else %}
+                                {{ row.suggestions.warning_label|default:"Unknown request" }}
+                            {% endif %}
+                        </span>
+                        {% comment %}
+                            Money tracked to the budget in a year lnldb has no
+                            budget for: a link to add it, its year filled in.
+                        {% endcomment %}
+                        {% if can_add_request and row.suggestions.unknown_budget %}
+                            {% with year=row.suggestions.unknown_budget.fiscal_year %}
+                                <a class="fin-tag" href="{% url 'finance:fr-new' %}?kind=budget&amp;fiscal_year={{ year }}&amp;next={{ request.get_full_path|urlencode }}%23txn-{{ row.txn.pk }}"
+                                   title="Enter the year's SGA budget in lnldb">
+                                    <span class="glyphicon glyphicon-plus"></span> Add budget
+                                </a>
+                            {% endwith %}
+                        {% endif %}
+                        {% comment %}
+                            The number names the year and usually the request's
+                            own name follows it in the memo, so most of the new
+                            request's form can be filled from this line. Back to
+                            the queue afterwards, where this row will now match.
+                        {% endcomment %}
+                        {% if can_add_request and row.suggestions.unknown_request %}
+                            {% with new=row.suggestions.unknown_request %}
+                                <a class="fin-tag" href="{% url 'finance:fr-new' %}?reference={{ new.reference|urlencode }}&amp;name={{ new.name|urlencode }}&amp;fiscal_year={{ new.fiscal_year }}&amp;next={{ request.get_full_path|urlencode }}%23txn-{{ row.txn.pk }}"
+                                   title="Enter {{ new.reference }} in lnldb, pre-filled from this line">
+                                    <span class="glyphicon glyphicon-plus"></span> Add {{ new.reference }}
+                                </a>
+                            {% endwith %}
+                        {% endif %}
+                    {% endif %}
+
+                    {% comment %}
+                        One payment for a bill that covered several shows. It is
+                        linked to the bill in the Multi-bill box below, and each
+                        show is credited with its share. Splitting it into an
+                        entry per show instead is still offered: the split page
+                        lays the shares out to check and save.
+                    {% endcomment %}
+                    {% if row.suggestions.multibill %}
+                        {% with mb=row.suggestions.multibill %}
+                            <a class="fin-tag" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
+                               title="{{ mb.reason }}. Linking it to the multi-bill credits each event with its share; split it instead to give each event an entry of its own.">
+                                <span class="glyphicon glyphicon-scissors"></span>
+                                Or split across its {{ mb.multibill.events.all|length }} events
+                            </a>
+                        {% endwith %}
+                    {% endif %}
+
+                    {% comment %}
+                        Reconciling this line the ordinary way while an
+                        encumbrance for it is open charges the budget twice, so
+                        the possibility is stated on the row itself and not only
+                        in the picker further down.
+                    {% endcomment %}
+                    {% if row.close_encumbrance %}
+                        <span class="fin-tag is-warn"
+                              title="A pending encumbrance of about this amount is open. Match it below rather than settling the line the ordinary way, or the budget line is charged twice.">
+                            <span class="glyphicon glyphicon-bookmark"></span> Maybe encumbered
+                        </span>
+                    {% endif %}
+
+                    {% comment %}
+                        Filed as passed through to a show, without saying which
+                        show. The event is the only thing that makes this line
+                        count towards that show's costs on the event P&L, so
+                        the row says it is missing rather than leaving it to be
+                        noticed there.
+                    {% endcomment %}
+                    {% if row.needs_event %}
+                        <span class="fin-tag is-warn"
+                              title="{% if row.is_revenue %}LNL billing -- an Internal Service Delivery -- that names no event lnldb has. Link the event so its P&amp;L counts this money.{% else %}This looks like a cost passed through to one event. Name the event under More so it counts against that show.{% endif %}">
+                            <span class="glyphicon glyphicon-calendar"></span> Which event?
+                        </span>
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'finance:txn-detail' row.txn.pk %}" class="fin-queue-open"
+                   title="Split this line, or see everything Workday sent">
+                    <span class="glyphicon glyphicon-scissors"></span> Split
+                </a>
+            </div>
+
+            {% if can_edit %}
+                <div class="fin-queue-body">
+                    {% comment %}
+                        Above the routing form, because it answers a question
+                        asked earlier than "where does this go": somebody has
+                        already said where this money goes, and filling the form
+                        in below would charge the budget line a second time.
+
+                        Its own <form> rather than a control inside the
+                        reconcile one -- nested forms are invalid, and these two
+                        post to different places and mean opposite things.
+                    {% endcomment %}
+                    {% if row.encumbrances %}
+                        <form method="post" class="fin-encumbrance-match"
+                              action="{% url 'finance:match-encumbrance' row.txn.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <label class="fin-encumbrance-lede" for="fin-enc-{{ row.txn.pk }}">
+                                <span class="glyphicon glyphicon-bookmark"></span>
+                                Already encumbered?
+                            </label>
+                            <select name="encumbrance" id="fin-enc-{{ row.txn.pk }}"
+                                    class="form-control input-sm">
+                                {% comment %}
+                                    Nothing pre-selected on purpose. Picking the
+                                    wrong row files a purchase against the wrong
+                                    budget line and marks a live commitment
+                                    spent, and neither shows up afterwards.
+                                {% endcomment %}
+                                <option value="">Not encumbered — settle below</option>
+                                {% comment %}
+                                    An encumbrance of several lines is offered
+                                    whole, its lines indented under it; see
+                                    finance.suggestions.encumbrance_match_options.
+                                {% endcomment %}
+                                {% for option in row.encumbrances %}
+                                    <option value="{{ option.value }}">{{ option.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-default">
+                                Match &amp; settle
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <form method="post" class="fin-reconcile-form"
+                          action="{% url 'finance:reconcile' row.txn.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                        <div class="fin-fields">
+                            {% comment %}
+                                Poka-Yoke: the form only holds the fields valid
+                                for this direction, so a revenue row is
+                                structurally incapable of posting a spend
+                                category. The fund is on both: money goes into
+                                one as surely as it comes out of one.
+                            {% endcomment %}
+                            {% if row.is_revenue %}
+                                {% comment %}
+                                    Money coming in is one of two things, and
+                                    they are not variations on each other: new
+                                    revenue, or a purchase being credited back.
+                                    A refund takes no routing of its own -- the
+                                    entry it reverses already carries all of it
+                                    -- so choosing one here is the whole job,
+                                    and routing.js folds the revenue pair away
+                                    the moment it is chosen.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_multibill label="or Multi-bill" size="lg" autofilled=row.form.autofilled.linked_multibill suggestion=row.suggestions.linked_multibill only %}
+                                {% comment %}
+                                    This payment covers the event's bill, so marking
+                                    the bill paid -- dated the day the last of its
+                                    money arrived -- is offered, ticked. Untick it to
+                                    leave the bill unpaid. It is checked again when
+                                    the row is filed: only the bill for the event the
+                                    money is filed against, and only once covered.
+                                {% endcomment %}
+                                {% if row.bill_offer %}
+                                    <div class="form-group fin-field fin-field-check fin-mark-paid">
+                                        <input type="hidden" name="bill_offered" value="{{ row.bill_offer.bill.pk }}">
+                                        <label title="The payments received for the {% if row.bill_offer.is_multibill %}multi-bill's events{% else %}event{% endif %}, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
+                                        <label class="fin-inline-check">
+                                            <input type="checkbox" name="{% if row.bill_offer.is_multibill %}mark_multibill_paid{% else %}mark_bill_paid{% endif %}" value="{{ row.bill_offer.bill.pk }}" checked>
+                                            Mark {% if row.bill_offer.is_multibill %}multi-bill{% else %}bill{% endif %} paid on {{ row.bill_offer.paid_on|date:"M j, Y" }}
+                                        </label>
+                                    </div>
+                                {% endif %}
+                                {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" autofilled=row.form.autofilled.non_event_revenue_type suggestion=row.suggestions.revenue_source only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Into fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
+                                {% comment %}
+                                    Hidden by routing.js unless the fund draws on
+                                    funding requests: SGA's reimbursement names the
+                                    request it repays.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.funding_request label="Reimburses request" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
+                            {% else %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend Category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
+                                {% comment %}
+                                    Both hidden by routing.js unless the chosen
+                                    fund draws on a funding request, so the
+                                    common case never sees them. The request is
+                                    filled in whenever the memo quotes one lnldb
+                                    holds, even when which line it means cannot
+                                    be told, and narrows the line picker to that
+                                    request's lines.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fr_request label="Funding request" size="md" autofilled=row.form.autofilled.fr_request suggestion=row.suggestions.fr_request only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fr_line_target label="Funding request line" size="lg" autofilled=row.form.autofilled.fr_line_target suggestion=row.suggestions.fr_line_target only %}
+                            {% endif %}
+
+                            <div class="fin-fields-tail">
+                                <button type="button" class="fin-more-toggle"
+                                        aria-expanded="{{ row.expanded|yesno:"true,false" }}">
+                                    <span class="glyphicon glyphicon-option-horizontal"></span> More
+                                </button>
+                                {% comment %}
+                                    The remainder rather than the full line: a
+                                    part-allocated line stays in the queue and
+                                    this finishes it off. Shown unsigned,
+                                    because "Settle ($26,242.55)" reads as a
+                                    negative button rather than an amount.
+                                {% endcomment %}
+                                {% if row.partially_allocated and row.txn.is_fully_allocated %}
+                                    {# Nothing left to allocate: it only needs settling, which its page does. #}
+                                    <a href="{{ row.txn.get_absolute_url }}" class="btn btn-primary">
+                                        Review &amp; settle
+                                    </a>
+                                {% else %}
+                                    <button type="submit" class="btn btn-primary fin-allocate">
+                                        Settle {{ row.txn.unallocated_amount|abs_value|money }}
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% comment %}
+                            Real fields, but most lines leave them alone: seven
+                            of 253 lines on a year's export carry a project, and
+                            only a cost hired in for one show needs its event.
+                            Folded away so the row a Treasurer sees twenty-five
+                            times reads as two boxes and a button, and opened by
+                            the view whenever this particular line has something
+                            in here worth seeing -- an event found or still
+                            needed, a project code, the 315-AG partition.
+                        {% endcomment %}
+                        <div class="fin-fields fin-fields-more{% if not row.expanded %} is-folded{% endif %}">
+                            {% if not row.is_revenue %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Incurred for event" size="lg" autofilled=row.form.autofilled.linked_event suggestion=row.suggestions.linked_event only %}
+                                {% comment %}
+                                    Money SGA took back -- a reimbursement it made
+                                    twice -- names the request instead of a line.
+                                    Rare, so it lives here, and the row unfolds
+                                    when the memo says this is one.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.funding_request label="SGA took back money for" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
+                            {% endif %}
+
+                            {% include 'finance/_queue_field.html' with field=row.form.project_tag label="Project" size="md" only %}
+
+                            {% if not row.is_revenue %}
+                                <div class="form-group fin-field fin-field-check fin-cross-year">
+                                    <label title="{{ row.form.allow_cross_year_fr.help_text }}">Fiscal year</label>
+                                    <label class="fin-inline-check">
+                                        {{ row.form.allow_cross_year_fr }} Charge another year
+                                    </label>
+                                </div>
+                            {% endif %}
+
+                            <div class="form-group fin-field fin-field-check">
+                                <label title="{{ row.form.is_projection.help_text }}">Partition</label>
+                                <label class="fin-inline-check">
+                                    {{ row.form.is_projection }} Projection
+                                </label>
+                            </div>
+
+                            {% if row.txn.crossing_requires_reason %}
+                                <div class="form-group fin-field fin-field-lg fin-partition-reason"
+                                     data-default-projection="{{ row.txn.defaults_to_projection|yesno:"1,0" }}">
+                                    <label>Why is this leaving {{ row.txn.partition_code_label }}?</label>
+                                    {{ row.form.audit_explanation }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="fin-panel">
+            <div class="fin-empty">
+                <span class="glyphicon glyphicon-ok-circle"></span>
+                <strong>Queue is clear.</strong>
+                <div>Every imported Workday line is settled.</div>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% comment %}
+        The ledger's bulk bar, pointed at the queue. Same shape on purpose:
+        select rows, pick the answers once, apply. See finance.views.ingest.bulk_reconcile.
+    {% endcomment %}
+    {% if can_edit %}
+        <form method="post" action="{% url 'finance:bulk-reconcile' %}" id="fin-qbulk-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input type="hidden" name="selected" id="fin-qbulk-selected" value="">
+            <div class="fin-bulk-bar" id="fin-qbulk-bar">
+                <div class="fin-bulk-inner">
+                    <span class="fin-bulk-count">
+                        <span id="fin-qbulk-count">0</span> selected
+                    </span>
+
+                    <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fund_source.id_for_label }}">Fund</label>
+                    {{ bulk_reconcile_form.fund_source }}
+
+                    {% comment %}
+                        Hidden by routing.js unless the chosen fund draws on a
+                        funding request, the same rule it applies to the pickers
+                        on a queue row -- the wrapper is what gets folded away,
+                        so the labels go with the boxes rather than being left
+                        behind as stray words on the bar. The request box
+                        narrows the line picker, as it does on a row.
+
+                        Charging a whole batch to one award is why the fund
+                        list includes funding-request money at all; see
+                        finance.forms.BulkReconcileForm.
+                    {% endcomment %}
+                    <span class="fin-bulk-fr">
+                        <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fr_request.id_for_label }}">Request</label>
+                        {{ bulk_reconcile_form.fr_request }}
+                        <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fr_line_target.id_for_label }}">FR line</label>
+                        {{ bulk_reconcile_form.fr_line_target }}
+                    </span>
+                    <label class="fin-bulk-check" title="{{ bulk_reconcile_form.allow_cross_year_fr.help_text }}">
+                        {{ bulk_reconcile_form.allow_cross_year_fr }} Other year
+                    </label>
+
+                    <label class="fin-bulk-label" for="{{ bulk_reconcile_form.lnl_spend_category.id_for_label }}">Category</label>
+                    {{ bulk_reconcile_form.lnl_spend_category }}
+
+                    <label class="fin-bulk-label" for="{{ bulk_reconcile_form.project_tag.id_for_label }}">Project</label>
+                    {{ bulk_reconcile_form.project_tag }}
+
+                    <button type="submit" class="btn btn-primary">Settle selected</button>
+
+                    {% comment %}
+                        The other thing a batch of rows can be: ten Workday
+                        lines delivering one encumbrance. It shares the bar and
+                        the selection because the selecting is identical, and
+                        posts elsewhere via formaction because the actions are
+                        not -- this one takes its routing from the reservation
+                        rather than from the boxes to the left.
+
+                        formnovalidate because Fund above is a required field
+                        of the *other* action, and the browser would otherwise
+                        refuse to submit a form this button does not use it in.
+                    {% endcomment %}
+                    {% if bulk_encumbrance_form %}
+                        <span class="fin-bulk-or">or</span>
+                        {{ bulk_encumbrance_form.encumbrance }}
+                        <button type="submit" class="btn btn-default" formnovalidate
+                                formaction="{% url 'finance:bulk-match-encumbrance' %}">
+                            Draw selected
+                        </button>
+                    {% endif %}
+
+                    <button type="button" class="btn btn-link" id="fin-qbulk-cancel">Cancel</button>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+
+    {% pager page_obj %}
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/queue.js' %}"></script>
+{% endblock %}

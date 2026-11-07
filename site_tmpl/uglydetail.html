@@ -3,6 +3,7 @@
 {% load permissionif %}
 {% load gpa_scale_emoji %}
 {% load spotify_tags %}
+{% load finance_extras %}
 
 {% block title %}{{event}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
@@ -63,10 +64,15 @@
                                 <a class="btn btn-success btn-lg"
                                    href="{% url "events:review" event.id %}">Review For Billing	</a>
                             {% endpermission %}
-                        {% else %}
-                            {% permission request.user has 'events.bill_event' of event %}
+                        {% elif not event.multibillings.exists %}
+                            {% comment %}
+                                The site-wide permission, which the bill pages check: a
+                                client's billing contacts hold it for their own events
+                                only. An event on a multi-bill is billed there.
+                            {% endcomment %}
+                            {% permission request.user has 'events.bill_event' %}
                                 <a class="btn btn-primary btn-lg"
-                                   href="{% url "events:bills:new" event.id %}">Create Bill</a>
+                                   href="{% url "finance:bill-new" event.id %}">Create Bill</a>
                             {% endpermission %}
                         {% endif %}
                     {% endif %}
@@ -675,6 +681,16 @@
                 {% endpermission %}
                 {% permission request.user has 'events.view_event_billing' of event %}
                 <div id="billing" class="tab-pane">
+                    {% comment %}
+                        Where the bill stands and what comes next, from the finance
+                        app's Billing stages. Empty until the event is reviewed. Asked
+                        of the site-wide permission, not the event's: the client's own
+                        billing contacts hold it for their events, and this is the
+                        Treasurer's.
+                    {% endcomment %}
+                    {% permission request.user has 'events.bill_event' %}
+                        {% billing_next_step event %}
+                    {% endpermission %}
                     {% if not event.closed %}
                         {% permission request.user has 'events.adjust_event_charges' of event %}
                             <div class="pull-right btn-group">
@@ -765,23 +781,31 @@
                                                     <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
                                                 {% endif %}
                                             {% endfor %}
+                                            {% if billing.sent_on %}
+                                                {{ billing.sent_on }}, not by email{% if billing.sent_note %}: {{ billing.sent_note }}{% endif %}<br>
+                                            {% endif %}
                                         </td>
                                         <td>
+                                            {% comment %}
+                                                The site-wide permission, which the bill
+                                                pages check, as for Create Bill above.
+                                            {% endcomment %}
+                                            {% permission request.user has 'events.bill_event' %}
                                             {% if not event.closed %}
-                                                <form class="form-inline" action="{% url "events:bills:pay" event.id billing.id %}" method="post">
+                                                <div class="form-inline">
                                                     <div class="form-group">
                                                     {% if not billing.date_paid %}
-                                                        {% csrf_token %}
-                                                        <button class="btn btn-link" type="submit">Mark Paid</button>
+                                                        <a class="btn btn-link" href="{% url "finance:bill-paid" event.id billing.id %}">Mark Paid…</a>
                                                     {% endif %}
                                                     <a class="btn btn-link"
-                                                       href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
+                                                       href="{% url "finance:bill-edit" event.id billing.id %}">Update</a>
                                                     {% if not billing.date_paid %}
-                                                        <a class="btn btn-link" href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
+                                                        <a class="btn btn-link" href="{% url "finance:bill-delete" event.id billing.id %}">Delete</a>
                                                     {% endif %}
                                                     </div>
-                                                </form>
+                                                </div>
                                             {% endif %}
+                                            {% endpermission %}
                                         </td>
                                     {% endpermission %}
                                 </tr>
@@ -790,7 +814,13 @@
                                 <tr>
                                     <td>{{ multibilling.date_billed }}</td>
                                     <td>{{ multibilling.date_paid }}</td>
-                                    <td><a href="{% url 'events:multibillings:pdf' multibilling.id %}">See invoice</a></td>
+                                    <td>
+                                        {% permission request.user has 'events.view_event_billing' %}
+                                            <a href="{% url 'finance:multibill-pdf' multibilling.id %}">See invoice</a>
+                                        {% else %}
+                                            On a multi-bill
+                                        {% endpermission %}
+                                    </td>
                                     {% permission request.user has 'events.bill_event' of event %}
                                         <td>
                                             {% for email in multibilling.multibillingemail_set.all %}
@@ -800,6 +830,9 @@
                                                     <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
                                                 {% endif %}
                                             {% endfor %}
+                                            {% if multibilling.sent_on %}
+                                                {{ multibilling.sent_on }}, not by email{% if multibilling.sent_note %}: {{ multibilling.sent_note }}{% endif %}<br>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             MultiBill
@@ -808,6 +841,153 @@
                                 </tr>
                             {% endfor %}
                         </table>
+                    {% endif %}
+
+                    {% comment %}
+                        What the subledger says this show actually brought in and
+                        cost, beside what it was billed. Only there for someone
+                        who can read the subledger -- viewevent leaves `finance`
+                        out of the context otherwise. The figures, and why the
+                        billed amount is the latest bill rather than the sum of
+                        them, are finance.calculators.event_financials.
+                    {% endcomment %}
+                    {% if finance %}
+                        <style>
+                            .event-finance-stats { display: flex; flex-wrap: wrap; margin: 0 -6px 12px; }
+                            .event-finance-stat { flex: 1 1 150px; margin: 0 6px 12px; padding: 10px 14px;
+                                                  border: 1px solid #e5e5e5; border-radius: 4px; background: #fafafa; }
+                            .event-finance-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #777; }
+                            .event-finance-stat-value { font-size: 20px; font-weight: 600; margin: 2px 0; }
+                            .event-finance-stat small { display: block; color: #777; line-height: 1.4; }
+                            .event-finance-flags { padding: 10px 14px; }
+                            .event-finance-flags ul { margin: 0; padding: 0; list-style: none; }
+                            .event-finance-flags li { display: flex; align-items: center; justify-content: space-between;
+                                                      flex-wrap: wrap; padding: 3px 0; }
+                            .event-finance-flags li .glyphicon { margin-right: 6px; }
+                            .event-finance-entries td.num, .event-finance-entries th.num { text-align: right; white-space: nowrap; }
+                        </style>
+                        <h2>
+                            Finance
+                            {% if finance_entries %}
+                                <small class="pull-right" style="padding-top:12px;">
+                                    <a href="{% url 'finance:ledger' %}?event={{ event.pk }}">Open in the subledger &rsaquo;</a>
+                                </small>
+                            {% endif %}
+                        </h2>
+
+                        <div class="event-finance-stats">
+                            <div class="event-finance-stat">
+                                <div class="event-finance-stat-label">Billed</div>
+                                {% if finance.billed is not None %}
+                                    <div class="event-finance-stat-value">{{ finance.billed|money }}</div>
+                                    {% if finance.billed_source == 'multibill' %}<small>Share of a multi-bill</small>{% endif %}
+                                {% else %}
+                                    <div class="event-finance-stat-value text-muted">—</div>
+                                    <small>Not billed</small>
+                                {% endif %}
+                            </div>
+                            <div class="event-finance-stat">
+                                <div class="event-finance-stat-label">Received</div>
+                                <div class="event-finance-stat-value">{{ finance.received|money }}</div>
+                                <small>{{ finance.payment_state_label }}</small>
+                                {% if finance.owed %}
+                                    <small>{{ finance.owed|money }} owed{% if finance.days_owed is not None %}, {{ finance.days_owed }} day{{ finance.days_owed|pluralize }}{% endif %}</small>
+                                {% endif %}
+                            </div>
+                            <div class="event-finance-stat">
+                                <div class="event-finance-stat-label">Direct costs</div>
+                                <div class="event-finance-stat-value">{{ finance.costs|money }}</div>
+                                {% if finance.sga_funded %}<small title="Charged to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ finance.sga_funded|money }} paid by SGA</small>{% endif %}
+                                {% if finance.reserved %}<small>+ {{ finance.reserved|money }} encumbered, not yet charged</small>{% endif %}
+                            </div>
+                            <div class="event-finance-stat">
+                                <div class="event-finance-stat-label">Margin</div>
+                                <div class="event-finance-stat-value {% if finance.margin < 0 %}text-danger{% elif finance.margin > 0 %}text-success{% endif %}">{{ finance.margin|money }}</div>
+                                {% if finance.margin_percent is not None %}<small>{{ finance.margin_percent }}% of what was received</small>{% endif %}
+                            </div>
+                            {% if finance.rentals_billed or finance.passthrough_cost %}
+                                <div class="event-finance-stat">
+                                    <div class="event-finance-stat-label">Rentals</div>
+                                    <div class="event-finance-stat-value">{{ finance.rentals_recovered|money }}</div>
+                                    <small>billed, against {{ finance.passthrough_cost|money }} cost</small>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if finance.flags %}
+                            {% comment %}
+                                Danger when this show lost money; a warning for
+                                everything else, which is the bill and the ledger
+                                not yet agreeing. Not marked paid carries finance's
+                                Mark paid form, which opens with the date the money
+                                arrived filled in.
+                            {% endcomment %}
+                            <div class="alert event-finance-flags {% if 'loss' in finance.flag_keys or 'rental_under_billed' in finance.flag_keys %}alert-danger{% else %}alert-warning{% endif %}" role="alert">
+                                <ul>
+                                    {% for key, label in finance.flags %}
+                                        <li>
+                                            <span>
+                                                <span class="glyphicon {% if key == 'loss' or key == 'rental_under_billed' %}glyphicon-alert{% else %}glyphicon-exclamation-sign{% endif %}" aria-hidden="true"></span>{{ label }}
+                                            </span>
+                                            {% if key == 'not_marked_paid' and finance.can_mark_paid %}
+                                                {% permission request.user has 'events.bill_event' %}
+                                                    <a href="{% if finance.billed_source == 'multibill' %}{% url 'finance:multibill-paid' finance.bill.pk %}{% else %}{% url 'finance:bill-paid' event.pk finance.bill.pk %}{% endif %}?next={{ request.get_full_path|urlencode }}%23billing"
+                                                       class="btn btn-xs btn-default"
+                                                       title="Mark the bill paid on the day the last of its payment reached Workday">Mark paid…</a>
+                                                {% endpermission %}
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <h3>Linked subledger entries</h3>
+                        {% if finance_entries %}
+                            <div class="table-responsive">
+                                <table class="table table-condensed table-hover event-finance-entries">
+                                    <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Payee</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th class="num">Amount</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for entry, share in finance_entries %}
+                                        <tr>
+                                            <td style="white-space:nowrap;">{{ entry.effective_date|date:"M j, Y" }}</td>
+                                            <td>
+                                                <a href="{% url 'finance:entry-detail' entry.pk %}">{{ entry.description|default:"(untitled)" }}</a>
+                                                {% if share is not None %}
+                                                    <br><small class="text-muted">
+                                                        Paid on <a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a>;
+                                                        this event's share of {{ entry.amount|money }}
+                                                    </small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}
+                                                {% else %}<span class="text-muted">encumbrance</span>{% endif %}
+                                            </td>
+                                            <td>{{ entry|entry_badge }}{% if entry.is_projection %} <span class="label label-default" title="Filed in the Projection partition">Projection</span>{% endif %}</td>
+                                            <td>{{ entry|status_badge }}</td>
+                                            {% if share is not None %}
+                                                <td class="num {{ share|money_class }}">{{ share|money }}</td>
+                                            {% else %}
+                                                <td class="num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
+                                            {% endif %}
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Nothing in the subledger is linked to this event yet.</p>
+                        {% endif %}
                     {% endif %}
 
                     {% permission request.user has 'events.event_view_sensitive' of event %}

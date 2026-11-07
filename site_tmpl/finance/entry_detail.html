@@ -1,0 +1,242 @@
+{# Page 4 -- one ledger entry, its routing form and its audit trail. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+{% load crispy_forms_tags %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}">&larr; Ledger</a>{% endblock %}
+{% block fin_title %}{{ entry.description|default:"(untitled)" }}{% endblock %}
+{% block fin_sub %}Entry &middot; {{ entry.effective_date|date:"M j, Y" }} &middot; {{ entry.amount|money }}{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        {# ---- LEFT: locked source record ---- #}
+        <div class="col-md-5">
+            {% if entry.encumbrance %}
+                <div class="alert alert-info">
+                    {% if txn %}Encumbered as a line of{% else %}A line of the encumbrance{% endif %}
+                    <a href="{{ entry.encumbrance.get_absolute_url }}">{{ entry.encumbrance }}</a>.
+                    {% if not txn %}Change its lines, or delete the whole encumbrance, from there. If this part of the purchase isn't happening, click <em>Remove</em> below.{% endif %}
+                </div>
+            {% endif %}
+            {% if entry.refund_of %}
+                {# A refund has no routing of its own: ParsedTransaction.REFUND_INHERITED. #}
+                <div class="alert alert-info">
+                    A refund of <a href="{{ entry.refund_of.get_absolute_url }}">{{ entry.refund_of.description|default:"a purchase" }}</a>,
+                    so it is charged where the purchase is:
+                    {{ entry.fund_source|default:"no fund" }}{% if entry.lnl_spend_category %}, {{ entry.lnl_spend_category }}{% endif %}{% if entry.fr_line_target %}, {% if entry.fr_line_target.is_budget_line %}budget line{% else %}FR line{% endif %} {{ entry.fr_line_target.label }}{% endif %}{% if entry.project_tag %}, {{ entry.project_tag }}{% endif %}.
+                    Change the purchase and this refund follows it.
+                </div>
+            {% endif %}
+            {% if txn %}
+                <div class="fin-panel fin-immutable">
+                    <div class="fin-panel-head">
+                        <span><span class="glyphicon glyphicon-lock"></span> Workday record</span>
+                        <span class="fin-locked-note">read-only</span>
+                    </div>
+                    <div class="fin-panel-body">
+                        <dl class="fin-kv">
+                            <dt>Operational transaction</dt>
+                            <dd><a href="{% url 'finance:txn-detail' txn.pk %}"><code>{{ txn.reference }}</code></a></dd>
+                            <dt>Accounting date</dt><dd>{{ txn.accounting_date|date:"M j, Y" }}</dd>
+                            <dt>Workday line total</dt>
+                            <dd class="{{ txn.net_amount|money_class }}"><strong>{{ txn.net_amount|money }}</strong></dd>
+                            {% if txn.payee %}<dt>Payee</dt><dd>{{ txn.payee }}</dd>{% endif %}
+                            {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
+                        </dl>
+                        {% if txn.is_split %}
+                            <div class="alert alert-info fin-mb-0">
+                                This Workday line is split across {{ txn.slices.count }} entries.
+                                <a href="{% url 'finance:txn-detail' txn.pk %}">View the whole split &rarr;</a>
+                            </div>
+                        {% endif %}
+                        {% if entry.crosses_partition %}
+                            <div class="alert alert-warning fin-mb-0 fin-mt-8">
+                                <span class="glyphicon glyphicon-transfer"></span>
+                                {{ entry.partition_note }}
+                                That is allowed — SGA reimburses one account for the other’s
+                                spending — but it is worth being sure it is deliberate.
+                            </div>
+                        {% elif txn.default_partition %}
+                            <div class="alert alert-info fin-mb-0 fin-mt-8">
+                                Paid out of <code>{{ txn.partition_code_label }}</code>, and counted
+                                on that side.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% comment %}
+                        Worktags are the same Workday record, so they share the
+                        box. Folded, as they are looked up rather than read.
+                    {% endcomment %}
+                    {% if worktags %}
+                        <details class="fin-panel-fold">
+                            <summary>Worktags</summary>
+                            <div class="fin-panel-body">
+                                <dl class="fin-kv">
+                                    {% for key, value in worktags %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}
+                                </dl>
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="fin-panel fin-immutable">
+                    <div class="fin-panel-head"><span>Encumbrance</span></div>
+                    <div class="fin-panel-body">
+                        <p class="fin-muted">
+                            Logged before its Workday line arrived, so it stays Pending until it is
+                            matched. Its line offers it in the <a href="{% url 'finance:queue' %}">queue</a>
+                            under <em>Already encumbered?</em>.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# ---- A multi-bill's payment, and each event's share of it ---- #}
+            {% if entry.linked_multibill %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">
+                        <span>Payment for a multi-bill</span>
+                        <a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a>
+                    </div>
+                    <div class="fin-panel-body">
+                        <p class="fin-muted">Each event on the bill is credited with its share of this payment, by price, as the bill is split. Client type: {{ entry.client_type_display }}.</p>
+                    </div>
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead><tr><th>Event</th><th></th><th class="fin-num">Share</th></tr></thead>
+                            <tbody>
+                                {% for event, share in multibill_shares %}
+                                    <tr>
+                                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
+                                        <td class="fin-muted">{{ event.datetime_start|date:"M j, Y" }}</td>
+                                        <td class="fin-num">{{ share|money }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="3" class="fin-muted">The multi-bill has no events.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# ---- Inherited event metadata ---- #}
+            {% if entry.linked_event %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">
+                        <span>Inherited from the event</span>
+                        <span class="fin-locked-note">never re-keyed</span>
+                    </div>
+                    <div class="fin-panel-body">
+                        <dl class="fin-kv">
+                            <dt>Event</dt>
+                            <dd><a href="{% url 'events:detail' entry.linked_event.pk %}">{{ entry.linked_event.event_name }}</a></dd>
+                            <dt>Client type</dt><dd>{{ entry.client_type_display }}</dd>
+                            <dt>Services</dt><dd>{{ entry.event_services_display|or_dash }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ---- RIGHT: editable metadata + audit trail ---- #}
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Subledger metadata</span>
+                    <span>
+                        {{ entry|entry_badge }} {{ entry|status_badge }}
+                    </span>
+                </div>
+                <div class="fin-panel-body">
+                    {% if can_edit %}
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {% crispy form %}
+                            <div class="text-right">
+                                <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <dl class="fin-kv">
+                            <dt>Amount</dt>
+                            <dd class="{{ entry.amount|money_class }}">{{ entry.amount|money }}</dd>
+                            <dt>Date</dt><dd>{{ entry.effective_date|date:"M j, Y" }}</dd>
+                            <dt>Description</dt><dd>{{ entry.description|or_dash }}</dd>
+                            <dt>Fund</dt><dd>{{ entry.fund_source|or_dash }}</dd>
+                            <dt>Spend category</dt><dd>{{ entry.lnl_spend_category|or_dash }}</dd>
+                            <dt>Project</dt><dd>{{ entry.project_tag|or_dash }}</dd>
+                            <dt>Explanation</dt><dd>{{ entry.audit_explanation|linebreaksbr|or_dash }}</dd>
+                        </dl>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ---- Receipt ---- #}
+            <div class="fin-panel">
+                <div class="fin-panel-head">Receipt</div>
+                <div class="fin-panel-body">
+                    {% if entry.receipt_file %}
+                        {% if can_view_receipts %}
+                            <a href="{{ entry.receipt_file.url }}" target="_blank" class="btn btn-default">
+                                <span class="glyphicon glyphicon-paperclip"></span>
+                                View receipt
+                            </a>
+                            <span class="fin-muted">{{ entry.receipt_file.name|cut:"finance/receipts/" }}</span>
+                        {% else %}
+                            <span class="fin-muted">A receipt is attached, but you don't have permission to view it.</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="fin-muted">
+                            No receipt attached.
+                            {% if can_edit %}Use the field above to upload a PDF.{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ---- Audit trail ---- #}
+            <div class="fin-panel">
+                <div class="fin-panel-head">Audit trail</div>
+                <div class="fin-panel-body">
+                    <ul class="fin-audit">
+                        {% for item in audit_trail %}
+                            <li>
+                                <div>
+                                    <strong>{{ item.user|default:"System" }}</strong>
+                                    {% if item.is_creation %}
+                                        created this entry
+                                    {% elif item.unreadable %}
+                                        saved this entry
+                                        <span class="fin-muted">(recorded before a field changed shape &mdash; details unavailable)</span>
+                                    {% elif item.changes %}
+                                        changed
+                                        {% for change in item.changes %}
+                                            <span class="fin-audit-change">
+                                                {{ change.field }}
+                                                {% if change.old %}<span class="fin-audit-old">{{ change.old|truncatechars:28 }}</span> &rarr; {% endif %}
+                                                <span class="fin-audit-new">{{ change.new|default:"(empty)"|truncatechars:28 }}</span>
+                                            </span>{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        saved this entry
+                                    {% endif %}
+                                </div>
+                                <div class="fin-audit-meta">
+                                    {{ item.date|date:"M j, Y \a\t P" }}
+                                    {% if item.comment %}&middot; {{ item.comment }}{% endif %}
+                                </div>
+                            </li>
+                        {% empty %}
+                            <li class="fin-muted">
+                                No recorded changes yet. Edits made from here on are tracked.
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,231 @@
+"""
+The finance test package.
+
+Importing this module installs one compatibility shim, described below, before
+any test runs. Everything else lives in the ``test_*`` modules, grouped here by
+what they cover rather than alphabetically.
+
+**The data model**
+
+``test_models``
+    Fiscal years, the money helper, entry types, the immutability guarantee,
+    line identity, and every accounting rule enforced in ``Model.clean()``.
+``test_model_details``
+    The narrower model surface the pages lean on: rollups, picker labels,
+    refundable balances, partition inheritance, and the derived properties that
+    prefer a queryset annotation and fall back to their own query.
+``test_config``
+    The admin-editable vocabularies and settings -- retiring a term, the
+    PROTECT guards, the singleton settings row, and cache invalidation.
+
+**Getting data in**
+
+``test_importers``
+    Reading Workday's CSV and ``.xlsx`` exports, and deciding what is a
+    duplicate.
+``test_importer_parsing``
+    The parsing layer on its own: encodings and the BOM, delimiter sniffing,
+    the header hunt, amount and date dialects, column aliases, and the staging
+    helpers behind the two-step import.
+``test_ingest``
+    What the queue says, and the paths around its main flows: what an import
+    reports, the staged upload, logging an encumbrance, settling, the
+    suggestion JSON endpoint, filing a credit as a refund, and matching and
+    drawing down encumbrances. The main flows themselves -- upload and
+    confirm, reconcile, undo, bulk reconcile -- are in ``test_views``.
+
+**Deciding what a line means**
+
+``test_suggestions``
+    What the export tells us outright versus what we merely infer, and the
+    rule ordering that keeps those apart.
+``test_calculators``
+    The dashboard's numbers.
+``test_event_costs``
+    Costs that belong to one event: suggesting the event on an expense, each
+    event's billed / received / cost / margin figures, and the pages that show
+    them -- the event P&L, the ledger's event filter, the dashboard panel, the
+    queue row and the event's own Billing tab.
+``test_balances``
+    What each fund holds: revenue naming a fund, SGA's A/F/S reference rules
+    and the near-miss when a memo's letter disagrees with lnldb's, each
+    account's cash from a Workday balance split between its funds, and the
+    balance page, its inputs, and closing and reopening a year.
+``test_revenue_sources``
+    Where income comes from and what LNL is owed: the source deciding the
+    fund, SGA's payments naming their request (reimbursements in, money taken
+    back out), what SGA still owes per request and how old it is, the queue's
+    reading of SGA's journal entries and of multi-bills, and the dashboard's
+    revenue figures.
+``test_reports``
+    The Reports tab: an event's costs that SGA pays for, the period a report
+    covers and what it is compared with, the income and spending, fund
+    balances, events and owed-to-LNL reports against figures small enough to
+    add up by hand, the CSV, and the ledger's download. The activity reports
+    are tested with what they report on, in ``test_activity``.
+``test_frrf``
+    The Funding Request Report Form: which purchases are on it, which receipt
+    backs each and how they are numbered, the report's warnings, the PDF with
+    each receipt on its own labelled pages, and the page and its permission.
+``test_budgets``
+    SGA budgets: one a year, named for it, with Request IDs, categories and
+    requested and approved amounts; charging budget lines, the pickers, the
+    queue reading a memo's Request ID and Tracking, deposits and returns, and
+    the dashboard and ledger.
+``test_brf``
+    The Budget Report Form: SGA money and group funds per line, how each
+    purchase was paid, the last day spent, receipts numbered line by line,
+    the lines nothing was spent on, a line's PDF and the zip, and the answers
+    typed on the page.
+``test_activity``
+    What LNL's work was worth, from the events app: WPI terms, pricing every
+    show in bulk exactly as the events app does, student organizations against
+    departments with the external wear percentage, and activity term over
+    term and year over year.
+``test_books_start``
+    Every line imported is in the books: the queue, the balances and the
+    reports count old lines like any other, and an older export moves the
+    books' start back and says so on the import's confirmation.
+
+**Forms and pages**
+
+``test_forms``
+    Field-level rules, the direction split, and what each form offers.
+``test_form_rules``
+    The rules that only show up in combination: cross-year funding requests,
+    the fund/FR-line pairing, split formset arithmetic, and the fields each
+    form deletes rather than validates.
+``test_views``
+    The pages, their permissions, and the flows that span several requests --
+    among them the queue's upload, reconcile, undo and bulk reconcile.
+``test_ledger``
+    The spreadsheet page specifically: sorting, filtering, column visibility
+    and the bulk action bar.
+``test_detail``
+    One bank line and one entry -- splitting, deletion, and the audit trail
+    reconstructed from django-reversion snapshots.
+``test_billing``
+    Bills and multi-bills. The bill pages and the multi-bill invoice came from
+    the events app with the bills, tests and all. The rest is the multi-bill's
+    own: its total and how each charge is priced and rounded, which events it
+    may cover and what happens when their clients differ, its pages and when
+    they refuse a change, marking it paid, its invoice and the events'
+    invoices that can follow it, and how the rental check and revenue by
+    client read it.
+``test_billing_page``
+    The Billing page and the stages it lists bills by: which stage a bill is
+    at and since when, the fiscal-year and partition filters, each tab and what
+    it offers, recording a worktag and an ISD, deciding an event needs no bill,
+    starting a multi-bill from ticked events, the event page's Next step box,
+    and the menu entries that replaced the events app's billing lists.
+``test_bill_payments``
+    Payments for bills: the queue finding the bill a payment settles by the
+    ISD number recorded on it, before the memo's event name; marking the bill
+    paid when its payment is filed, from the queue or a multi-bill's split;
+    the Mark paid form for either kind of bill, which asks how it was paid
+    when nothing filed covers it, and replaced the one-click buttons; and what
+    an unpaid bill has received and owes, the same on the Billing page as on
+    the Owed to LNL report.
+``test_billing_closing``
+    The end of billing: closing events from the Billing page's Paid and No
+    bill needed tabs, one row or ticked together, as the event page's Close
+    button does, and refusing while money is still owed; and the weekly
+    digest the ``billing_digest`` command emails the Treasurer, with the
+    limits it reads from Finance Configuration.
+
+**Everything else**
+
+``test_rollups``
+    The batch figures behind the listing pages -- that each equals the
+    per-row property it stands in for, and that its query count stays flat as
+    rows are added -- together with the group fixture that decides whether a
+    fresh install can open the app at all.
+
+``test_admin``
+    That every registered admin page loads, and that the guards on the
+    read-only and singleton models hold.
+``test_import_events``
+    The ``import_real_events`` management command: that it never imports an
+    event twice, deletes one a transaction is linked to, or copies private
+    fields off the production record.
+``test_lookups``
+    The autocomplete channels, including their permission gate and escaping.
+``test_templatetags``
+    The filters and tags, and in particular that each one survives being
+    handed ``None`` or a non-numeric value.
+
+``util``
+    Shared fixtures and builders. Not a test module.
+"""
+import os
+import sys
+
+
+def _install_mptt_windows_shim():
+    """
+    Repair django-mptt's testing-generator guard on non-POSIX paths.
+
+    ``mptt.models._check_no_testing_generators`` runs on every MPTT model
+    instantiation during ``manage.py test``, and builds a label for its error
+    message with ``call_file.split("/")[-2]``. A Windows path contains no
+    ``/``, so the split yields a one-element list and the guard raises
+    ``IndexError`` from the line that was only ever meant to name a directory.
+
+    The effect is that every ``ProjectTag`` created in a test blows up before
+    the test body runs -- twenty-nine of them here -- which is not a failing
+    assertion but a whole area of this app going unexercised and unmeasured.
+    ``MPTT_ALLOW_TESTING_GENERATORS`` does not help: the IndexError happens on
+    the line above the one that reads the setting.
+
+    The replacement keeps the guard exactly as intended -- refuse a model built
+    by model_bakery or model_mommy unless the setting allows it, with the same
+    message -- and only builds the path label in a way that works on any
+    platform. It is deliberately installed from the test package rather than
+    from application code: it exists solely because tests are running, and
+    nothing in production ever calls it.
+
+    Remove this when django-mptt fixes the split upstream; the guard survives
+    on its own either way, because this only ever replaces a broken one.
+    """
+    if sys.argv[1:2] != ['test']:
+        # The upstream guard only installs itself under `manage.py test`, so
+        # outside that there is nothing to repair.
+        return
+    try:
+        from django.conf import settings
+        from mptt.models import MPTTModel
+    except ImportError:                                     # pragma: no cover
+        return
+
+    # Untouched unless mptt actually installed the broken guard, which it only
+    # does when model_bakery or model_mommy is importable.
+    current = getattr(MPTTModel, '_check_no_testing_generators', None)
+    if current is None or getattr(current, '_lnl_shim', False):
+        return
+
+    def _check_no_testing_generators(self):
+        import inspect
+
+        frames = inspect.getouterframes(inspect.currentframe(), 0)
+        # Upstream indexes frame 5 unconditionally; a shorter stack is a
+        # legitimate call, not a reason to raise from the guard itself.
+        if len(frames) <= 5:
+            return
+        call_file = frames[5][1]
+        if 'model_mommy' not in call_file and 'model_bakery' not in call_file:
+            return
+        if getattr(settings, 'MPTT_ALLOW_TESTING_GENERATORS', False):
+            return
+        # os.path rather than a hard-coded separator: the only actual bug.
+        call_directory = os.path.basename(os.path.dirname(call_file))
+        raise Exception(
+            "The %s populates django-mptt fields with random values which leads to "
+            "unpredictable behavior. If you really want to generate this model that "
+            "way, please set MPTT_ALLOW_TESTING_GENERATORS=True in your settings."
+            % call_directory)
+
+    _check_no_testing_generators._lnl_shim = True
+    MPTTModel._check_no_testing_generators = _check_no_testing_generators
+
+
+_install_mptt_windows_shim()

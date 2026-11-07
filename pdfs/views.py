@@ -7,7 +7,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -22,7 +21,7 @@ except ModuleNotFoundError:
     from weasyprint.fonts import FontConfiguration
 from pypdf import PdfWriter
 
-from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
+from events.models import Category, BaseEvent, Event2019, ExtraInstance, Quote
 from projection.models import PITLevel, Projectionist
 
 
@@ -99,22 +98,6 @@ def get_category_data(event):
             categories_data.append(o)
         event_data['categories_data'] = categories_data
     return event_data
-
-
-def get_multibill_data(multibilling):
-    data = {'multibilling': multibilling}
-    orgsets = map(lambda event: event.org.all(), multibilling.events.all())
-    orgs = next(iter(orgsets))
-    for orgset in orgsets:
-        orgs |= orgset
-    orgs = orgs.distinct()
-    data['orgs'] = orgs
-    billing_org = multibilling.org
-    data['billing_org'] = billing_org
-    events = multibilling.events.order_by('datetime_start')
-    data['events'] = events
-    data['total_cost'] = sum(map(lambda event: event.cost_total, multibilling.events.all()))
-    return data
 
 
 def get_quote_data(event):
@@ -216,12 +199,14 @@ def generate_event_bill_pdf(request, event):
 
     return view_quote(request, quote.pk)
 
-def render_quote_to_pdf(quote) -> BytesIO:
-    pdf_file = BytesIO()
 
-    if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
-        font_config = FontConfiguration()
-        font_string = """
+def write_weasyprint_pdf(html, pdf_file):
+    """
+    Draw ``html`` into ``pdf_file`` with WeasyPrint, in the 2025 invoice's font.
+    Finance's multi-bill invoice uses it too.
+    """
+    font_config = FontConfiguration()
+    font_string = """
         @font-face {
             font-family: 'Helvetica-Neue';
             src: url('file:///static/fonts/HelveticaNeue.ttf');
@@ -246,10 +231,18 @@ def render_quote_to_pdf(quote) -> BytesIO:
             font-style: italic;
         }
         """
-        HTML(string=quote.html, url_fetcher=url_fetcher, base_url="/").write_pdf(
-            pdf_file,
-            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
-            font_config=font_config)
+    HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(
+        pdf_file,
+        stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
+        font_config=font_config)
+    return pdf_file
+
+
+def render_quote_to_pdf(quote) -> BytesIO:
+    pdf_file = BytesIO()
+
+    if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
+        write_weasyprint_pdf(quote.html, pdf_file)
     else:
         pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
 
@@ -295,41 +288,6 @@ def generate_event_bill_pdf_standalone(event, request=None, return_stream=False)
 
     if return_stream:
         return pdf_file
-    return pdf_file.getvalue()
-
-
-@login_required
-def generate_multibill_pdf(request, multibilling):
-    if not request.user.has_perm('events.view_event_billing'):
-        raise PermissionDenied
-    # Prepare context
-    multibilling = get_object_or_404(MultiBilling.objects.annotate(num_events=Count('events')), pk=multibilling)
-    data = get_multibill_data(multibilling)
-
-    # Render html content through html template with context
-    resp = generate_pdf(data, 'pdf_templates/bill-multi.html', request)
-
-    resp['Content-Disposition'] = 'inline; filename="bill.pdf"'
-    return resp
-
-
-def generate_multibill_pdf_standalone(multibilling, request=None):
-    """
-    Generate multibill PDF without HttpResponse
-
-    :returns: PDF file
-    """
-    # Prepare context
-    multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
-    data = get_multibill_data(multibilling)
-
-    # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-multi.html', context=data, request=request)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
     return pdf_file.getvalue()
 
 

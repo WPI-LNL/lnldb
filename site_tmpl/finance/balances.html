@@ -1,0 +1,431 @@
+{# What each fund holds, account by account, against what Workday says. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+
+{% block fin_title %}Balances{% endblock %}
+{% block fin_sub %}
+    FY{{ year.fiscal_year|stringformat:"s"|slice:"2:" }}, {{ year.first|date:"M j, Y" }} &ndash; {{ year.last|date:"M j, Y" }}{% if not year.year_over %} (so far){% endif %}
+{% endblock %}
+{% block fin_actions %}
+    {% with short=year.fiscal_year|stringformat:"s"|slice:"2:" %}
+        {% permission request.user has 'finance.edit_subledger' %}
+            <a href="{% url 'finance:checkpoint-new' %}" class="btn btn-default">
+                <span class="glyphicon glyphicon-piggy-bank"></span> Record a Workday balance
+            </a>
+            <a href="{% url 'finance:transfer-new' %}" class="btn btn-default">
+                <span class="glyphicon glyphicon-transfer"></span> Move money between funds
+            </a>
+            {% if year.books_start %}
+                <a href="{% url 'finance:opening-balances' %}" class="btn btn-default">Opening balances</a>
+            {% endif %}
+        {% endpermission %}
+        {% if can_close %}
+            <a href="{% url 'finance:close-year' year.fiscal_year %}" class="btn btn-primary">
+                <span class="glyphicon glyphicon-lock"></span> Close FY{{ short }}
+            </a>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block fin_content %}
+    {% with short=year.fiscal_year|stringformat:"s"|slice:"2:" %}
+
+    <div class="fin-panel">
+        <div class="fin-panel-body">
+            {% comment %}
+                The page opens on the figures. What they mean, and how current
+                they are, is folded away under How to read this page.
+            {% endcomment %}
+            {% if year.books_start %}
+                <details class="fin-howto">
+                    <summary>How to read this page</summary>
+                    <p class="fin-balance-intro fin-mt-8">
+                        {% if year.latest_line_date %}Counted up to <strong>{{ year.latest_line_date|date:"M j, Y" }}</strong>, the newest imported line.{% endif %}
+                        The books start on {{ year.books_start|date:"M j, Y" }}.
+                    </p>
+                    <p class="fin-balance-intro">
+                        Money going out, and any balance below zero, is in <strong>(parentheses)</strong>.
+                        Each fund's row adds up across: Opening + Came in + Spent + Transfers = {% if year.year_over %}Closing{% else %}Now{% endif %}.
+                    </p>
+                    <p class="fin-balance-intro">
+                        $0 is nothing, <span class="fin-unknown">?</span> is not known yet, and <span class="fin-na">—</span> means the figure does not apply to that row.
+                    </p>
+                    <ul>
+                        <li><strong>After encumbrances</strong> is {% if year.year_over %}Closing{% else %}Now{% endif %} + Encumbered: what is left once the purchases logged in advance are charged. For a fund SGA reimburses it is below zero by what SGA will owe.</li>
+                        <li><strong>Event costs awaiting payment</strong>: an expense linked to an event is not taken from Legacy (or any fund that carries forward) until the event is paid for. Until then it waits in a row of its own, and moves into the fund under Transfers on the day the event's bill is marked paid.</li>
+                        <li><strong>Billed, not paid</strong>: what billed events still owe. It is not cash until it arrives, so it is shown beside the fund it will land in, not counted in it.</li>
+                        <li><strong>Not settled yet</strong>: lines still in the queue. With them, the funds add up to the account's cash.</li>
+                        <li>Balances count every settled line, whichever Projection or Event Production side it was for.</li>
+                    </ul>
+                </details>
+            {% else %}
+                <p class="fin-muted fin-m-0">Nothing has been imported yet. The books start with the fiscal year of the first Workday line.</p>
+            {% endif %}
+            {% if year.accounts|length > 1 or transfers %}
+                <nav class="fin-jump" aria-label="On this page">
+                    <span class="fin-jump-label">On this page</span>
+                    {% for account in year.accounts %}
+                        <a href="#fin-account-{{ account.code|slugify }}">{{ account.code }}{% if account.account.notes %} <span class="fin-muted">{{ account.account.notes }}</span>{% endif %}</a>
+                    {% endfor %}
+                    {% if transfers %}<a href="#fin-transfers">Transfers between funds</a>{% endif %}
+                </nav>
+            {% endif %}
+            {% if year.unassigned_lines %}
+                <div class="alert alert-warning fin-m-0 fin-mt-12">
+                    {{ year.unassigned_lines }} imported line{{ year.unassigned_lines|pluralize }}
+                    carr{{ year.unassigned_lines|pluralize:"ies,y" }} no account code that lnldb knows, so
+                    {{ year.unassigned_lines|pluralize:"it is,they are" }} left out of every balance here.
+                    Add the code under Partition Codes in the admin.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if close %}
+        <div class="alert {% if changes %}alert-warning{% else %}alert-success{% endif %}">
+            <span class="glyphicon glyphicon-lock"></span>
+            <strong>FY{{ short }} was closed</strong>
+            on {{ close.closed_on|date:"M j, Y" }}{% if close.closed_by %} by {{ close.closed_by.get_full_name|default:close.closed_by.username }}{% endif %}.
+            {% if changes %}
+                It has changed since:
+                <ul class="fin-my-8">
+                    {% for code, what, then, now in changes %}
+                        <li>{{ code }} {{ what }}: {{ then|figure }} when closed, {{ now|figure }} now</li>
+                    {% endfor %}
+                </ul>
+                Usually a line imported or settled again after the close. If the new figures are
+                right, reopen the year and close it again to record them.
+            {% else %}
+                Nothing has changed since.
+            {% endif %}
+            {% if close.notes %}<div class="fin-muted fin-mt-4">{{ close.notes|linebreaksbr }}</div>{% endif %}
+            {% permission request.user has 'finance.close_fiscalyear' %}
+                <form class="fin-inline" method="post" action="{% url 'finance:reopen-year' year.fiscal_year %}"
+                      onsubmit="return confirm('Reopen FY{{ short }}? Its year-end transfers are taken back. Workday balances stay.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-default">Reopen</button>
+                </form>
+            {% endpermission %}
+        </div>
+    {% endif %}
+
+    {% if year.before_books %}
+        <div class="fin-empty">
+            <span class="glyphicon glyphicon-inbox"></span>
+            <strong>FY{{ short }} is before the books start.</strong>
+            <div>Balances count from {{ year.books_start|date:"M j, Y" }}. What the accounts held then is the opening balance of FY{{ books_start_year|stringformat:"s"|slice:"2:" }}.</div>
+        </div>
+    {% endif %}
+
+    {% for account in year.accounts %}
+        {% with slug=account.code|slugify own=account.own_row waiting=account.waiting_row %}
+        <div class="fin-panel fin-anchor" id="fin-account-{{ slug }}">
+            <div class="fin-panel-head">
+                <span>
+                    {{ account.code }}
+                    {% if account.account.notes %}<span class="fin-muted">{{ account.account.notes }}</span>{% endif %}
+                </span>
+                {% if account.unpaid_bills or account.checkpoints %}
+                    <nav class="fin-jump" aria-label="{{ account.code }}">
+                        {% if account.unpaid_bills %}<a href="#fin-unpaid-{{ slug }}">Bills not yet paid ({{ account.unpaid_bills|length }})</a>{% endif %}
+                        {% if account.checkpoints %}<a href="#fin-workday-{{ slug }}">Workday balances ({{ account.checkpoints|length }})</a>{% endif %}
+                    </nav>
+                {% endif %}
+            </div>
+
+            {# The account's answer in a few figures, before the table that shows the working. #}
+            <div class="fin-panel-body">
+                <div class="fin-stats">
+                    <div class="fin-stat">
+                        <div class="fin-stat-label">Cash in Workday</div>
+                        {% if account.cash_known %}
+                            <div class="fin-stat-value">{{ account.closing_cash|figure }}</div>
+                            <div class="fin-stat-sub">on {{ account.last|date:"M j, Y" }} &middot; {{ account.opening_cash|figure }} on {{ account.first|date:"M j" }}</div>
+                        {% else %}
+                            <div class="fin-stat-value"><span class="fin-unknown" title="Not known yet">?</span></div>
+                            <div class="fin-stat-sub">not known until a Workday balance is recorded</div>
+                        {% endif %}
+                    </div>
+                    {% if own %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">{{ own.name }} free to spend</div>
+                            {% if own.after_encumbrances is not None %}
+                                <div class="fin-stat-value {% if own.after_encumbrances < 0 %}text-danger{% endif %}">{{ own.after_encumbrances|figure }}</div>
+                                <div class="fin-stat-sub">{{ own.closing|figure }} now &middot; {{ own.encumbered|negate|figure }} encumbered</div>
+                            {% else %}
+                                <div class="fin-stat-value"><span class="fin-unknown" title="Not known yet">?</span></div>
+                                <div class="fin-stat-sub">not known until a Workday balance is recorded</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if account.unpaid_bills %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">Billed, not paid</div>
+                            <div class="fin-stat-value"><a href="#fin-unpaid-{{ slug }}">{{ account.billed|figure }}</a></div>
+                            <div class="fin-stat-sub">
+                                {{ account.unpaid_bills|length }} bill{{ account.unpaid_bills|length|pluralize }}
+                                {% if own.free_once_paid is not None %}&middot; <span title="Free now, plus what these bills still owe, less the event costs and encumbrances waiting for the same events, which move into {{ own.name }} when each is paid">{{ own.free_once_paid|figure }} free once paid</span>{% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if account.owed_by_sga is not None %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">SGA will owe LNL</div>
+                            <div class="fin-stat-value">{{ account.owed_by_sga|figure }}</div>
+                            <div class="fin-stat-sub">once encumbered purchases are charged</div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if not account.cash_known %}
+                    <div class="alert alert-info fin-m-0 fin-mt-12">
+                        lnldb does not know what {{ account.code }} holds yet, so
+                        {% if account.own_fund %}{{ account.own_fund }}{% else %}its own money{% endif %}
+                        shows only what moved. Copy any balance for it out of Workday
+                        -- today's is fine -- and every other day is worked out from it.
+                        {% permission request.user has 'finance.edit_subledger' %}
+                            <a href="{% url 'finance:checkpoint-new' %}?account={{ account.account.pk }}" class="btn btn-primary fin-ml-8"><span class="glyphicon glyphicon-piggy-bank"></span> Record a Workday balance</a>
+                        {% endpermission %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {% comment %}
+                Every figure carries its sign, so a row adds up across and a
+                column adds up down: money going out is in parentheses, never a
+                plain figure in a column headed Spent. Spent and Encumbered are
+                kept as positive amounts out, hence |negate.
+
+                Zero is $0, never a dash: a question mark is a figure not known
+                yet (|figure's rendering of None), and a grey dash one that does
+                not apply to the row at all. The Treasurer asked for the three to
+                be told apart.
+            {% endcomment %}
+            <div class="fin-panel-divider">Funds</div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table fin-balance-table">
+                    <thead>
+                        <tr>
+                            <th>Fund</th>
+                            <th class="fin-num">Opening<small>{{ account.first|date:"M j" }}</small></th>
+                            <th class="fin-num">Came in</th>
+                            <th class="fin-num">Spent</th>
+                            <th class="fin-num" title="Money moved between funds inside this account, and an event's costs moving into the fund they were charged to once the event is paid for. Workday never sees these: no cash moves.">Transfers</th>
+                            <th class="fin-num fin-col-key">{% if year.year_over %}Closing{% else %}Now{% endif %}<small>{{ account.last|date:"M j" }}</small></th>
+                            <th class="fin-num fin-col-sep" title="Purchases encumbered against this fund and not yet charged">Encumbered</th>
+                            <th class="fin-num" title="What the balance will be once the encumbered purchases are charged">After encumbrances</th>
+                            <th class="fin-col-sep">What it means</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in account.rows %}
+                            <tr class="{% if row.is_idle %}fin-row-idle{% endif %}">
+                                <td>
+                                    {% if row.fund %}
+                                        <a href="{% url 'finance:ledger' %}?fy={{ year.fiscal_year }}&amp;fund={{ row.fund.slug }}">{{ row.name }}</a>
+                                    {% else %}{{ row.name }}{% endif %}
+                                    <div class="fin-muted">
+                                        {% if row.is_own %}{{ account.code }}'s own money &middot; {% endif %}{{ row.behaviour_label }}
+                                        {% if row.events %}&middot; <span title="{% for event, amount in row.events %}{{ event }}{% if not forloop.last %}, {% endif %}{% endfor %}">{{ row.events|length }} event{{ row.events|length|pluralize }}</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td class="fin-num">{% if row.has_opening %}{{ row.opening|figure }}{% else %}<span class="fin-na" title="This fund starts each year with nothing in it">—</span>{% endif %}</td>
+                                <td class="fin-num">{% if row.takes_income %}{{ row.received|figure }}{% else %}<span class="fin-na" title="Only costs wait for an event's payment">—</span>{% endif %}</td>
+                                <td class="fin-num">{{ row.spent|negate|figure }}</td>
+                                <td class="fin-num">{{ row.transferred|figure }}</td>
+                                <td class="fin-num fin-col-key {% if row.needs_attention %}text-danger{% endif %}">{{ row.closing|figure }}</td>
+                                <td class="fin-num fin-col-sep">{{ row.encumbered|negate|figure }}</td>
+                                <td class="fin-num">{{ row.after_encumbrances|figure }}</td>
+                                <td class="fin-col-sep {% if row.needs_attention %}text-danger{% endif %}">{{ row.status }}</td>
+                            </tr>
+                        {% endfor %}
+                        {% if account.unfiled_opening or account.unfiled_closing %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'finance:queue' %}?fy={{ year.fiscal_year }}">Not settled yet</a>
+                                    <div class="fin-muted">lines in the queue, in no fund until they are settled</div>
+                                </td>
+                                <td class="fin-num">{{ account.unfiled_opening|figure }}</td>
+                                <td class="fin-num"><span class="fin-na" title="A line is in or out of the queue; it does not come in, go out or move between funds there">—</span></td>
+                                <td class="fin-num"><span class="fin-na" title="A line is in or out of the queue; it does not come in, go out or move between funds there">—</span></td>
+                                <td class="fin-num"><span class="fin-na" title="A line is in or out of the queue; it does not come in, go out or move between funds there">—</span></td>
+                                <td class="fin-num fin-col-key">{{ account.unfiled_closing|figure }}</td>
+                                <td class="fin-num fin-col-sep"><span class="fin-na" title="Nothing is encumbered against the queue">—</span></td>
+                                <td class="fin-num">{{ account.unfiled_closing|figure }}</td>
+                                <td class="fin-col-sep">Settle these and the money moves into its funds</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                    {# Opening and closing are the account's cash, which the rows above add up to; without a Workday balance they are unknown, but the movements are not. #}
+                    <tfoot>
+                        <tr>
+                            <th>{{ account.code }} in total<div class="fin-muted">the account's cash</div></th>
+                            <th class="fin-num">{{ account.opening_cash|figure }}</th>
+                            <th class="fin-num">{{ account.received|figure }}</th>
+                            <th class="fin-num">{{ account.spent|negate|figure }}</th>
+                            <th class="fin-num">{{ account.transferred|figure }}</th>
+                            <th class="fin-num fin-col-key">{{ account.closing_cash|figure }}</th>
+                            <th class="fin-num fin-col-sep">{{ account.encumbered|negate|figure }}</th>
+                            <th class="fin-num">{{ account.after_encumbrances|figure }}</th>
+                            <th class="fin-col-sep">
+                                {% if account.out_of_balance %}
+                                    <span class="text-danger">The funds miss the cash by {{ account.out_of_balance|figure }}</span>
+                                {% endif %}
+                            </th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            {% if account.unpaid_bills %}
+                <div class="fin-panel-divider fin-anchor" id="fin-unpaid-{{ slug }}">Bills not yet paid</div>
+                <div class="fin-table-wrap">
+                    <table class="table fin-table fin-balance-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Client</th>
+                                <th>Billed on</th>
+                                <th>Stage</th>
+                                <th class="fin-num">Still owed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unpaid in account.unpaid_bills %}
+                                <tr>
+                                    <td><a href="{% url 'events:detail' unpaid.event.pk %}">{{ unpaid.event }}</a></td>
+                                    <td>{{ unpaid.client|default:"No client on file" }}</td>
+                                    <td>{{ unpaid.bill.date_billed|date:"M j, Y" }}</td>
+                                    <td>{{ unpaid.stage }}</td>
+                                    <td class="fin-num">{{ unpaid.owed|figure }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4">
+                                    Billed, not paid
+                                    {% if own.free_once_paid is not None %}
+                                        <div class="fin-muted">{{ own.name }} will have {{ own.free_once_paid|figure }} free once these are paid, as the costs waiting for the same events move in with them</div>
+                                    {% endif %}
+                                </th>
+                                <th class="fin-num">{{ account.billed|figure }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            {% endif %}
+
+            {% if account.checkpoints %}
+                <div class="fin-panel-divider fin-anchor" id="fin-workday-{{ slug }}">Workday balances</div>
+                <div class="fin-table-wrap">
+                    <table class="table fin-table fin-balance-table">
+                        <thead>
+                            <tr>
+                                <th>As of</th>
+                                <th class="fin-num">Workday</th>
+                                <th class="fin-num">Ledger</th>
+                                <th class="fin-num">Difference</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in account.checkpoints %}
+                                <tr>
+                                    <td>
+                                        {{ row.checkpoint.as_of|date:"M j, Y" }}
+                                        {% if row.checkpoint.note %}<div class="fin-muted">{{ row.checkpoint.note }}</div>{% endif %}
+                                    </td>
+                                    <td class="fin-num">{{ row.checkpoint.balance|figure }}</td>
+                                    <td class="fin-num">{{ row.computed|figure }}</td>
+                                    <td class="fin-num {% if row.difference and not row.is_anchor %}text-danger{% endif %}">
+                                        {% if row.is_anchor %}<span class="fin-na" title="Every other day is counted from this balance, so there is nothing to compare it with">—</span>{% else %}{{ row.difference|figure }}{% endif %}
+                                    </td>
+                                    <td class="fin-muted">
+                                        {% if row.is_anchor %}
+                                            Everything is counted from this one.
+                                        {% elif row.difference %}
+                                            Lines are missing from the ledger, a balance was copied wrong, or a line posted after the balance was read.
+                                        {% else %}
+                                            Agrees.
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right">
+                                        {% permission request.user has 'finance.edit_subledger' %}
+                                            <form method="post" action="{% url 'finance:checkpoint-delete' row.checkpoint.pk %}"
+                                                  onsubmit="return confirm('Remove this Workday balance?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-link text-danger fin-x" title="Remove this Workday balance" aria-label="Remove this Workday balance">&times;</button>
+                                            </form>
+                                        {% endpermission %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+        {% endwith %}
+    {% empty %}
+        {% if not year.before_books and year.books_start %}
+            <div class="fin-empty">
+                <span class="glyphicon glyphicon-inbox"></span>
+                <strong>No account has any money in FY{{ short }} yet.</strong>
+                <div>Set which account each fund is held in under Fund Sources in the admin.</div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if transfers %}
+        <div class="fin-panel fin-anchor" id="fin-transfers">
+            <div class="fin-panel-head">
+                <span>Transfers between funds</span>
+                <span class="fin-locked-note">no cash moves, so Workday never shows these</span>
+            </div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table fin-balance-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account</th>
+                            <th>From &rarr; To</th>
+                            <th class="fin-num">Amount</th>
+                            <th>Why</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transfer in transfers %}
+                            <tr>
+                                <td>
+                                    {{ transfer.date|date:"M j, Y" }}
+                                    {% if transfer.kind != 'transfer' %}<div class="fin-muted">{{ transfer.get_kind_display }}</div>{% endif %}
+                                </td>
+                                <td>{{ transfer.account.code }}</td>
+                                <td>{{ transfer.from_fund }} &rarr; {{ transfer.to_fund }}</td>
+                                <td class="fin-num">{{ transfer.amount|figure }}</td>
+                                <td>{{ transfer.description }}</td>
+                                <td class="text-right">
+                                    {% if transfer.kind == 'transfer' %}
+                                        {% permission request.user has 'finance.edit_subledger' %}
+                                            <form method="post" action="{% url 'finance:transfer-delete' transfer.pk %}"
+                                                  onsubmit="return confirm('Take this transfer back?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-link text-danger fin-x" title="Take this transfer back" aria-label="Take this transfer back">&times;</button>
+                                            </form>
+                                        {% endpermission %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {% endwith %}
+{% endblock %}

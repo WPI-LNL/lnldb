@@ -1,0 +1,235 @@
+{# One multi-bill: what it covers, what it comes to and why, who it went to, and what can be done next. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:multibill-list' %}">&larr; All multi-bills</a>{% endblock %}
+{% block fin_title %}
+    {{ bill.display_name }}
+    {% if bill.date_paid %}
+        <span class="fin-tag is-ok">Paid {{ bill.date_paid|date:"M j, Y" }}</span>
+    {% else %}
+        <span class="fin-tag">Unpaid</span>
+    {% endif %}
+{% endblock %}
+{% block fin_sub %}{{ bill.events.all|length }} event{{ bill.events.all|length|pluralize }}{% endblock %}
+{% block fin_actions %}
+    {% if can_change %}
+        <a href="{% url 'finance:multibill-edit' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Edit</a>
+        <a href="{% url 'finance:multibill-charge-new' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-plus"></span> Add a charge</a>
+    {% endif %}
+    <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
+    {% if can_change %}
+        {% if bill.isd_number %}
+            <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-default">Change ISD</a>
+        {% elif bill.worktag_charged %}
+            <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-primary">Record ISD</a>
+        {% else %}
+            <a href="{% url 'finance:multibill-worktag' bill.pk %}" class="btn btn-default">Enter worktag</a>
+        {% endif %}
+    {% endif %}
+    {% if not has_closed_events %}
+        {% if bill.date_paid %}
+            <form class="fin-inline" method="post" action="{% url 'finance:multibill-unpaid' bill.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-default">Mark unpaid</button>
+            </form>
+        {% else %}
+            <a href="{% url 'finance:multibill-paid' bill.pk %}" class="btn btn-primary">Mark paid…</a>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-file"></span> Invoice PDF</a>
+    {% if can_change %}
+        <a href="{% url 'finance:multibill-delete' bill.pk %}" class="btn btn-link text-danger">Delete</a>
+    {% endif %}
+{% endblock %}
+
+{% block fin_content %}
+    {% comment %}
+        The saved total is what finance matches payments against and splits
+        between the events; the events and charges are what the invoice draws.
+        They part when an event's price changes after the bill went out.
+    {% endcomment %}
+    {% if total_differs %}
+        <div class="alert alert-warning">
+            {% if bill.date_paid %}
+                This bill was paid at {{ saved_total|money }}. Its events and charges now come to
+                {{ breakdown.total|money }}, because a price changed after it was paid. The paid figure stands.
+            {% else %}
+                The saved total is {{ saved_total|money }}, but the events and charges now come to
+                {{ breakdown.total|money }}. An event's price has probably changed since it was billed. Finance
+                matches payments against the saved total, and the invoice shows the new one.
+                {% if can_change %}
+                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-update-total' bill.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">Update the total to {{ breakdown.total|money }}</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if bill.isd_differs %}
+        <div class="alert alert-danger">
+            ISD {{ bill.isd_number }} charges {{ bill.isd_amount|money }}, but the bill now comes to
+            {{ bill.amount|money }}. Change the ISD in Workday, then record the new amount.
+        </div>
+    {% endif %}
+    {% if has_closed_events %}
+        <div class="alert alert-info">
+            An event on this bill is closed, so the bill can no longer be changed or marked paid.
+        </div>
+    {% endif %}
+
+    <div class="fin-panel">
+        <div class="fin-panel-body">
+            <div class="fin-stats fin-mb-12">
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Total</div>
+                    <div class="fin-stat-value">{{ saved_total|money }}</div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Bill to</div>
+                    <div class="fin-stat-value is-text">
+                        {% if bill.org %}{{ bill.org.name }}{% else %}<span class="fin-muted">not set</span>{% endif %}
+                    </div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Billed on</div>
+                    <div class="fin-stat-value is-text">{{ bill.date_billed|date:"M j, Y" }}</div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Payments received</div>
+                    <div class="fin-stat-value is-text">{{ received|money }}</div>
+                    {% if last_payment %}<div class="fin-stat-sub">last on {{ last_payment|date:"M j, Y" }}</div>{% endif %}
+                    {% if perms.finance.view_subledger %}
+                        <div class="fin-stat-sub hidden-print"><a href="{% url 'finance:ledger' %}?multibill={{ bill.pk }}">See them in the ledger</a></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if bill.description %}<p>{{ bill.description|linebreaksbr }}</p>{% endif %}
+            {% if bill.worktag_charged or bill.isd_number %}
+                <p>
+                    Charged to {{ bill.worktag_charged|or_dash }}{% if bill.fund_label %} ({{ bill.fund_label }}){% endif %}{% if bill.isd_number %}
+                    on ISD {{ bill.isd_number }}, {{ bill.isd_amount|money }}, created {{ bill.isd_entered_on|date:"M j, Y" }}{% else %}.
+                    The ISD is not recorded yet{% endif %}.
+                </p>
+            {% endif %}
+            {% if bill.paid_note %}<p class="fin-muted">Paid: {{ bill.paid_note }}</p>{% endif %}
+            <p class="fin-muted">
+                The invoice is the bill's own summary{% if bill.attach_event_invoices %}, followed by each event's itemized
+                invoice{% else %} only{% endif %}.{% if can_change %} Change that under <em>Edit</em>.{% endif %}
+            </p>
+            {% if clients|length > 1 %}
+                <p class="fin-muted">
+                    These events were booked for
+                    {% for org, count in clients %}{{ org.retname }} ({{ count }}){% if not forloop.last %}, {% endif %}{% endfor %};
+                    the bill goes to {% if bill.org %}{{ bill.org.retname }}{% else %}nobody yet{% endif %}.
+                </p>
+            {% endif %}
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                <thead>
+                <tr>
+                    <th>What</th>
+                    <th></th>
+                    <th class="fin-num">Amount</th>
+                    <th class="hidden-print"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in breakdown.events %}
+                    <tr>
+                        <td><a href="{% url 'events:detail' row.event.pk %}">{{ row.event.event_name }}</a></td>
+                        <td class="fin-muted">
+                            {{ row.event.datetime_start|date:"M j, Y" }}
+                            {% if row.client %}&middot; {{ row.client.retname }}{% endif %}
+                            {% if row.event.closed %}&middot; closed{% endif %}
+                        </td>
+                        <td class="fin-num">{{ row.price|money }}</td>
+                        <td class="hidden-print"></td>
+                    </tr>
+                {% endfor %}
+                {% if breakdown.charges %}
+                    <tr>
+                        <td><strong>Events</strong></td>
+                        <td></td>
+                        <td class="fin-num"><strong>{{ breakdown.events_total|money }}</strong></td>
+                        <td class="hidden-print"></td>
+                    </tr>
+                {% endif %}
+                {% for row in breakdown.charges %}
+                    {% with charge=row.charge %}
+                        <tr>
+                            <td>{{ charge.description }}</td>
+                            <td class="fin-muted">
+                                {% if charge.kind == 'percent' %}
+                                    {% if charge.percent < 0 %}Discount:{% else %}Fee:{% endif %}
+                                    {{ charge.percent|floatformat:"-2" }}% of the events' {{ breakdown.events_total|money }}
+                                {% else %}
+                                    {{ charge.get_kind_display }}{% if charge.quantity != 1 %}: {{ charge.quantity }} &times; {{ charge.unit_price|money }}{% endif %}
+                                    {% if row.fee %}&middot; plus the {{ charge.rental_fee_percent|floatformat:"-2" }}% rental fee, {{ row.fee|money }}{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="fin-num">{{ row.total|money }}</td>
+                            <td class="hidden-print text-right fin-nowrap">
+                                {% if can_change %}
+                                    <a href="{% url 'finance:multibill-charge-edit' bill.pk charge.pk %}" class="btn btn-link">Change</a>
+                                    <form class="fin-inline" method="post" action="{% url 'finance:multibill-charge-delete' bill.pk charge.pk %}"
+                                          onsubmit="return confirm('Remove this charge from the bill?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link text-danger fin-x" title="Remove this charge" aria-label="Remove this charge">&times;</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endwith %}
+                {% endfor %}
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td></td>
+                    <td class="fin-num"><strong>{{ breakdown.total|money }}</strong></td>
+                    <td class="hidden-print"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Emails sent</span>
+            <span class="hidden-print">
+                {% if not bill.date_paid and not has_closed_events %}
+                    <a href="{% url 'finance:multibill-sent' bill.pk %}" class="btn btn-default" title="It reached the client some other way, such as by hand">{% if bill.sent_on %}Change when it was sent{% else %}Mark sent…{% endif %}</a>
+                {% endif %}
+                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-default">Email client</a>
+            </span>
+        </div>
+        {% if bill.sent_on %}
+            <div class="fin-panel-body">
+                Marked sent {{ bill.sent_on|date:"M j, Y" }}, not by email{% if bill.sent_note %}: {{ bill.sent_note }}{% endif %}.
+            </div>
+        {% endif %}
+        {% if emails %}
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead><tr><th>Sent</th><th>Subject</th><th>To</th></tr></thead>
+                    <tbody>
+                    {% for email in emails %}
+                        <tr>
+                            <td>{% if email.sent_at %}{{ email.sent_at|date:"M j, Y g:i a" }}{% else %}<span class="text-warning">Not sent</span>{% endif %}</td>
+                            <td>{{ email.subject }}</td>
+                            <td>
+                                {% for user in email.email_to_users.all %}{{ user.get_full_name|default:user.email }}{% if not forloop.last or email.email_to_orgs.all %}, {% endif %}{% endfor %}
+                                {% for org in email.email_to_orgs.all %}{{ org.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="fin-panel-body fin-muted">Not emailed yet.</div>
+        {% endif %}
+    </div>
+{% endblock %}
