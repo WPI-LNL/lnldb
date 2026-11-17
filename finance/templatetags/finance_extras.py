@@ -1,0 +1,497 @@
+"""
+Template filters and tags shared by the finance pages.
+
+Two rules hold across everything in here. First, a filter is handed
+whatever the template happens to have -- ``None``, an empty string, a value
+straight off a form -- so every one of them coerces defensively and returns
+something printable rather than raising: a page that renders a dash is much
+better than a page that 500s over one bad cell. Second, anything that emits
+markup goes through ``format_html`` unless every substituted value is a
+number this module produced itself.
+"""
+import os
+from decimal import Decimal, InvalidOperation
+
+from django import template
+from django.conf import settings
+from django.contrib.humanize.templatetags.humanize import intcomma
+from django.contrib.staticfiles import finders
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.http import QueryDict
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
+
+from finance.models import dollars
+
+register = template.Library()
+
+
+@register.simple_tag
+def autocomplete_media():
+    """
+    The scripts django-ajax-selects needs to wire itself up. Scripts only.
+
+    ``AutoCompleteSelectField`` renders an ordinary text box plus a hidden input
+    carrying ``data-ajax-select`` and a ``source`` URL. Those attributes are
+    inert markup on their own; ``ajax_select.js`` is what finds them on ready
+    and attaches the jQuery UI autocomplete.
+
+    ``base.html`` already loads that script site-wide, which makes this look
+    redundant. It is not, and the reason is its very last line::
+
+        })(window.jQuery, window.django.jQuery);
+
+    ``window.django`` is created by ``admin/js/jquery.init.js``, which
+    ``base.html`` does not load. On a page that supplies nothing further, that
+    line throws ``TypeError`` before the module body runs -- so the plugin is
+    never registered, nothing binds on ready, and the "Link to Event" box looks
+    completely normal, accepts typing and searches nothing. No error reaches the
+    page, which is what made it hard to attribute.
+
+    Emitting the real media fixes it by supplying the missing prerequisite and
+    re-running ``ajax_select.js`` after it, this time with a ``window.django``
+    to read.
+
+    Every other form template in this project gets these from
+    ``{{ form.media }}``. The finance pages cannot rely on that: the queue
+    renders one form per row and has none at all when the queue is empty, and
+    the split modal has a formset rather than a form -- so the pages that need
+    the scripts most are the ones with no ``form`` in context. Asking the widget
+    class for its own media instead means no finance page can forget, and no
+    file list is duplicated here to rot when ajax_select bumps a jQuery version.
+
+    Because this is emitted app-wide, the finance forms set
+    ``helper.include_media = False`` so crispy does not emit a second copy on
+    the pages it renders. One source for these assets, one place to reason
+    about them.
+
+    .. warning::
+
+       The stylesheets are dropped on purpose, and putting them back breaks the
+       dropdown. ``ajax_select``'s media carries a complete **jQuery UI 1.13.2**
+       theme, but the widget that actually runs here is **jQuery UI 1.10.3** --
+       the copy ``base.html`` loads and hands to ``window.$``. Loading 1.13's
+       stylesheet over 1.10's markup styles a menu that is not the menu on the
+       page: 1.13 wraps each row in ``.ui-menu-item-wrapper`` and drops the
+       ``.ui-menu-item a`` rules 1.10 relies on, so the results list rendered
+       misaligned and flickered as it opened.
+
+       ``base.html`` already loads a full jQuery UI 1.10.2 stylesheet matching
+       that widget, and ``ajax_select.css`` besides, so there is nothing missing
+       to supply -- only a mismatched theme to avoid.
+
+    .. note::
+
+       The bundled jQuery is not a conflict. ``AJAX_SELECT_BOOTSTRAP`` is on, so
+       this pulls jQuery 3.7.1 alongside the jQuery 1.10 that ``base.html``
+       already loaded -- but ``jquery.init.js`` immediately calls
+       ``jQuery.noConflict(true)``, which hands the new copy to
+       ``django.jQuery`` and puts ``window.$`` back to 1.10. The finance scripts
+       keep the jQuery they were written against, and the separate instance also
+       isolates them from the ``dismissAddRelatedObjectPopup`` error that
+       ``ajax_select.js`` raises outside the admin.
+    """
+    from django import forms
+    from ajax_select.fields import AutoCompleteSelectWidget
+
+    # Any channel will do -- the media is the same for all of them, and the
+    # widget is built purely to be asked for it. Taking the script list from
+    # ajax_select rather than writing it out here means a version bump in the
+    # package cannot leave a stale filename behind in this file.
+    scripts = AutoCompleteSelectWidget(channel='Events').media._js
+    return forms.Media(js=scripts)
+
+
+@register.simple_tag
+def asset(path):
+    """
+    A static URL with a cache-buster that actually changes when the file does.
+
+    Every finance page used ``{% static %}?v={{ GIT_RELEASE }}``, and
+    GIT_RELEASE is the git SHA: constant across every edit between commits. A
+    browser that had already fetched queue.js kept serving its copy back, so
+    changes to the stylesheet or the scripts were invisible until someone
+    thought to hard-refresh -- and the symptom is a button that silently does
+    nothing, which is the hardest kind of bug to attribute.
+
+    In development the stamp is the file's modification time. In production
+    files only change when a deploy does, so the release SHA is exactly right
+    and no filesystem call is made per request.
+    """
+    url = staticfiles_storage.url(path)
+    stamp = _asset_stamp(path)
+    return '%s?v=%s' % (url, stamp) if stamp else url
+
+
+def _asset_stamp(path):
+    """
+    The cache-busting stamp for one static file.
+
+    Returns an empty string when there is nothing useful to stamp with, in
+    which case :func:`asset` emits a bare URL. A missing file is not an error
+    here -- ``collectstatic`` may not have run yet, and refusing to render the
+    page over it would help nobody.
+    """
+    if not settings.DEBUG:
+        return getattr(settings, 'GIT_RELEASE', '') or ''
+    try:
+        found = finders.find(path)
+        return str(int(os.path.getmtime(found))) if found else ''
+    except OSError:
+        return ''
+
+
+@register.filter
+def money(value, show_sign=False):
+    """
+    Accounting-style currency, as :func:`finance.models.dollars` writes it.
+    Negatives render in parentheses, which is what the Treasurer expects to
+    see next to a Workday export; zero is ``$0``, and ``None`` -- not known
+    yet -- is ``?``. Plain text, so it is safe inside an attribute or an email.
+
+    A figure that does not apply to its row is not a value at all, so the
+    template writes the grey dash for it (``.fin-na``).
+    """
+    if value is None or value == '':
+        return '?'
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    if show_sign and amount > 0:
+        return '+' + dollars(amount)
+    return dollars(amount)
+
+
+@register.filter
+def figure(value):
+    """
+    :func:`money` for a cell of a table: the ``?`` of a figure not known yet
+    is marked up, so it stands out and says why on hover.
+    """
+    if value is None or value == '':
+        return format_html('<span class="fin-unknown" title="{}">?</span>', 'Not known yet')
+    return money(value)
+
+
+@register.filter
+def invoice_money(value):
+    """
+    Currency as an invoice to a client writes it: $1,234.50, or -$50.00 for a
+    credit or discount, as the 2025 invoice writes an event's discounts. The
+    parentheses of :func:`money` are for the Treasurer, not the client.
+    """
+    if value is None or value == '':
+        return ''
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    return '%s$%s' % ('-' if amount < 0 else '', intcomma('%.2f' % abs(amount)))
+
+
+@register.filter
+def money_class(value):
+    """ CSS class matching the sign, for consistent red/green across pages. """
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return ''
+    if amount > 0:
+        return 'text-success'
+    if amount < 0:
+        return 'text-danger'
+    return 'text-muted'
+
+
+@register.filter
+def abs_value(value):
+    """
+    Magnitude without the sign, for rows that show direction some other way.
+
+    Non-numeric input is passed straight back so the template still shows
+    whatever it had.
+    """
+    try:
+        return abs(Decimal(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+
+
+@register.filter
+def negate(value):
+    """
+    The figure with its sign turned over, for an amount kept as a positive
+    figure of money going out -- spent, encumbered -- that a column adding up
+    to a balance shows in parentheses. ``None`` stays ``None``.
+    """
+    try:
+        return -Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+
+
+@register.filter
+def percent_of(part, whole):
+    """ Clamped 0-100 integer percentage, safe when the denominator is zero. """
+    try:
+        part, whole = Decimal(part), Decimal(whole)
+    except (InvalidOperation, TypeError, ValueError):
+        return 0
+    if not whole:
+        return 0
+    return max(0, min(100, int(round(part / whole * 100))))
+
+
+def _count(number, one, many):
+    return '%s %s' % (number, one if number == 1 else many)
+
+
+@register.simple_tag
+def approved(item):
+    """
+    What SGA approved, for one line or for a whole request, budget or group
+    of lines -- saying plainly which of two different things a missing figure
+    is. A line with no approved amount is still with SGA: ``?`` and *Pending
+    SGA Approval*. A line approved at $0 is one SGA denied: ``$0`` and
+    *Denied*. A total adds up the lines SGA has decided and says how many are
+    still pending; it is ``?`` only when every line is.
+    """
+    pending = format_html('<span class="fin-approval is-waiting">Pending SGA Approval</span>')
+    if hasattr(item, 'line_count'):
+        if not item.approved_known:
+            return format_html('<span class="fin-unknown" title="{}">?</span> {}',
+                               "Every line is pending SGA approval", pending)
+        if item.waiting_count:
+            return format_html('{}<div class="fin-approval-note">{} pending SGA approval</div>',
+                               money(item.total_awarded),
+                               _count(item.waiting_count, 'line', 'lines'))
+        return money(item.total_awarded)
+    value = getattr(item, 'amount_awarded', None)
+    if value is None:
+        return format_html('<span class="fin-unknown" title="{}">?</span> {}',
+                           "SGA hasn't approved an amount for this line yet", pending)
+    if not Decimal(value):
+        return format_html('$0 <span class="fin-approval is-turned-down" title="{}">Denied</span>',
+                           "SGA denied this line")
+    return money(value)
+
+
+@register.simple_tag
+def requested(item):
+    """
+    What LNL asked SGA for, for one line or a total, as :func:`approved` says
+    what SGA gave. A line with nothing entered is ``?``; a total counts the
+    lines that have no requested amount, and is ``?`` only when none has one.
+    """
+    if hasattr(item, 'line_count'):
+        if not item.requested_known:
+            return format_html('<span class="fin-unknown" title="{}">?</span>',
+                               "No line says what was requested")
+        if item.requested_missing_count:
+            return format_html('{}<div class="fin-approval-note">{} without one</div>',
+                               money(item.total_requested),
+                               _count(item.requested_missing_count, 'line', 'lines'))
+        return money(item.total_requested)
+    value = getattr(item, 'amount_requested', None)
+    if value is None:
+        return format_html('<span class="fin-unknown" title="{}">?</span>',
+                           "What was requested isn't entered")
+    return money(value)
+
+
+@register.simple_tag
+def burndown_bar(spent, awarded):
+    """
+    Spent and left, in the colours of the dashboard's money out and money in,
+    with an overspend rendered as a full darker red bar plus an explicit overage
+    figure -- a bar that silently clamps at 100% would hide the one case the
+    Treasurer most needs to see. Nothing approved and nothing spent, as on a
+    line SGA denied, has nothing to show, so no bar.
+    """
+    try:
+        spent, awarded = Decimal(spent), Decimal(awarded)
+    except (InvalidOperation, TypeError, ValueError):
+        return ''
+
+    if awarded <= 0:
+        if spent <= 0:
+            return ''
+        return mark_safe('<div class="progress fin-burndown"><div class="progress-bar '
+                         'is-over" style="width:100%"></div></div>')
+
+    if spent > awarded:
+        over = spent - awarded
+        return format_html(
+            '<div class="progress fin-burndown" title="Overspent by ${}">'
+            '<div class="progress-bar is-over" style="width:100%">'
+            'Over by ${}</div></div>',
+            intcomma('%.2f' % over), intcomma('%.2f' % over))
+
+    spent_pct = int(round(spent / awarded * 100)) if awarded else 0
+    spent_pct = max(0, min(100, spent_pct))
+    return format_html(
+        '<div class="progress fin-burndown" title="${} of ${} spent">'
+        '<div class="progress-bar is-spent" style="width:{}%"></div>'
+        '<div class="progress-bar is-left" style="width:{}%"></div></div>',
+        intcomma('%.2f' % spent), intcomma('%.2f' % awarded), spent_pct, 100 - spent_pct)
+
+
+@register.simple_tag(takes_context=True)
+def filter_url(context, **overrides):
+    """
+    The filter bar's querystring (``?fy=...&partition=...``) with some values
+    swapped. Only those two survive: see
+    :meth:`finance.filters.FilterState.url_with`.
+    """
+    state = context.get('filter_state')
+    if state is None:
+        return '?'
+    return state.url_with(**overrides)
+
+
+@register.simple_tag(takes_context=True)
+def sort_url(context, column):
+    """ Toggle sort direction on a ledger column header. """
+    request = context['request']
+    params = request.GET.copy()
+    current = params.get('sort', 'date')
+    direction = params.get('dir', 'desc')
+    params['sort'] = column
+    params['dir'] = 'asc' if (current == column and direction == 'desc') else 'desc'
+    params.pop('page', None)
+    return '?' + params.urlencode()
+
+
+@register.simple_tag(takes_context=True)
+def sort_indicator(context, column):
+    """ The up/down arrow on whichever ledger column is currently sorted. """
+    request = context['request']
+    if request.GET.get('sort', 'date') != column:
+        return ''
+    arrow = '&#9650;' if request.GET.get('dir', 'desc') == 'asc' else '&#9660;'
+    return mark_safe('<span class="fin-sort-arrow">%s</span>' % arrow)
+
+
+# fin-tag on a finance page. The event page draws these badges too and does not
+# load finance.css, so Bootstrap's own classes stay as what it falls back on;
+# finance.css comes later and overrides them.
+BADGE_PLAIN = 'label label-default fin-tag'
+BADGE_OK = 'label label-success fin-tag is-ok'
+BADGE_WARN = 'label label-warning fin-tag is-warn'
+BADGE_INFO = 'label label-info fin-tag is-info'
+
+
+@register.filter
+def entry_badge(entry):
+    """
+    Coloured label for revenue / expense / refund / encumbrance.
+
+    Encumbrances get their own colour as well as their own word: money merely
+    reserved should not sit in a column of settled spending looking exactly
+    like it.
+    """
+    mapping = {'revenue': BADGE_OK, 'expense': BADGE_PLAIN, 'refund': BADGE_INFO, 'encumbrance': BADGE_WARN}
+    return format_html('<span class="{}">{}</span>',
+                       mapping.get(entry.entry_type, BADGE_PLAIN), entry.get_entry_type_display())
+
+
+@register.filter
+def or_dash(value):
+    """
+    The value, or the grey dash of something that does not apply to this row:
+    the same mark a figure gets, so a blank reads the same across a table.
+    """
+    return value if value else mark_safe('<span class="fin-na">—</span>')
+
+
+@register.filter
+def status_badge(entry):
+    """ Settled / pending pill for an entry. """
+    if entry.status == 'settled':
+        return format_html('<span class="{}">Settled</span>', BADGE_OK)
+    return format_html('<span class="{}">Pending</span>', BADGE_WARN)
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Subscript a dict from a template, which has no syntax for it.
+
+    Used where the key is itself a variable -- per-column data keyed by
+    column name, for instance. Anything that is not dict-like yields
+    ``None`` rather than raising.
+    """
+    if hasattr(dictionary, 'get'):
+        return dictionary.get(key)
+    return None
+
+
+@register.filter
+def indent_px(level):
+    """ Convert an MPTT depth into the left padding the tree rows use. """
+    try:
+        return int(level) * 18
+    except (TypeError, ValueError):
+        return 0
+
+
+@register.inclusion_tag('finance/partials/_pager.html', takes_context=True)
+def pager(context, page, window=2):
+    """
+    The page links under a long list: first and last, the pages either side of
+    this one, and a box to jump straight to any page -- so the end of a
+    hundred-page queue is one click away, not a hundred.
+
+    Every link keeps the rest of the querystring (the ledger's search, sort
+    and filters) and swaps only ``page``. The jump box is a GET form, so it
+    carries the same values as hidden fields; ``Paginator.get_page`` already
+    turns a number past the end into the last page.
+    """
+    request = context.get('request')
+    params = request.GET.copy() if request is not None else QueryDict(mutable=True)
+    params.pop('page', None)
+    rest = params.urlencode()
+
+    def url(number):
+        return '?page=%d%s' % (number, '&' + rest if rest else '')
+
+    last = page.paginator.num_pages
+    shown = sorted({1, last} | set(range(max(1, page.number - window),
+                                         min(last, page.number + window) + 1)))
+    links = []
+    for number in shown:
+        # A gap of one page is drawn as that page; anything wider as a dash.
+        if links and number - links[-1]['number'] == 2:
+            links.append({'number': number - 1, 'url': url(number - 1)})
+        elif links and number - links[-1]['number'] > 2:
+            links.append({'number': None})
+        links.append({'number': number, 'url': url(number), 'current': number == page.number})
+
+    return {
+        'page': page,
+        'links': links,
+        'previous_url': url(page.previous_page_number()) if page.has_previous() else None,
+        'next_url': url(page.next_page_number()) if page.has_next() else None,
+        'hidden': [(key, value) for key in params for value in params.getlist(key)],
+    }
+
+
+@register.inclusion_tag('finance/partials/_billing_next_step.html', takes_context=True)
+def billing_next_step(context, event):
+    """
+    The event page's *Next step* box: the stage the event's bill is at, and a
+    button for what comes next. Nothing for an event with no stage -- one not
+    yet reviewed for billing, which is the VP's, or one already closed.
+
+    The stage comes from :mod:`finance.billing`, the same place the Billing
+    page reads it, so the two cannot disagree. So do what an unpaid bill has
+    received and still owes.
+    """
+    from finance.billing import attach_payments, item_for_event
+
+    item = item_for_event(event)
+    if item is not None:
+        attach_payments([item])
+    return {'item': item, 'event': event, 'request': context.get('request'),
+            'csrf_token': context.get('csrf_token')}

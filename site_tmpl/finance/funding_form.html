@@ -1,0 +1,129 @@
+{# Edit a funding request or a budget: the header, a budget's categories, and the lines nested under them. #}
+{% extends 'finance/base_titled.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+{% load static %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% if instance %}{% url 'finance:fr-detail' instance.pk %}{% else %}{% url 'finance:fr-list' %}{% endif %}">&larr; {% if instance %}{{ instance.name }}{% else %}SGA Funding{% endif %}</a>{% endblock %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        <div class="fin-panel-body">
+            {% comment %}
+                is-budget / is-request decides which boxes and columns are on
+                screen: a budget has no request number, side or opening figure
+                of its own, and its lines have a Request ID and a side and sit
+                under categories. js/fr_lines.js swaps the class when the Type
+                changes; the server clears whatever does not apply on save
+                either way.
+            {% endcomment %}
+            <form method="post" id="fin-fr-form" class="{% if is_budget %}is-budget{% else %}is-request{% endif %}">
+                {% csrf_token %}
+
+                {% if existing_budget %}
+                    <div class="alert alert-warning">
+                        FY{{ existing_budget.fiscal_year|stringformat:"s"|slice:"2:" }} already has a budget:
+                        <a href="{% url 'finance:fr-edit' existing_budget.pk %}">{{ existing_budget.name }}</a>.
+                        A year has one budget, so add these lines to that one.
+                    </div>
+                {% endif %}
+
+                {% crispy form %}
+
+                <div class="fin-panel-subhead">Lines</div>
+                <details class="fin-howto fin-mb-12">
+                    <summary>How lines work</summary>
+                    <ul>
+                        <li><strong>Approved:</strong> leave it blank while the line is <span class="fin-approval is-waiting">Pending SGA Approval</span>, and enter 0 if SGA <span class="fin-approval is-turned-down">Denied</span> it. Neither can be charged to.</li>
+                        <li>Refunds charged against a line restore its balance.</li>
+                        <li class="fin-budget-only"><strong>Categories:</strong> <em>+ Line</em> adds a line under a category, and <em>Move to</em> moves one to another. Removing a category moves its lines to <em>No category</em>.</li>
+                        <li class="fin-budget-only"><strong>Request ID:</strong> the line's four digits from SGA, which Workday memos quote, e.g. <code>Velcro restock, consumables, (4521)</code>.</li>
+                        <li class="fin-budget-only"><strong>Projection:</strong> a line's side locks once anything is charged to it.</li>
+                    </ul>
+                </details>
+
+                {{ formset.management_form }}
+                {{ categories.management_form }}
+                <div class="fin-table-wrap">
+                    <table class="table fin-table" id="fin-fr-lines">
+                        <thead>
+                            <tr>
+                                <th class="fin-budget-only" style="width:110px;">Request ID</th>
+                                <th style="min-width:150px;">Name</th>
+                                <th style="min-width:200px;">Description</th>
+                                <th style="width:130px;">Requested</th>
+                                <th style="width:170px;">Approved</th>
+                                <th class="fin-budget-only" style="width:80px;">Projection</th>
+                                <th>Spend category</th>
+                                <th class="fin-request-only" style="width:80px;">Order</th>
+                                <th class="fin-budget-only">Move to</th>
+                                <th class="fin-x-col"></th>
+                            </tr>
+                        </thead>
+                        {% comment %}
+                            One tbody per category, its lines nested under its
+                            heading row; the lines with no category last. A
+                            request's form shows only the lines. See
+                            finance.views.projects.category_blocks.
+                        {% endcomment %}
+                        {% for block in blocks %}
+                            <tbody class="fin-cat-block{% if not block.form %} is-loose{% endif %}" data-key="{{ block.key }}">
+                                {% if block.form %}
+                                    {% include 'finance/partials/_budget_category_row.html' with cf=block.form %}
+                                {% else %}
+                                    <tr class="fin-cat-row is-loose fin-budget-only">
+                                        <td colspan="10">
+                                            <span class="fin-cat-caret" aria-hidden="true">&#9662;</span>
+                                            <span class="fin-muted">No category</span>
+                                            <button type="button" class="btn btn-default fin-cat-add-line">
+                                                <span class="glyphicon glyphicon-plus"></span> Line
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                                {% for f in block.lines %}
+                                    {% include 'finance/partials/_fr_line_row.html' %}
+                                {% endfor %}
+                            </tbody>
+                        {% endfor %}
+                    </table>
+                </div>
+
+                {% comment %}
+                    What the Add buttons clone: an empty line, and an empty
+                    category. __prefix__ becomes the next free form number.
+                {% endcomment %}
+                <template id="fin-line-template">
+                    {% include 'finance/partials/_fr_line_row.html' with f=formset.empty_form %}
+                </template>
+                <template id="fin-category-template">
+                    <tbody class="fin-cat-block" data-key="">
+                        {% include 'finance/partials/_budget_category_row.html' with cf=categories.empty_form %}
+                    </tbody>
+                </template>
+
+                <div class="fin-form-row">
+                    <button type="button" class="btn btn-default fin-request-only" id="fin-fr-add">
+                        <span class="glyphicon glyphicon-plus"></span> Add another line
+                    </button>
+                    <button type="button" class="btn btn-default fin-budget-only" id="fin-category-add">
+                        <span class="glyphicon glyphicon-plus"></span> Add category
+                    </button>
+                    <span class="fin-muted fin-small">
+                        Blank lines are ignored when you save.
+                    </span>
+                    <span class="fin-push">
+                        <a href="{% if instance %}{% url 'finance:fr-detail' instance.pk %}{% else %}{% url 'finance:fr-list' %}{% endif %}" class="btn btn-default">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/fr_lines.js' %}"></script>
+<script src="{% asset 'js/row_remove.js' %}"></script>
+{% endblock %}

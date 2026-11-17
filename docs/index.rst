@@ -88,6 +88,7 @@ Table of Contents
    reference/devices
    reference/emails
    reference/events
+   reference/finance
    reference/inventory
    reference/meetings
    reference/members

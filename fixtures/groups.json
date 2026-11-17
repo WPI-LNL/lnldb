@@ -391,6 +391,51 @@
         "sound"
       ],
       [
+        "manage_fundingrequest",
+        "finance",
+        "fundingrequest"
+      ],
+      [
+        "view_fundingrequest",
+        "finance",
+        "fundingrequest"
+      ],
+      [
+        "edit_subledger",
+        "finance",
+        "parsedtransaction"
+      ],
+      [
+        "settle_subledger",
+        "finance",
+        "parsedtransaction"
+      ],
+      [
+        "view_subledger",
+        "finance",
+        "parsedtransaction"
+      ],
+      [
+        "view_subledger_receipts",
+        "finance",
+        "parsedtransaction"
+      ],
+      [
+        "manage_projecttag",
+        "finance",
+        "projecttag"
+      ],
+      [
+        "import_workdaytransaction",
+        "finance",
+        "workdaytransaction"
+      ],
+      [
+        "close_fiscalyear",
+        "finance",
+        "fiscalyearclose"
+      ],
+      [
         "add_equipmentcategory",
         "inventory",
         "equipmentcategory"

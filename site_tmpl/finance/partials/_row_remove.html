@@ -1,0 +1,10 @@
+{% comment %}
+    What removes a row of a line table: an X, in a cell of class fin-row-remove.
+    Django needs the form's DELETE box ticked to remove a row, so the box is
+    here, hidden, and js/row_remove.js drives it. The row says whether it is
+    saved, with data-saved, and any line of errors under it carries
+    fin-row-errors.
+{% endcomment %}
+<span class="fin-row-flag">{{ form.DELETE }}</span>
+<button type="button" class="btn btn-link text-danger fin-x fin-row-drop"
+        title="Remove this line" aria-label="Remove this line">&times;</button>

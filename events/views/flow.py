@@ -10,36 +10,34 @@ from django.db.models import Avg, Count
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
-from django.template.loader import render_to_string
 from django.urls.base import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
 from accounts.models import UserPreferences
-from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
+from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
 from events.forms import (
-    AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
-                          MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
+    AttachmentForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
-                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
+                          ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
                           CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm, EventOccurrenceForm
 )
-from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
+from events.models import (BaseEvent, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord, Rental, EventOccurrence)
-from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
+from helpers.mixins import (ConditionalFormMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.challenges import is_officer
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
-from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
-                        generate_multibill_pdf_standalone)
+from pdfs.views import generate_pdfs_standalone
 from ..cal import generate_ics
 
 @login_required
@@ -1157,6 +1155,14 @@ def viewevent(request, id):
 
     context['apps'] = apps
 
+    # What the subledger says this show brought in and cost. Imported here
+    # rather than at the top: finance already imports the events models, and
+    # this is the only place the events app looks the other way.
+    if request.user.has_perm('finance.view_subledger'):
+        from finance.calculators import event_entries, event_financials
+        context['finance'] = event_financials(event)
+        context['finance_entries'] = event_entries(event)
+
     return render(request, 'uglydetail.html', context)
 
 
@@ -1237,282 +1243,6 @@ class CCRDelete(SetFormMsgMixin, HasPermOrTestMixin, LoginRequiredMixin, DeleteV
         return reverse("events:detail", args=(self.kwargs['event'],))
 
 
-class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = Billing
-    form_class = BillingForm
-    template_name = "form_crispy_cbv.html"
-    msg = "New Bill"
-    perms = 'events.bill_event'
-
-    def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
-        if self.event.closed:
-            messages.add_message(request, messages.ERROR, 'Event is closed.')
-            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
-        return super(BillingCreate, self).dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super(BillingCreate, self).get_context_data(**kwargs)
-        if self.event.closed:
-            raise PermissionDenied
-        orgs = self.event.org.all()
-        orgstrings = ",".join(["%s's billing account was last verified: %s" % (
-            o.name, o.verifications.latest().date if o.verifications.exists() else "Never") for o in orgs])
-        context['extra'] = orgstrings
-        return context
-
-    def get_form_kwargs(self):
-        # pass "user" keyword argument with the current user to your form
-        kwargs = super(BillingCreate, self).get_form_kwargs()
-        kwargs['event'] = self.event
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "Bill Created!", extra_tags='success')
-        return super(BillingCreate, self).form_valid(form)
-
-    def get_success_url(self):
-        if 'save-and-make-email' in self.request.POST:
-            return reverse("events:bills:email", args=(self.kwargs['event'], self.object.pk))
-        else:
-            return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
-
-
-class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
-    model = Billing
-    form_class = BillingUpdateForm
-    template_name = "form_crispy_cbv.html"
-    msg = "Update Bill"
-    perms = 'events.bill_event'
-
-    def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
-        if self.event.closed:
-            messages.add_message(request, messages.ERROR, 'Event is closed.')
-            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
-        return super(BillingUpdate, self).dispatch(request, *args, **kwargs)
-
-    def get_object(self, *args, **kwargs):
-        """ Validate preconditions for editing a bill """
-        obj = super(BillingUpdate, self).get_object(*args, **kwargs)
-        if obj.event.closed:
-            raise PermissionDenied
-        else:
-            return obj
-
-    def get_form_kwargs(self):
-        kwargs = super(BillingUpdate, self).get_form_kwargs()
-        kwargs['event'] = self.event
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "Billing Updated!", extra_tags='success')
-        return super(BillingUpdate, self).form_valid(form)
-
-    def get_success_url(self):
-        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
-
-
-class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
-    model = Billing
-    template_name = "form_delete_cbv.html"
-    msg = "Delete Bill"
-    perms = 'events.bill_event'
-
-    def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
-        if self.event.closed:
-            messages.add_message(request, messages.ERROR, 'Event is closed.')
-            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
-        return super(BillingDelete, self).dispatch(request, *args, **kwargs)
-
-    def get_object(self, *args, **kwargs):
-        """ Validate preconditions for deleting a bill """
-        obj = super(BillingDelete, self).get_object(*args, **kwargs)
-        if obj.date_paid:
-            raise PermissionDenied
-        if obj.event.closed:
-            raise PermissionDenied
-        else:
-            return obj
-
-    def get_success_url(self):
-        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
-
-
-class MultiBillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = MultiBilling
-    form_class = MultiBillingForm
-    template_name = "form_crispy.html"
-    msg = "New MultiBill"
-    perms = 'events.bill_event'
-
-    def get_form_kwargs(self):
-        kwargs = super(MultiBillingCreate, self).get_form_kwargs()
-        kwargs['show_nonbulk_events'] = self.request.GET.get('show_nonbulk_events') == 'true'
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "MultiBill Created!", extra_tags='success')
-        return super(MultiBillingCreate, self).form_valid(form)
-
-    def get_success_url(self):
-        if 'save-and-make-email' in self.request.POST:
-            return reverse("events:multibillings:email", args=(self.object.pk,))
-        else:
-            return reverse("events:multibillings:list")
-
-
-class MultiBillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
-    model = MultiBilling
-    form_class = MultiBillingUpdateForm
-    template_name = "form_crispy.html"
-    msg = "Update MultiBill"
-    perms = 'events.bill_event'
-
-    def get_object(self, *args, **kwargs):
-        """ Validate preconditions for editing a multibill """
-        obj = super(MultiBillingUpdate, self).get_object(*args, **kwargs)
-        if obj.events.filter(closed=True).exists():
-            raise PermissionDenied
-        else:
-            return obj
-
-    def form_valid(self, form):
-        messages.success(self.request, "MultiBill Updated!", extra_tags='success')
-        return super(MultiBillingUpdate, self).form_valid(form)
-
-    def get_success_url(self):
-        return reverse("events:multibillings:list")
-
-
-class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
-    model = MultiBilling
-    template_name = "form_delete_cbv.html"
-    msg = "Delete MultiBill"
-    perms = 'events.bill_event'
-
-    def get_object(self, *args, **kwargs):
-        """ Validate preconditions for deleting a multibill """
-        obj = super(MultiBillingDelete, self).get_object(*args, **kwargs)
-        if obj.date_paid:
-            raise PermissionDenied
-        if obj.events.filter(closed=True).exists():
-            raise PermissionDenied
-        else:
-            return obj
-
-    def get_success_url(self):
-        return reverse("events:multibillings:list")
-
-
-@require_POST
-@login_required
-def pay_bill(request, event, pk):
-    """
-    Quietly pays a bill, showing a message on the next page. POST only.
-    """
-    bill = get_object_or_404(Billing, event_id=event, id=pk)
-    if not request.user.has_perm('events.bill_event', bill.event):
-        raise PermissionDenied
-    if bill.event.closed:
-        messages.add_message(request, messages.ERROR, 'Event is closed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)))
-    if bill.date_paid:
-        messages.info(request, "Bill has already been paid", extra_tags="info")
-    else:
-        bill.date_paid = timezone.now()
-        bill.save()
-        if 'next' in request.GET:
-            messages.success(request, "Marked latest bill paid for %s" % bill.event.event_name, extra_tags="success")
-        else:
-            messages.success(request, "Bill paid!", extra_tags="success")
-    if 'next' in request.GET:
-        return HttpResponseRedirect(request.GET['next'])
-    else:
-        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")
-
-
-class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = BillingEmail
-    form_class = BillingEmailForm
-    template_name = "form_crispy.html"
-    msg = "New Billing Email"
-    perms = 'events.bill_event'
-
-    def dispatch(self, request, *args, **kwargs):
-        self.billing = get_object_or_404(Billing, pk=self.kwargs['billing'])
-        return super(BillingEmailCreate, self).dispatch(request, *args, **kwargs)
-
-    def get_form_kwargs(self):
-        # pass "user" keyword argument with the current user to your form
-        kwargs = super(BillingEmailCreate, self).get_form_kwargs()
-        kwargs['billing'] = self.billing
-        kwargs['initial'] = {'subject': render_to_string('emails/email_billing_subject.txt', {'billing': self.billing},
-                                                         request=self.request),
-                             'message': render_to_string('emails/email_billing_message.txt', {'billing': self.billing},
-                                                         request=self.request)}
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "Billing Email Created!", extra_tags='success')
-        response = super(BillingEmailCreate, self).form_valid(form)
-        # send the email
-        i = form.instance
-        event = self.billing.event
-        to = list(i.email_to_users.values_list('email', flat=True))
-        to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
-        pdf_handle = generate_event_bill_pdf_standalone(event, request=self.request)
-        filename = "%s-bill.pdf" % slugify(event.event_name)
-        attachments = [{"file_handle": pdf_handle, "name": filename}]
-        email = BillingEmailGenerator(event=event, subject=i.subject, body=i.message, to_emails=to, attachments=attachments)
-        email.send()
-        i.sent_at = timezone.now()
-        i.save()
-        return response
-
-    def get_success_url(self):
-        return reverse("events:detail", args=(self.billing.event_id,)) + "#billing"
-
-
-class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = MultiBillingEmail
-    form_class = MultiBillingEmailForm
-    template_name = "form_crispy.html"
-    msg = "New Billing Email"
-    perms = 'events.bill_event'
-
-    def dispatch(self, request, *args, **kwargs):
-        self.multibilling = get_object_or_404(MultiBilling, pk=self.kwargs['multibilling'])
-        return super(MultiBillingEmailCreate, self).dispatch(request, *args, **kwargs)
-
-    def get_form_kwargs(self):
-        # pass "user" keyword argument with the current user to your form
-        kwargs = super(MultiBillingEmailCreate, self).get_form_kwargs()
-        kwargs['multibilling'] = self.multibilling
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "Billing Email Created!", extra_tags='success')
-        response = super(MultiBillingEmailCreate, self).form_valid(form)
-        # send the email
-        i = form.instance
-        to = list(i.email_to_users.values_list('email', flat=True))
-        to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
-        pdf_handle = generate_multibill_pdf_standalone(self.multibilling, request=self.request)
-        filename = "bill.pdf"
-        attachments = [{"file_handle": pdf_handle, "name": filename}]
-        email = DLEG(subject=i.subject, body=i.message, to_emails=to, reply_to=[settings.EMAIL_TARGET_T],
-                     bcc=[settings.EMAIL_TARGET_T], attachments=attachments)
-        email.send()
-        i.sent_at = timezone.now()
-        i.save()
-        return response
-
-    def get_success_url(self):
-        return reverse("events:multibillings:list")
-
-
 class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
     model = Event2019
     form_class = WorkdayForm
@@ -1535,7 +1265,12 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        is_update = self.object.workday_fund is not None or self.object.worktag is not None
+        # What the client sent last time, read now: by the time form_valid runs, the form has already copied the new
+        # values onto the event. Only this form sets the worktag, so a worktag on the event is what says the form was
+        # filled out before -- the fund alone can be on the event without one.
+        self.previous = {name: getattr(self.object, name) for name in WorkdayForm.Meta.fields}
+        self.previous_entered_by = self.object.workday_entered_by
+        self.is_update = is_update = bool(self.object.worktag)
         if self.object.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
@@ -1559,6 +1294,9 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        # Imported here rather than at the top: finance already imports the events models.
+        from finance.models import changes_client_type
+
         # Automatically add the user who submitted the workday form to the client
         org = self.object.org_to_be_billed
         if org is not None and self.request.user not in org.associated_users.all():
@@ -1567,59 +1305,49 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             org.associated_users.add(self.request.user)
         else:
             set_revision_comment("Entered Workday billing info", form)
-        # Add workday info to organization info if not already saved
-        if org.workday_fund is None or org.worktag is None:
+        # Keep the client's workday info on file current, so their next bill's form is pre-filled with what they
+        # used last. Not when it is a fund of the other kind: the fund on file says whether the client is a student
+        # org or a department, and one show paid from elsewhere must not change that. The event keeps what was sent.
+        if (org is not None and (org.workday_fund, org.worktag) != (self.object.workday_fund, self.object.worktag)
+                and not changes_client_type(org, self.object.workday_fund)):
             org.workday_fund = self.object.workday_fund
             org.worktag = self.object.worktag
             org.save()
-        # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
-        if self.object.workday_fund is not None or self.object.worktag is not None:
-            email_body = "The workday billing info for the following event was updated by {}. The previous version " \
-                         "had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
-            if len(form.changed_data) > 0:
-                email_body += "\nFields changed: "
-                for field_name in form.changed_data:
-                    email_body += field_name + ", "
-                email_body = email_body[:-2]
-            email = EventEmailGenerator(
-                event=self.object,
-                subject='Event Workday Info Updated',
-                to_emails=settings.EMAIL_TARGET_T,
-                body=email_body
-            )
-            email.send()
+        self.email_treasurer(form)
         self.object.workday_entered_by = self.request.user
         messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in "
                                        "Workday when you receive it.", extra_tags='success')
         return super(WorkdayEntry, self).form_valid(form)
 
+    def email_treasurer(self, form):
+        """
+        Tell the Treasurer the workday info has arrived and the ISD can be created, or, when the client is editing
+        info they already sent, exactly what changed.
+
+        Everything in the body is escaped: the event email template marks it safe, and the worktag and comments are
+        typed by the client.
+        """
+        def shown(name, value):
+            if name == 'workday_fund':
+                value = dict(form.fields[name].choices).get(value, value)
+            return escape(value) if value not in (None, '') else '(blank)'
+
+        if self.is_update:
+            changes = ['{}: {} → {}'.format(form[name].label, shown(name, self.previous[name]),
+                                            shown(name, getattr(self.object, name)))
+                       for name in WorkdayForm.Meta.fields
+                       if (self.previous[name] or None) != (getattr(self.object, name) or None)]
+            subject = 'Event Workday Info Updated'
+            body = '{} updated the workday billing info for this event. It had been entered by {}.\n\n'.format(
+                escape(self.request.user), escape(self.previous_entered_by or 'nobody on record'))
+            body += 'Changed:\n' + '\n'.join(changes) if changes else 'Nothing was changed.'
+        else:
+            subject = 'Worktag Received: {}'.format(self.object.event_name)
+            body = '{} entered the workday billing info for this event. It is ready for an Internal Service ' \
+                   'Delivery.\n\n'.format(escape(self.request.user))
+            body += '\n'.join('{}: {}'.format(form[name].label, shown(name, getattr(self.object, name)))
+                              for name in WorkdayForm.Meta.fields)
+        EventEmailGenerator(event=self.object, subject=subject, to_emails=settings.EMAIL_TARGET_T, body=body).send()
+
     def get_success_url(self):
         return reverse("events:detail", args=(self.object.pk,))
-
-
-@require_POST
-@login_required
-def mark_entered_into_workday(request, id):
-    """
-    Marks an event as entered into Workday. POST only.
-    """
-    event = get_object_or_404(Event2019, id=id)
-    if not request.user.has_perm('events.bill_event', event):
-        raise PermissionDenied
-    if event.closed:
-        messages.add_message(request, messages.ERROR, 'Event is closed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if event.entered_into_workday:
-        messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
-    if not event.reviewed:
-        messages.add_message(request, messages.ERROR, 'Event has not been reviewed for billing.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if not event.last_bill:
-        messages.add_message(request, messages.ERROR, 'Event has not been billed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    else:
-        event.entered_into_workday = True
-        set_revision_comment("Marked entered into Workday", None)
-        event.save()
-        messages.success(request, "Marked %s as entered into Workday." % event.event_name, extra_tags="success")
-    return HttpResponseRedirect(reverse('events:awaitingworkday'))
