@@ -32,8 +32,8 @@ Add an Encumbrance
 
    - **Amount** -- what you expect that part to cost. Type it as a positive number.
    - **Description** -- leave it blank to use the one at the top, or say what this part is.
-   - **Fund** and **Spend Category** -- as you would settle the purchase. For a funding request, also choose the
-     **FR Line**; pick the request in the box above it first to list only its lines. See :doc:`funding-requests`.
+   - **Fund** and **Spend category** -- as you would settle the purchase. For a funding request, also choose the
+     **SGA line**; pick the request in the box above it first to list only its lines. See :doc:`funding-requests`.
    - **Incurred for event** -- for gear hired in for a show. Booking a rental is exactly when you know which show it is
      for, so it is worth filling in here.
    - **Project**, if it has one, and **Projection** for Projection spending.

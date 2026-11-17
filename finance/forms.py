@@ -2110,8 +2110,8 @@ class FundingRequestForm(forms.ModelForm):
 
     One form for both, with the type at the top. A budget has no request
     number, side or opening figure of its own -- its lines carry the number
-    and the side -- so those boxes are hidden for it (the template marks them
-    ``fin-request-only``) and cleared on save by
+    and the side -- so those boxes are hidden for it (the layout wraps each of
+    :attr:`REQUEST_ONLY` in a ``fin-request-only`` cell) and cleared on save by
     :meth:`finance.models.FundingRequest._clean_budget`.
     """
     REQUEST_ONLY = ('reference', 'is_projection', 'owed_at_books_start')
@@ -2161,11 +2161,13 @@ class FundingRequestForm(forms.ModelForm):
                               "change.")
         self.helper = finance_form_helper()
         # In a grid, so the lines, which are what this page is mostly for, start
-        # on the first screen and not under a page of full-width boxes.
-        self.helper.layout = Layout(
-            Div('kind', 'name', 'reference', 'fiscal_year', 'date_submitted', 'date_approved',
-                'is_projection', 'closed', 'owed_at_books_start', 'notes',
-                css_class='fin-form-grid'))
+        # on the first screen and not under a page of full-width boxes. Each
+        # request-only box is a grid cell of its own, marked so the page can put
+        # the whole cell away for a budget, however crispy wraps the field.
+        def cell(name):
+            return Div(name, css_class='fin-request-only') if name in self.REQUEST_ONLY else name
+        self.helper.layout = Layout(Div(*[cell(name) for name in self._meta.fields],
+                                        css_class='fin-form-grid'))
 
     def clean_kind(self):
         """ Nothing posted keeps the type it had, or makes a funding request. """

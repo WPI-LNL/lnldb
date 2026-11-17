@@ -1166,8 +1166,8 @@ row itself is untouched -- it is immutable bank truth, and only what LNL decided
 One case is refused rather than forced: a slice with a refund recorded against it
 is load-bearing, since the refund exists to reverse *that* purchase, and the
 database will not orphan it. The queue says so instead of returning a 500, and
-so do removing the entry on its own page and ticking its *Del* box on the
-split. Likewise a funding request line with entries or encumbrances charged to
+so do removing the entry on its own page and removing its row, with the X,
+on the split. Likewise a funding request line with entries or encumbrances charged to
 it can't be deleted from the request's edit page
 (``BaseFRLineItemFormSet.clean``).
 
@@ -1202,7 +1202,7 @@ encumbrance restored -- because the second is easy to miss when only the first w
 meant.
 
 Removing one such entry does the same: *Remove* on its own page
-(:func:`~finance.views.detail.entry_delete`) and the split's *Del* box put it
+(:func:`~finance.views.detail.entry_delete`) and the X on the split's row put it
 back on its encumbrance rather than deleting it, with a warning. A line still
 open on its encumbrance has nothing to go back to, so *Remove* on its page
 deletes it: that much is no longer encumbered, and nothing has to be matched to
@@ -1681,7 +1681,7 @@ deposit, for that year's budget, and money going back, for last year's budget
 while it has money left (unspent money goes back around June 30), else this
 year's. The dashboard's *SGA Funding Burndown* lists budgets after requests;
 the side filter narrows a budget to that side's lines (``LineTotals``). The
-ledger's *SGA Line* column shows a budget line as ``4521 Gaff tape`` and SGA's
+ledger's *SGA line* column shows a budget line as ``4521 Gaff tape`` and SGA's
 payments as *deposit for* or *returned:*.
 
 The Budget Report Form is described under *The Budget Report Form* below.
@@ -2788,7 +2788,7 @@ Permissions
     Settle Workday lines: mark their entries Settled. Shown as *Settle
     Workday lines*. Taking a line back out of Settled needs it too: undoing a
     settled line, removing a settled entry (on its own page or with the
-    split's *Del* box) and the ledger bar's *Set status*, which is not offered
+    X on the split's row) and the ledger bar's *Set status*, which is not offered
     without it. Without it, saving the split leaves an entry that was settled
     Settled, as editing it on its own page does, and only new entries are left
     Pending. Settling is in each entry's history like any other change, with

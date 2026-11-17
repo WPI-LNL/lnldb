@@ -242,7 +242,7 @@ class PageTests(MultibillFixture, CacheResetMixin, FinanceViewTestCase):
     def test_the_queue_fills_it_in_and_offers_to_mark_it_paid(self):
         self.line()
         response = self.client.get(reverse('finance:queue'), {'fy': 'all'})
-        self.assertContains(response, 'or Multi-bill')
+        self.assertContains(response, 'or multi-bill')
         self.assertContains(response, 'name="mark_multibill_paid" value="%s" checked' % self.bill.pk)
         self.assertContains(response, 'Mark multi-bill paid on')
 

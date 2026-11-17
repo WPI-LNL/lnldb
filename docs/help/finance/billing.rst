@@ -180,7 +180,7 @@ The payment comes in a Workday export, and you settle it in the finance queue (s
 
 - **The queue finds the bill by its ISD number.** The payment names the ISD it pays, such as *Internal Service
   Delivery: 25090179-ISD*. When that number is recorded on a bill, the queue fills in the event, with the caption *ISD
-  number recorded on the bill*. For a multi-bill, it fills in `or Multi-bill` instead, and each of the bill's events is
+  number recorded on the bill*. For a multi-bill, it fills in `or multi-bill` instead, and each of the bill's events is
   credited with its share. A bill with no ISD number recorded is still found by the event the memo names.
 - **Mark the bill paid as you settle.** When the payment covers the bill, the row has a ticked box, *Mark bill paid on*
   the day the money arrived. Click `Settle`, and the bill is marked paid on that day. Untick the box to leave it

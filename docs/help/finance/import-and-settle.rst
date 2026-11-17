@@ -84,7 +84,7 @@ Money going out
 
 - **Fund** -- whose money paid for it. Usually `Legacy` (on 315-AG, `SGA Mandatory Transfer`). If the memo quotes a
   funding request number, it will say `SGA Funding Request`.
-- **Spend Category** -- what it was for. When the memo quotes a funding request, the category comes from that request
+- **Spend category** -- what it was for. When the memo quotes a funding request, the category comes from that request
   (the line it names, or the one category all its lines were awarded for), never from Workday's category. Picking a
   funding request line replaces any category the app filled in.
 - **Funding request** and **Funding request line** -- only shown when the fund is `SGA Funding Request`. If the memo
@@ -104,11 +104,11 @@ Money coming in
 
 Money coming in is one of three things:
 
-- **Payment for an event** -- choose the event under `Link to Event`. Department billing arrives as an Internal Service
+- **Payment for an event** -- choose the event under `Link to event`. Department billing arrives as an Internal Service
   Delivery, and the event is usually filled in for you: from the bill its ISD number is recorded on, or else from the
   show the memo names. When the payment covers the event's bill, a ticked **Mark bill paid on** box marks the bill paid
   as you settle; untick it to leave the bill unpaid. See :doc:`billing`.
-- **Other income** -- choose what it was under `or Non-Event Revenue`: an SGA reimbursement, a donation, gear sold, a cash deposit. The fund
+- **Other income** -- choose what it was under `or non-event revenue`: an SGA reimbursement, a donation, gear sold, a cash deposit. The fund
   it goes into (`Into fund`) follows from the choice. An SGA reimbursement also names the request it repays
   (`Reimburses request`).
 - **A refund** -- choose the purchase it refunds under `Refund of`. A refund needs nothing else: it takes everything from
@@ -141,7 +141,7 @@ Unknown request              The memo quotes an SGA funding request number that 
 A.27.16 or F.27.16?          The memo's request number isn't in the app, but the same number is under another letter.
                              One of the two is probably a typo; check which, and pick the right line.
 Or split across its...       One payment for a bill that covered several shows, found by the ISD number recorded on
-                             it, or by its amount. The row links it to the bill under `or Multi-bill`, and each show
+                             it, or by its amount. The row links it to the bill under `or multi-bill`, and each show
                              is credited with its share. To give each show an entry of its own instead, click the tag
                              to lay out the shares on the split page, check them, and save.
 ===========================  ===========================================================================================
@@ -153,12 +153,13 @@ Split a Line That Paid for Several Things
 One card charge can cover tape, a repair and a show's rental. Click `Split` on the row (or open the line from the ledger)
 to reach `Split this purchase`. Add a row for each part with `Add an entry`, fill in each one, and click `Save split`.
 Type each amount as it reads on the receipt, without a minus sign: every part runs the same way as the line. To drop a
-row, tick its `Del` box; a row that came from an encumbrance goes back on the encumbrance instead of being deleted, as
-Undo puts it back. The parts must add up to the line exactly; the page tells you how much is left over. Saving
+row, click the X at its end. A row you added goes at once. A saved row is struck through until you save the split, and
+its X turns into an undo arrow in case you clicked the wrong one. A row that came from an encumbrance goes back on the
+encumbrance instead of being deleted, as Undo puts it back. The parts must add up to the line exactly; the page tells you how much is left over. Saving
 settles the line and it leaves the queue. To move money between the parts later, change the amounts and save the split
 again.
 
-A part paid from `SGA Funding Request` names the request line it was spent against in `FR Line`, with the request box
+A part paid from `SGA Funding Request` names the request line it was spent against in `SGA line`, with the request box
 above it as on a queue row. Under them, `SGA took money back?` is only for a line where SGA took money back, which names
 the whole request instead of a line.
 

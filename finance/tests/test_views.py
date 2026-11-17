@@ -185,20 +185,27 @@ class DashboardTests(FinanceViewTestCase):
     def test_the_queue_total_is_each_line_in_full(self):
         """
         Gross, and a line stays at its whole amount once it has entries: it is
-        waiting until it is settled, and it used to count as $0.
+        waiting until it is settled, and it used to count as $0. A part-split
+        line counts in full too, as its row shows it, with what is left to
+        settle as a tag beside it.
         """
         self.make_txn(op='OT-T1', amount='-350.00')
         filled = self.make_txn(op='OT-T2', amount='475.00')
         ParsedTransaction.objects.create(
             parent_transaction=filled, amount=filled.net_amount, fund_source=fund('legacy'),
             effective_date=filled.accounting_date, status=TransactionStatus.PENDING)
-        expected = Decimal('825.00')
+        part = self.make_txn(op='OT-T3', amount='-1000.00')
+        ParsedTransaction.objects.create(
+            parent_transaction=part, amount=Decimal('-900.00'), fund_source=fund('legacy'),
+            effective_date=part.accounting_date, status=TransactionStatus.PENDING)
+        expected = Decimal('1825.00')
         dashboard = self.client.get(reverse('finance:dashboard') + '?fy=2026')
-        self.assertEqual(dashboard.context['unreconciled_count'], 2)
+        self.assertEqual(dashboard.context['unreconciled_count'], 3)
         self.assertEqual(dashboard.context['unreconciled_total'], expected)
         queue = self.client.get(reverse('finance:queue') + '?fy=2026')
         self.assertEqual(queue.context['queue_total'], expected)
-        self.assertContains(queue, '$825.00 in the queue')
+        self.assertContains(queue, '$1,825.00 in the queue')
+        self.assertContains(queue, '($100.00) left')
 
     def test_action_banner_absent_when_clear(self):
         txn = self.make_txn(op='OT-B')
@@ -574,18 +581,18 @@ class IngestionTests(FinanceViewTestCase):
     def test_expense_row_shows_expense_pickers_only(self):
         """
         Poka-Yoke: a negative line offers expense routing. It may still name an
-        event, but as "Incurred for event" -- never revenue's "Link to Event".
+        event, but as "Incurred for event" -- never revenue's "Link to event".
         """
         self.make_txn(op='OT-Q2', amount='-500.00')
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
-        self.assertContains(response, "Spend Category")
-        self.assertNotContains(response, "Link to Event")
+        self.assertContains(response, "Spend category")
+        self.assertNotContains(response, "Link to event")
 
     def test_revenue_row_shows_event_linker_only(self):
         self.make_txn(op='OT-Q3', amount='500.00')
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
-        self.assertContains(response, "Link to Event")
-        self.assertNotContains(response, "Spend Category")
+        self.assertContains(response, "Link to event")
+        self.assertNotContains(response, "Spend category")
 
     def test_the_paying_account_is_shown_on_the_row(self):
         self.make_txn(op='OT-Q4', org='315-AG')

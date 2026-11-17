@@ -43,10 +43,10 @@ Link a Payment to Its Show
 --------------------------
 
 A department's payment arrives as an Internal Service Delivery whose memo names the show, for example
-``Lens and Lights services for Pan Asian Festival D26``. The queue fills in `Link to Event` from it.
+``Lens and Lights services for Pan Asian Festival D26``. The queue fills in `Link to event` from it.
 
 **One payment for several shows.** A payment for a bill that covered several shows (a multi-bill) is linked to the
-bill: pick it under `or Multi-bill`, in place of an event. The queue fills it in when the bill's ISD number is recorded,
+bill: pick it under `or multi-bill`, in place of an event. The queue fills it in when the bill's ISD number is recorded,
 or when the memo names one of its shows and the payment is exactly the bill's amount. When the amount alone matches one
 multi-bill, it is offered as a suggestion to click. The payment stays one entry, and each show is credited with its
 share, worked out from what each would have cost on its own: the same share the bill is split by on this tab.

@@ -314,7 +314,7 @@
                                         {% endif %}
                                         <td>{{ form.project_tag }}</td>
                                         <td>{{ form.audit_explanation }}</td>
-                                        <td class="fin-row-remove">{% include 'finance/partials/_row_remove.html' %}</td>
+                                        <td class="fin-row-remove">{% include 'finance/partials/_row_remove.html' with form=form %}</td>
                                     </tr>
                                     {% if form.errors %}
                                         <tr class="fin-row-errors"><td colspan="9">

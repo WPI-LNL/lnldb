@@ -50,7 +50,7 @@ Percentage fee or discount  A percentage of what the events come to: ``10`` for 
 ==========================  ===========================================================================================
 
 Fees, discounts and rental fees are rounded down to the cent, the same way an event's own are. Each charge has `Change`
-and `Remove` beside it, and the total updates as you go.
+and an X beside it, and the total updates as you go. The X asks before it takes the charge off the bill.
 
 
 Change a Multi-bill

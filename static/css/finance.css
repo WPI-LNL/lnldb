@@ -629,6 +629,11 @@
 .fin-row-remove { text-align: right; }
 .fin-row-removed > td { opacity: 0.45; }
 .fin-row-removed > td:not(.fin-row-remove) { text-decoration: line-through; }
+/* The cell's line stops at its boxes, which draw their own text, so each box is
+   struck through itself. */
+.fin-row-removed input,
+.fin-row-removed select,
+.fin-row-removed textarea { text-decoration: line-through; }
 .fin-row-removed > td.fin-row-remove { opacity: 1; }
 .fin-page .fin-row-removed .btn.fin-x,
 .fin-page .fin-row-removed .btn.fin-x:hover { color: var(--fin-accent); background: var(--fin-accent-soft); }
@@ -956,11 +961,16 @@ input.hidden-file-input { display: none; }
 }
 
 /* Every control the same height and type size, whether Django, crispy or
-   django-ajax-selects rendered it. */
+   django-ajax-selects rendered it. The funding form's table of lines draws its
+   own inputs, with no class to hang this on, so it is named here. */
 .fin-field .form-control,
 .fin-field select,
 .fin-field input[type="text"],
-.fin-field textarea {
+.fin-field textarea,
+#fin-fr-lines input[type="text"],
+#fin-fr-lines input[type="number"],
+#fin-fr-lines select,
+#fin-fr-lines textarea {
     width: 100%;
     height: 30px;
     padding: 3px 8px;
@@ -971,8 +981,13 @@ input.hidden-file-input { display: none; }
     box-shadow: none;
 }
 
-.fin-field textarea { height: 30px; resize: vertical; min-height: 30px; }
-.fin-field .form-control:focus { border-color: var(--fin-accent); box-shadow: 0 0 0 2px rgba(49,112,143,0.12); }
+.fin-field textarea,
+#fin-fr-lines textarea { height: 30px; resize: vertical; min-height: 30px; }
+.fin-field .form-control:focus,
+#fin-fr-lines input[type="text"]:focus,
+#fin-fr-lines input[type="number"]:focus,
+#fin-fr-lines select:focus,
+#fin-fr-lines textarea:focus { border-color: var(--fin-accent); box-shadow: 0 0 0 2px rgba(49,112,143,0.12); outline: 0; }
 
 .fin-inline-check {
     display: flex;
@@ -1363,37 +1378,14 @@ input.hidden-file-input { display: none; }
 .fin-approval.is-turned-down { background: var(--fin-surface-tint); color: var(--fin-text-soft); border-color: var(--fin-border); cursor: help; }
 .fin-approval-note { font-size: 11px; color: var(--fin-muted); font-weight: 400; }
 
-/* One form for both types: whichever does not apply is put away. */
+/* One form for both types: whichever does not apply is put away. The header's
+   request-only boxes are cells FundingRequestForm's layout marks. */
 #fin-fr-form.is-request .fin-budget-only,
-#fin-fr-form.is-budget .fin-request-only,
-#fin-fr-form.is-budget #div_id_reference,
-#fin-fr-form.is-budget #div_id_is_projection,
-#fin-fr-form.is-budget #div_id_owed_at_books_start { display: none; }
-/* Crispy wraps a tick box in a form-group of its own, which would stay behind as
-   an empty cell of the grid. */
-#fin-fr-form.is-budget .form-group:has(> #div_id_is_projection) { display: none; }
+#fin-fr-form.is-budget .fin-request-only { display: none; }
 @media (min-width: 992px) {
     #fin-fr-form.is-request #div_id_notes { grid-column: span 3; }
     #fin-fr-form.is-budget #div_id_notes { grid-column: 1 / -1; }
 }
-/* The same box as every other form's, in a table that draws its own inputs. */
-#fin-fr-lines input[type="text"],
-#fin-fr-lines input[type="number"],
-#fin-fr-lines select,
-#fin-fr-lines textarea {
-    height: 30px;
-    padding: 3px 8px;
-    font-size: 13px;
-    border: 1px solid var(--fin-border-strong);
-    border-radius: 3px;
-    background-color: #fff;
-    box-shadow: none;
-}
-#fin-fr-lines tr.fin-fr-row input[type="text"],
-#fin-fr-lines tr.fin-fr-row input[type="number"],
-#fin-fr-lines tr.fin-fr-row select,
-#fin-fr-lines tr.fin-fr-row textarea { width: 100%; }
-#fin-fr-lines textarea { min-height: 30px; resize: vertical; }
 /* Room under each box for the tag that hangs below Approved. */
 #fin-fr-lines > tbody > tr.fin-fr-row > td { padding-bottom: 20px; vertical-align: top; }
 #fin-fr-lines > tbody > tr.fin-fr-row > td.fin-row-remove { padding-top: 9px; }
@@ -1429,7 +1421,7 @@ input.hidden-file-input { display: none; }
     border-top: 2px solid var(--fin-border);
     padding: 6px 8px;
 }
-#fin-fr-lines tr.fin-cat-row input.fin-category-name { font-weight: 600; min-width: 260px; margin-right: 6px; }
+#fin-fr-lines tr.fin-cat-row input.fin-category-name { width: auto; font-weight: 600; min-width: 260px; margin-right: 6px; }
 #fin-fr-lines .fin-cat-caret { color: var(--fin-faint); margin-right: 4px; }
 #fin-fr-lines .fin-cat-delete { display: none; }
 #fin-fr-lines select.fin-line-move { max-width: 170px; }

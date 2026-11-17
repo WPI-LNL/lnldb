@@ -148,7 +148,7 @@ is Event Production or Projection on its own.
 
 **Entering it.** Click `New` at the top of the `SGA Funding` tab and choose `Budget`.
 
-#. The **Name** starts as ``FY27 SGA Budget`` and follows the **Fiscal Year** box as you change it. Whatever you call
+#. The **Name** starts as ``FY27 SGA Budget`` and follows the **Fiscal year** box as you change it. Whatever you call
    it, the name has to give the budget's own year: saving refuses ``FY26 SGA Budget`` on an FY27 budget. A year that
    already has a budget refuses a second one and links to the first.
 #. Click `Add category` for each group of similar lines and type its name. Then click `+ Line` on a category to add a
@@ -217,7 +217,7 @@ the budget under `More`, in `Returned to SGA from budget`; it needs no spend cat
 just after June 30, so it is matched to last year's budget while that budget still has money left. In reports it
 comes off the `SGA Budget` income line, as it undoes the deposit.
 
-Both show on the budget's page under **SGA deposit**, and on the ledger, where the **SGA Line** column says `deposit
+Both show on the budget's page under **SGA deposit**, and on the ledger, where the **SGA line** column says `deposit
 for` or `returned:` before the budget's name.
 
 **Proof of spending.** SGA wants a payment request for every line item of the budget, and cuts a line with none from

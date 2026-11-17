@@ -307,8 +307,8 @@
                                     the moment it is chosen.
                                 {% endcomment %}
                                 {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
-                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
-                                {% include 'finance/_queue_field.html' with field=row.form.linked_multibill label="or Multi-bill" size="lg" autofilled=row.form.autofilled.linked_multibill suggestion=row.suggestions.linked_multibill only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to event" size="lg" autofilled=row.form.autofilled.linked_event only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_multibill label="or multi-bill" size="lg" autofilled=row.form.autofilled.linked_multibill suggestion=row.suggestions.linked_multibill only %}
                                 {% comment %}
                                     This payment covers the event's bill, so marking
                                     the bill paid -- dated the day the last of its
@@ -327,7 +327,7 @@
                                         </label>
                                     </div>
                                 {% endif %}
-                                {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" autofilled=row.form.autofilled.non_event_revenue_type suggestion=row.suggestions.revenue_source only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or non-event revenue" size="md" autofilled=row.form.autofilled.non_event_revenue_type suggestion=row.suggestions.revenue_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Into fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                                 {% comment %}
                                     Hidden by routing.js unless the fund draws on
@@ -337,7 +337,7 @@
                                 {% include 'finance/_queue_field.html' with field=row.form.funding_request label="Reimburses request" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
                             {% else %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
-                                {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend Category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
                                 {% comment %}
                                     Both hidden by routing.js unless the chosen
                                     fund draws on a funding request, so the

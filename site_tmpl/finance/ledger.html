@@ -166,14 +166,14 @@
                         <th data-col="status"><a href="{% sort_url 'status' %}">Status{% sort_indicator 'status' %}</a></th>
                         <th data-col="partition">Partition</th>
                         <th data-col="event">Event</th>
-                        <th data-col="client_type">Client Type</th>
+                        <th data-col="client_type">Client type</th>
                         <th data-col="services">Services</th>
                         <th data-col="fund_source"><a href="{% sort_url 'fund_source' %}">Fund{% sort_indicator 'fund_source' %}</a></th>
-                        <th data-col="spend_category"><a href="{% sort_url 'spend_category' %}">Spend Category{% sort_indicator 'spend_category' %}</a></th>
-                        <th data-col="fr_line" title="The funding request or budget line spending is charged to, or the request or budget SGA paid for">SGA Line</th>
+                        <th data-col="spend_category"><a href="{% sort_url 'spend_category' %}">Spend category{% sort_indicator 'spend_category' %}</a></th>
+                        <th data-col="fr_line" title="The funding request or budget line spending is charged to, or the request or budget SGA paid for">SGA line</th>
                         <th data-col="project"><a href="{% sort_url 'project' %}">Project{% sort_indicator 'project' %}</a></th>
-                        <th data-col="workday_ref">Workday Ref</th>
-                        <th data-col="ledger_account">Ledger Acct</th>
+                        <th data-col="workday_ref">Workday ref</th>
+                        <th data-col="ledger_account">Ledger acct</th>
                         {% if perms.finance.view_subledger_receipts %}<th data-col="receipt">Receipt</th>{% endif %}
                         <th style="width:40px;"></th>
                     </tr>

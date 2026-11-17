@@ -975,7 +975,7 @@ class BudgetPagesTests(BudgetWorld, FinanceViewTestCase):
     def test_the_ledger_names_the_budget_line(self):
         response = self.client.get(reverse('finance:ledger') + '?fy=%s' % YEAR)
         self.assertContains(response, '4521 Gaff tape')
-        self.assertContains(response, 'SGA Line')
+        self.assertContains(response, 'SGA line')
 
 
 class LargeBudgetTests(FinanceViewTestCase):
