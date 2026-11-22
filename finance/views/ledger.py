@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls.base import reverse
@@ -114,15 +114,91 @@ def _ledger_csv(entries, filename):
     return csv_response(out.getvalue(), filename)
 
 
+def _rank(conditions):
+    """ Each of ``conditions`` as its place in the list, for sorting on. """
+    return Case(*[When(condition, then=Value(place)) for place, condition in enumerate(conditions)],
+                output_field=IntegerField())
+
+
+def _type_rank():
+    """ The Type column as a number, in the order its dropdown lists the types. """
+    return _rank([ParsedTransaction.entry_type_q(entry_type)
+                  for entry_type in ParsedTransaction.ENTRY_TYPE_LABELS])
+
+
+def _status_rank():
+    """ The Status column as a number, in the order its dropdown lists the statuses. """
+    return _rank([Q(status=value) for value, _ in TransactionStatus.choices])
+
+
+#: How each sortable column sorts, keyed by its ``data-col``.
+#:
+#: ``by`` is what ascending runs through, most significant first. Where the
+#: column has a filter on this page, ascending is the order that dropdown lists
+#: things in: the types and statuses as listed, funds and categories by their
+#: sort order then name, projects as their tree with each one's sub-projects
+#: under it. The rest run A to Z, oldest first, or smallest first.
+#:
+#: ``blank`` picks out the rows with nothing in the column -- a dash, or
+#: "(untitled)". They go last whichever way the column runs, because a blank is
+#: neither the start nor the end of anything.
+#:
+#: ``starts`` is the way a first click sorts: newest and largest first for the
+#: date and the amount, which is what a ledger is read for, and from the top of
+#: the list for everything else.
+#:
+#: Rows that tie stay newest first, as the ledger opens.
 SORTABLE = {
-    'date': 'effective_date',
-    'amount': 'amount',
-    'status': 'status',
-    'spend_category': 'lnl_spend_category__sort_order',
-    'fund_source': 'fund_source__sort_order',
-    'project': 'project_tag__name',
-    'description': 'description',
+    'date': {'by': ('effective_date',), 'starts': 'desc'},
+    'description': {'by': ('description',), 'blank': Q(description='')},
+    'amount': {'by': ('amount',), 'starts': 'desc'},
+    'type': {'by': (_type_rank,)},
+    'status': {'by': (_status_rank,)},
+    'fund_source': {'by': ('fund_source__sort_order', 'fund_source__name'),
+                    'blank': Q(fund_source__isnull=True)},
+    'spend_category': {'by': ('lnl_spend_category__sort_order', 'lnl_spend_category__name'),
+                       'blank': Q(lnl_spend_category__isnull=True)},
+    'project': {'by': ('project_tag__tree_id', 'project_tag__lft'),
+                'blank': Q(project_tag__isnull=True)},
 }
+
+SORT_DIRECTIONS = ('asc', 'desc')
+
+
+def ledger_sort(params):
+    """
+    The column the ledger is sorted on and which way, from ``?sort=`` and
+    ``?dir=``. A column that doesn't sort means the date, as the page opens;
+    a missing or unknown direction means the way that column's first click
+    goes. The header arrow and links are drawn from this, not from the
+    address, so they always describe the rows on screen.
+    """
+    column = params.get('sort')
+    if column not in SORTABLE:
+        column = 'date'
+    direction = params.get('dir')
+    if direction not in SORT_DIRECTIONS:
+        direction = SORTABLE[column].get('starts', 'asc')
+    return column, direction
+
+
+def ledger_order(column, direction):
+    """ The ``order_by()`` arguments for the ledger sorted on ``column``, ``direction``. """
+    spec = SORTABLE[column]
+    order = []
+    if 'blank' in spec:
+        order.append(Case(When(spec['blank'], then=Value(1)), default=Value(0),
+                          output_field=IntegerField()).asc())
+    for key in spec['by']:
+        expression = key() if callable(key) else F(key)
+        order.append(expression.desc() if direction == 'desc' else expression.asc())
+    if column == 'date':
+        # The same day runs in the order the entries were written, the same
+        # way round as the dates.
+        order.append(F('pk').desc() if direction == 'desc' else F('pk').asc())
+    else:
+        order += [F('effective_date').desc(), F('pk').desc()]
+    return order
 
 
 @login_required
@@ -191,18 +267,15 @@ def ledger(request):
     if project and project.isdigit():
         qs = qs.filter(project_tag_id=int(project))
 
+    # Each type is exactly the rows whose Type column says it: "Expense"
+    # leaves out refunds and encumbrances, which have types of their own.
     kind = request.GET.get('kind')
-    if kind == 'revenue':
-        qs = qs.revenue()
-    elif kind == 'expense':
-        qs = qs.expenses()
+    if kind in ParsedTransaction.ENTRY_TYPE_LABELS:
+        qs = qs.of_type(kind)
 
     # -- sorting ------------------------------------------------------------
-    sort = request.GET.get('sort', 'date')
-    direction = request.GET.get('dir', 'desc')
-    field = SORTABLE.get(sort.lstrip('-'), 'effective_date')
-    order = ('-' if direction == 'desc' else '') + field
-    qs = qs.order_by(order, '-pk')
+    sort, direction = ledger_sort(request.GET)
+    qs = qs.order_by(*ledger_order(sort, direction))
 
     if request.GET.get('format') == 'csv':
         if event is not None:
@@ -247,7 +320,9 @@ def ledger(request):
         'query': query,
         'sort': sort,
         'dir': direction,
+        'sort_starts': {column: spec.get('starts', 'asc') for column, spec in SORTABLE.items()},
         'querystring': params.urlencode(),
+        'type_choices': list(ParsedTransaction.ENTRY_TYPE_LABELS.items()),
         'status_choices': TransactionStatus.choices,
         'category_choices': [(c.slug, c.name) for c in SpendCategory.objects.active()],
         'fund_choices': [(f.slug, f.name) for f in FundSource.objects.active()],

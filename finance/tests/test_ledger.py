@@ -22,11 +22,11 @@ from finance.tests.test_views import FinanceViewTestCase
 from finance.tests.util import category, fund
 
 
-class LedgerFacetTests(FinanceViewTestCase):
-    """ Each facet narrows the ledger to exactly what it names, and no more. """
+class LedgerRowsTestCase(FinanceViewTestCase):
+    """ A few entries of each kind, for the facet and the sort tests to read. """
 
     def setUp(self):
-        super(LedgerFacetTests, self).setUp()
+        super(LedgerRowsTestCase, self).setUp()
         self.grant('view_subledger', 'edit_subledger')
 
         self.tag = ProjectTag.objects.create(name='New Equipment List 2026')
@@ -54,6 +54,27 @@ class LedgerFacetTests(FinanceViewTestCase):
 
     def _ledger(self, query=''):
         return self.client.get(reverse('finance:ledger') + '?fy=2026&' + query)
+
+    def _refund(self):
+        credit_txn = self.make_txn(op='OT-F4', amount='20.00')
+        return ParsedTransaction.objects.create(
+            parent_transaction=credit_txn, amount=Decimal('20.00'),
+            effective_date=credit_txn.accounting_date, description='Tape returned',
+            refund_of=self.spend, fund_source=fund('sga_mandatory'),
+            lnl_spend_category=category('consumables'))
+
+    def _encumbrance(self):
+        return ParsedTransaction.objects.create(
+            parent_transaction=None, amount=Decimal('-300.00'), status=TransactionStatus.PENDING,
+            effective_date=datetime.date(2025, 9, 20), description='Moving heads on order',
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
+
+    def _rows(self, query):
+        return [entry.description for entry in self._ledger(query).context['page_obj']]
+
+
+class LedgerFacetTests(LedgerRowsTestCase):
+    """ Each facet narrows the ledger to exactly what it names, and no more. """
 
     def test_the_status_facet_narrows_to_that_status(self):
         settled = self._ledger('status=%s' % TransactionStatus.SETTLED)
@@ -98,16 +119,43 @@ class LedgerFacetTests(FinanceViewTestCase):
         self.assertContains(response, 'Gaff tape')
         self.assertNotContains(response, 'Concert billing')
 
-    def test_a_refund_counts_as_an_expense_not_as_revenue(self):
-        """ A contra-expense belongs with what it reverses; see ``entry_type``. """
-        credit_txn = self.make_txn(op='OT-F4', amount='20.00')
-        ParsedTransaction.objects.create(
-            parent_transaction=credit_txn, amount=Decimal('20.00'),
-            effective_date=credit_txn.accounting_date, description='Tape returned',
-            refund_of=self.spend, fund_source=fund('sga_mandatory'),
-            lnl_spend_category=category('consumables'))
-        self.assertContains(self._ledger('kind=expense'), 'Tape returned')
-        self.assertNotContains(self._ledger('kind=revenue'), 'Tape returned')
+    def test_the_type_dropdown_offers_the_words_of_the_type_column(self):
+        response = self._ledger()
+        self.assertEqual([label for _, label in response.context['type_choices']],
+                         ['Revenue', 'Expense', 'Refund', 'Encumbrance'])
+        self.assertContains(response, '<option value="">Any type</option>', html=True)
+        self.assertContains(response, '<option value="encumbrance">Encumbrance</option>', html=True)
+
+    def test_each_type_shows_exactly_the_rows_the_type_column_gives_it(self):
+        """
+        A refund and an encumbrance each have a word of their own in the Type
+        column, so choosing *Expense* must not bring them along with it.
+        """
+        self._refund()
+        self._encumbrance()
+        expected = {
+            'revenue': ['Concert billing'],
+            'expense': ['Chain motor service', 'Gaff tape'],
+            'refund': ['Tape returned'],
+            'encumbrance': ['Moving heads on order'],
+        }
+        for kind, descriptions in expected.items():
+            entries = list(self._ledger('kind=%s' % kind).context['page_obj'])
+            self.assertEqual(sorted(entry.description for entry in entries), descriptions, kind)
+            self.assertEqual({entry.entry_type for entry in entries}, {kind})
+
+    def test_an_unknown_type_is_ignored_rather_than_erroring(self):
+        self.assertEqual(len(self._rows('kind=expenses')), 3)
+
+    def test_the_expenses_total_is_everything_that_is_not_revenue(self):
+        """ So Revenue and Expenses still make Net with refunds and encumbrances about. """
+        self._refund()
+        self._encumbrance()
+        response = self._ledger()
+        self.assertEqual(str(response.context['expense_total']), '490.00')
+        self.assertEqual(response.context['revenue_total'] - response.context['expense_total'],
+                         response.context['net_total'])
+        self.assertContains(response, 'less refunds, with encumbrances')
 
     def test_facets_combine_rather_than_replace_one_another(self):
         response = self._ledger('kind=expense&fund=legacy')
@@ -144,6 +192,74 @@ class LedgerFacetTests(FinanceViewTestCase):
         self.assertIn('q=gaff', response.context['querystring'])
         self.assertIn('kind=expense', response.context['querystring'])
         self.assertNotIn('page=', response.context['querystring'])
+
+
+class LedgerSortTests(LedgerRowsTestCase):
+    """
+    Every column sorts by one rule: ascending is the order that column's own
+    dropdown lists things in, blanks go last either way, and rows that tie stay
+    newest first.
+    """
+
+    def setUp(self):
+        super(LedgerSortTests, self).setUp()
+        self._refund()
+        self._encumbrance()
+
+    def test_the_type_column_sorts_in_the_order_of_its_dropdown(self):
+        """ The two expenses are on the same day, so the newer is first both ways. """
+        self.assertEqual(self._rows('sort=type&dir=asc'),
+                         ['Concert billing', 'Chain motor service', 'Gaff tape', 'Tape returned',
+                          'Moving heads on order'])
+        self.assertEqual(self._rows('sort=type&dir=desc'),
+                         ['Moving heads on order', 'Tape returned', 'Chain motor service',
+                          'Gaff tape', 'Concert billing'])
+
+    def test_sorting_by_type_keeps_the_type_filter(self):
+        self.assertEqual(self._rows('kind=encumbrance&sort=type&dir=asc'), ['Moving heads on order'])
+
+    def test_the_status_column_sorts_in_the_order_of_its_dropdown(self):
+        self.assertEqual(self._rows('sort=status&dir=asc')[-1], 'Gaff tape')
+        self.assertEqual(self._rows('sort=status&dir=desc')[0], 'Gaff tape')
+
+    def test_a_blank_goes_last_whichever_way_the_column_sorts(self):
+        """ Revenue can't have a spend category, so its row is the blank one. """
+        self.assertEqual(self._rows('sort=spend_category&dir=asc')[-1], 'Concert billing')
+        self.assertEqual(self._rows('sort=spend_category&dir=desc')[-1], 'Concert billing')
+
+    def test_the_project_column_sorts_as_its_dropdown_nests_them(self):
+        """
+        Each project's sub-projects come straight after it, as in the Project
+        dropdown -- not filed alphabetically among the top-level projects.
+        """
+        child = ProjectTag.objects.create(name='Chain hoists', parent=self.tag)
+        self.repair.project_tag = child
+        self.repair.save()
+        dropdown = [tag.name for tag in self._ledger().context['projects']]
+        self.assertEqual(dropdown, ['New Equipment List 2026', 'Chain hoists'])
+        # The refund takes its purchase's project, and is the newer of the two.
+        self.assertEqual(self._rows('sort=project&dir=asc')[:3],
+                         ['Tape returned', 'Gaff tape', 'Chain motor service'])
+
+    def test_a_column_that_does_not_sort_means_the_date(self):
+        """ Including in what the header shows, so the arrow is on the column that sorted. """
+        response = self._ledger('sort=payee&dir=asc')
+        self.assertEqual((response.context['sort'], response.context['dir']), ('date', 'asc'))
+        self.assertEqual(response.context['page_obj'][0].description, 'Gaff tape')
+        self.assertContains(response, 'Date<span class="fin-sort-arrow">&#9650;</span>')
+
+    def test_a_direction_it_does_not_know_is_the_columns_first_click(self):
+        response = self._ledger('sort=description&dir=sideways')
+        self.assertEqual((response.context['sort'], response.context['dir']), ('description', 'asc'))
+        response = self._ledger('sort=amount')
+        self.assertEqual((response.context['sort'], response.context['dir']), ('amount', 'desc'))
+
+    def test_a_first_click_sorts_date_and_amount_down_and_the_rest_from_the_top(self):
+        response = self._ledger()
+        self.assertContains(response, '?fy=2026&amp;sort=amount&amp;dir=desc')
+        for column in ('description', 'type', 'status', 'fund_source', 'spend_category', 'project'):
+            self.assertContains(response, '?fy=2026&amp;sort=%s&amp;dir=asc' % column)
+        self.assertContains(response, '?fy=2026&amp;sort=date&amp;dir=asc')  # already down
 
 
 class BulkActionGuardTests(FinanceViewTestCase):

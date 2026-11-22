@@ -302,6 +302,24 @@ class FilterUrlTests(TestCase):
         self.assertIn('fin-sort-arrow', sort_indicator({'request': request}, 'amount'))
         self.assertEqual(sort_indicator({'request': request}, 'date'), '')
 
+    def test_sort_url_starts_a_column_the_way_the_page_says(self):
+        """ A to Z and dropdown order first, for a column that isn't a date or an amount. """
+        request = RequestFactory().get('/?sort=date&dir=desc')
+        context = {'request': request, 'sort': 'date', 'dir': 'desc',
+                   'sort_starts': {'date': 'desc', 'type': 'asc'}}
+        self.assertIn('dir=asc', sort_url(context, 'type'))
+
+    def test_the_header_follows_what_the_page_sorted_on_not_the_address(self):
+        """
+        The ledger can't sort by payee, so it sorted by date: the arrow goes on
+        Date, and clicking Date turns that order round.
+        """
+        request = RequestFactory().get('/?sort=payee&dir=asc')
+        context = {'request': request, 'sort': 'date', 'dir': 'asc'}
+        self.assertIn('9650', sort_indicator(context, 'date'))
+        self.assertEqual(sort_indicator(context, 'payee'), '')
+        self.assertIn('dir=desc', sort_url(context, 'date'))
+
     def test_the_arrow_points_the_way_the_column_is_sorted(self):
         ascending = RequestFactory().get('/?sort=amount&dir=asc')
         descending = RequestFactory().get('/?sort=amount&dir=desc')

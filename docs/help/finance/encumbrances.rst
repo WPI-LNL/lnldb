@@ -97,7 +97,7 @@ Change or Cancel an Encumbrance
 
 You never have to match an encumbrance to a Workday line to get rid of it. If the purchase falls through, delete it.
 
-Find it in the `Ledger` -- search for its description, or choose the `Pending` status -- and open it.
+Find it in the `Ledger` -- search for its description, or choose the `Encumbrance` type -- and open it.
 
 - To cancel **that line**, click `Remove` on its page. The money stops counting as encumbered. If it was the
   encumbrance's only line, the encumbrance is deleted too.

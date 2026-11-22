@@ -2971,6 +2971,15 @@ class ParsedTransactionQuerySet(models.QuerySet):
         """
         return self.expenses().filter(parent_transaction__isnull=False)
 
+    def of_type(self, entry_type):
+        """
+        The entries whose Type column reads ``entry_type``: exactly one of
+        :attr:`ParsedTransaction.ENTRY_TYPE_LABELS`, and nothing else. Unlike
+        :meth:`expenses`, ``'expense'`` leaves out refunds and encumbrances,
+        which the column calls by their own names.
+        """
+        return self.filter(ParsedTransaction.entry_type_q(entry_type))
+
 
 @reversion.register()
 class ParsedTransaction(models.Model):
@@ -3288,6 +3297,24 @@ class ParsedTransaction(models.Model):
             return self.ENCUMBRANCE
         return self.REVENUE if (self.amount or 0) > 0 else self.EXPENSE
 
+    @classmethod
+    def entry_type_q(cls, entry_type):
+        """
+        :attr:`entry_type` as a query, so the database can filter and sort on
+        it. The same tests in the same order -- refund, then no bank line, then
+        the sign -- so a row is matched by the type its badge shows.
+        """
+        not_refund = Q(refund_of__isnull=True)
+        has_line = not_refund & Q(parent_transaction__isnull=False)
+        return {
+            cls.REVENUE: has_line & Q(amount__gt=0),
+            cls.EXPENSE: has_line & Q(amount__lte=0),
+            cls.REFUND: Q(refund_of__isnull=False),
+            cls.ENCUMBRANCE: not_refund & Q(parent_transaction__isnull=True),
+        }[entry_type]
+
+    #: In the order the ledger's Type dropdown lists them, which is also the
+    #: order sorting the Type column ascending puts them in.
     ENTRY_TYPE_LABELS = {
         REVENUE: 'Revenue',
         EXPENSE: 'Expense',

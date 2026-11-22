@@ -407,8 +407,8 @@ means revenue" is not quite true:
 ===========  ===============================  =============================================
 Type         Condition                        Routing
 ===========  ===============================  =============================================
-Revenue      ``amount > 0``, no refund        Event or revenue source; the fund it goes
-                                              into; the request SGA is repaying
+Revenue      ``amount > 0``, has a bank line  Event or revenue source; the fund it goes
+             and no ``refund_of``             into; the request SGA is repaying
 Expense      ``amount < 0``, has a bank line  Fund, spend category, FR line (or the request
                                               SGA took money back for); an event
 Refund       ``amount > 0`` + ``refund_of``   The purchase's routing (contra-expense)
@@ -444,6 +444,17 @@ The one column whose entire job is telling rows apart was showing the two as
 identical. Only the label is new — an encumbrance still carries expense routing,
 still answers yes to ``is_expense``, and is still counted as spending
 everywhere it was before.
+
+The ledger's Type dropdown offers the same four words, and each one matches
+exactly the rows the column labels with it: ``ParsedTransaction.entry_type_q``
+is ``entry_type`` as a query, and the dropdown, the filter
+(``ParsedTransactionQuerySet.of_type``) and the column's sort all use it.
+*Expense* leaves out refunds and encumbrances, unlike
+``ParsedTransactionQuerySet.expenses()``, which the ledger's *Expenses* total
+still uses: every row that isn't revenue, so that Revenue and Expenses make Net.
+How every column sorts is ``SORTABLE`` in ``finance/views/ledger.py``:
+ascending follows that column's own dropdown, blanks go last either way, and
+rows that tie stay newest first.
 
 An encumbrance can have several lines. One order paid partly out of Legacy and
 partly off a funding request is one ``Encumbrance`` row -- the description and
@@ -1240,8 +1251,8 @@ were mandatory, and that made the page unusable for its commonest job -- fixing
 a spend category chosen wrong three weeks ago meant first producing a receipt
 for somebody else's purchase, or inventing a sentence about it. A line missing
 its paperwork is a line to chase, not a line to lock; the entry page says
-plainly when a receipt is absent, and the ledger has a Receipt column to sort
-by. The encumbrance form asks for one description, of the whole purchase; it
+plainly when a receipt is absent, and the ledger has a Receipt column to show
+it. The encumbrance form asks for one description, of the whole purchase; it
 used to ask "What is this for?" as well, which nearly always got the
 description typed twice.
 

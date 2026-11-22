@@ -449,9 +449,11 @@ class LedgerTests(FinanceViewTestCase):
         self.assertNotContains(response, "Gaff tape")
 
     def test_sorting_does_not_error(self):
-        for column in ('date', 'amount', 'status', 'spend_category', 'project'):
-            self.assertOk(self.client.get(
-                reverse('finance:ledger') + '?sort=%s&dir=asc' % column))
+        from finance.views.ledger import SORTABLE
+        for column in SORTABLE:
+            for direction in ('asc', 'desc'):
+                self.assertOk(self.client.get(
+                    reverse('finance:ledger') + '?sort=%s&dir=%s' % (column, direction)))
 
     def test_bulk_assign_project(self):
         tag = ProjectTag.objects.create(name='NEL26')

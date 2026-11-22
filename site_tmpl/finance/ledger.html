@@ -70,6 +70,8 @@
         <div class="fin-stat">
             <div class="fin-stat-label">Expenses</div>
             <div class="fin-stat-value {{ expense_total|negate|money_class }}">{{ expense_total|negate|money }}</div>
+            {# Every row that isn't Revenue, so Revenue and Expenses make Net. #}
+            <div class="fin-stat-sub">less refunds, with encumbrances</div>
         </div>
         <div class="fin-stat">
             <div class="fin-stat-label">Net</div>
@@ -99,11 +101,13 @@
                            placeholder="Search description, payee, memo, event…" value="{{ query }}">
                 </div>
 
+                {# The same words as the Type column, each matching exactly the rows that column labels with it. #}
                 <div class="form-group">
                     <select name="kind" class="form-control input-sm">
-                        <option value="">All types</option>
-                        <option value="revenue" {% if active_filters.kind == 'revenue' %}selected{% endif %}>Revenue</option>
-                        <option value="expense" {% if active_filters.kind == 'expense' %}selected{% endif %}>Expenses</option>
+                        <option value="">Any type</option>
+                        {% for value, label in type_choices %}
+                            <option value="{{ value }}" {% if active_filters.kind == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -162,7 +166,7 @@
                         <th data-col="description"><a href="{% sort_url 'description' %}">Description{% sort_indicator 'description' %}</a></th>
                         <th data-col="payee">Payee</th>
                         <th data-col="amount" class="fin-num"><a href="{% sort_url 'amount' %}">Amount{% sort_indicator 'amount' %}</a></th>
-                        <th data-col="type">Type</th>
+                        <th data-col="type"><a href="{% sort_url 'type' %}">Type{% sort_indicator 'type' %}</a></th>
                         <th data-col="status"><a href="{% sort_url 'status' %}">Status{% sort_indicator 'status' %}</a></th>
                         <th data-col="partition">Partition</th>
                         <th data-col="event">Event</th>

@@ -350,15 +350,33 @@ def filter_url(context, **overrides):
     return state.url_with(**overrides)
 
 
+def _sorted_by(context):
+    """
+    The column the ledger is sorted on and which way. The view's own reading
+    when the page has one (see ``finance.views.ledger.ledger_sort``), which
+    turns an address it can't sort by into the date, so the arrow and the
+    next click describe the rows on screen and not what the address asked for.
+    """
+    request = context['request']
+    return (context.get('sort') or request.GET.get('sort', 'date'),
+            context.get('dir') or request.GET.get('dir', 'desc'))
+
+
 @register.simple_tag(takes_context=True)
 def sort_url(context, column):
-    """ Toggle sort direction on a ledger column header. """
+    """
+    The link on a ledger column header: the other way round if the column is
+    already sorted, otherwise the way that column's first click goes (the
+    view's ``sort_starts``; descending if it gave none).
+    """
     request = context['request']
     params = request.GET.copy()
-    current = params.get('sort', 'date')
-    direction = params.get('dir', 'desc')
+    current, direction = _sorted_by(context)
     params['sort'] = column
-    params['dir'] = 'asc' if (current == column and direction == 'desc') else 'desc'
+    if current == column:
+        params['dir'] = 'asc' if direction == 'desc' else 'desc'
+    else:
+        params['dir'] = (context.get('sort_starts') or {}).get(column, 'desc')
     params.pop('page', None)
     return '?' + params.urlencode()
 
@@ -366,10 +384,10 @@ def sort_url(context, column):
 @register.simple_tag(takes_context=True)
 def sort_indicator(context, column):
     """ The up/down arrow on whichever ledger column is currently sorted. """
-    request = context['request']
-    if request.GET.get('sort', 'date') != column:
+    current, direction = _sorted_by(context)
+    if current != column:
         return ''
-    arrow = '&#9650;' if request.GET.get('dir', 'desc') == 'asc' else '&#9660;'
+    arrow = '&#9650;' if direction == 'asc' else '&#9660;'
     return mark_safe('<span class="fin-sort-arrow">%s</span>' % arrow)
 
 
