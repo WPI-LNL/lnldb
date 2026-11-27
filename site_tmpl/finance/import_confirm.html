@@ -1,0 +1,146 @@
+{# Page 3 -- "you are about to add N lines" step, shown between upload and commit. #}
+{% extends 'finance/base_titled.html' %}
+{% load finance_extras %}
+
+{% comment %}
+    Shown between choosing a file and importing it. The number is the whole
+    point of the page: an export for the wrong month parses perfectly and
+    reads correctly, and the only thing that gives it away before it lands in
+    the queue is the count and the dates.
+{% endcomment %}
+
+{% block fin_back %}<a class="fin-page-back hidden-print" href="{% url 'finance:queue' %}">&larr; Queue</a>{% endblock %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="fin-panel">
+                <div class="fin-panel-body">
+
+                    <div class="alert alert-warning fin-import-confirm-lede">
+                        You are about to add
+                        <strong>{{ created_count }} line{{ created_count|pluralize }} to settle</strong>
+                        to the queue. Are you sure you want to proceed?
+                    </div>
+
+                    {% if new_books_start %}
+                        <div class="alert alert-info">
+                            This export goes back further than anything on file, so the books will start on
+                            <strong>{{ new_books_start|date:"M j, Y" }}</strong> instead of
+                            {{ books_start|date:"M j, Y" }}. Every one of its lines joins the queue to be settled.
+                            {% if opening_splits or owed_at_start %}
+                                <div class="fin-mt-8">
+                                    These were entered for {{ books_start|date:"M j, Y" }} and will need another
+                                    look once the older lines are settled. Nothing is changed for you:
+                                </div>
+                                <ul class="fin-m-0 fin-mt-8">
+                                    {% if opening_splits %}
+                                        <li>
+                                            The <a href="{% url 'finance:opening-balances' %}">opening balances</a>
+                                            ({{ opening_splits }} split{{ opening_splits|pluralize }}). They will count
+                                            the night before the new start, alongside the older lines that now say
+                                            what each fund held.
+                                        </li>
+                                    {% endif %}
+                                    {% for request in owed_at_start %}
+                                        <li>
+                                            <a href="{% url 'finance:fr-detail' request.pk %}">{{ request.reference }}</a>:
+                                            {{ request.owed_at_books_start|money }} owed by SGA when the books started.
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <dl class="fin-kv">
+                        <dt>File</dt><dd><code>{{ filename }}</code></dd>
+                        <dt>New lines</dt>
+                        <dd><strong>{{ created_count }}</strong> for the queue &mdash; each one work for somebody</dd>
+                        <dd class="fin-muted">Net {{ net_total|money }}</dd>
+                        {% if duplicate_count %}
+                            <dt>Already imported</dt>
+                            <dd>{{ duplicate_count }} line{{ duplicate_count|pluralize }} will be skipped</dd>
+                        {% endif %}
+                        {% if error_count %}
+                            <dt>Unreadable</dt>
+                            <dd class="text-danger">
+                                {{ error_count }} row{{ error_count|pluralize }} will be left out
+                            </dd>
+                        {% endif %}
+                        {% if suspect_count %}
+                            <dt>Worth a look</dt>
+                            <dd class="text-warning">
+                                {{ suspect_count }} new line{{ suspect_count|pluralize }}
+                                resemble{{ suspect_count|pluralize:"s," }} a line already in the ledger
+                            </dd>
+                        {% endif %}
+                    </dl>
+
+                    {% if suspects %}
+                        <ul class="fin-import-errors">
+                            {% for row in suspects %}
+                                <li class="text-warning">Line {{ row.line_number }}: {{ row.warning }}</li>
+                            {% endfor %}
+                            {% if more_suspects %}
+                                <li class="fin-muted">&hellip;and {{ more_suspects }} more.</li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+
+                    {% if errors %}
+                        <ul class="fin-import-errors">
+                            {% for row in errors %}
+                                <li>Line {{ row.line_number }}: {{ row.message }}</li>
+                            {% endfor %}
+                            {% if more_errors %}
+                                <li class="fin-muted">&hellip;and {{ more_errors }} more.</li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+
+                    {% if preview_rows %}
+                        <div class="fin-panel-subhead">First few lines</div>
+                        <div class="table-responsive">
+                            <table class="table table-condensed fin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Reference</th>
+                                        <th>Payee</th>
+                                        <th class="fin-num">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in preview_rows %}
+                                        <tr>
+                                            <td>{{ row.accounting_date|date:"M j, Y" }}</td>
+                                            <td><code>{{ row.reference }}</code></td>
+                                            <td>{{ row.payee|default:"(no payee)" }}</td>
+                                            <td class="fin-num {{ row.net_amount|money_class }}">
+                                                {{ row.net_amount|money }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if preview_more %}
+                            <p class="fin-muted">&hellip;and {{ preview_more }} more line{{ preview_more|pluralize }}.</p>
+                        {% endif %}
+                    {% endif %}
+
+                    <form method="post" action="{% url 'finance:upload-confirm' %}">
+                        {% csrf_token %}
+                        <button type="submit" name="cancel" value="1" class="btn btn-default">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Import {{ created_count }} line{{ created_count|pluralize }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

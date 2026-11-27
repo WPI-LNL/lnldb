@@ -90,13 +90,6 @@
                         <li role="presentation" class="dropdown-header">Event Payments</li>
 
                         <li><a href="{% url "events:unreviewed" %}">Events Pending Review</a></li>
-                        <li><a href="{% url "events:unbilled" %}">Events to be Billed</a></li>
-                        <li><a href="{% url "events:unbilled-semester" %}">Events to be Billed in Bulk</a></li>
-                        <li><a href="{% url "events:unpaid" %}">Events Billed, Pending Payment</a></li>
-                        <li><a href="{% url "events:awaitingworkday" %}">Events Awaiting Workday Entry</a></li>
-                        <li><a href="{% url "events:unpaid-workday" %}">Events Entered Into Workday</a></li>
-                        <li><a href="{% url "events:paid" %}">Events Paid</a></li>
-                        <li><a href="{% url "events:multibillings:list" %}">MultiBills</a></li>
                         {% endpermission %}
 
                         {% permission request.user has 'events.edit_workshops' %}
@@ -219,6 +212,44 @@
                         </ul>
                     </li>
                 {% endpermission %}
+                {% if perms.finance.view_subledger or perms.events.bill_event %}
+                    <li class="{% ancestor '/db/finance/' %} dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                            Finance
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:dashboard" %}">Dashboard</a></li>
+                                <li><a href="{% url "finance:ledger" %}">Ledger</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'finance.edit_subledger' %}
+                                <li><a href="{% url "finance:queue" %}">Queue</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:events" %}">Events</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'events.bill_event' %}
+                                <li><a href="{% url "finance:billing" %}">Billing</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'finance.view_subledger' %}
+                                <li><a href="{% url "finance:balances" %}">Balances</a></li>
+                                <li><a href="{% url "finance:projects" %}">Projects</a></li>
+                                <li><a href="{% url "finance:fr-list" %}">SGA Funding</a></li>
+                                <li><a href="{% url "finance:reports" %}">Reports</a></li>
+                            {% endpermission %}
+                            {% if perms.finance.import_workdaytransaction or perms.finance.edit_subledger %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            {% permission request.user has 'finance.import_workdaytransaction' %}
+                                <li><a href="{% url "finance:queue" %}?import=1">Import Workday Export</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'finance.edit_subledger' %}
+                                <li><a href="{% url "finance:encumbrance-new" %}">Add Encumbrance</a></li>
+                            {% endpermission %}
+                        </ul>
+                    </li>
+                {% endif %}
                 {% permission request.user has 'data.search' %}
                 <li>
                     <form class="navbar-form navbar-left" action="{% url "events-search" %}" method="GET" role="search">

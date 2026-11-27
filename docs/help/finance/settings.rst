@@ -1,0 +1,101 @@
+==========================================
+Categories, Rules and Settings (Treasurer)
+==========================================
+
+Most of what the finance app knows about LNL -- its spend categories, its funds, which Workday codes mean what -- is
+kept in tables you can change yourself, without asking the webmaster for a new version of the site. They are all in the Django admin.
+
+.. caution::
+    **Permission Required:** Admin access
+
+    Changing these needs access to the Django admin, with permission to change the finance tables. If you can't open
+    them, ask the webmaster.
+
+-----
+
+Where to Find Them
+------------------
+
+Open the admin and scroll to the **Financial Subledger** section. The tables you are most likely to need:
+
+==================================  ===================================================================================
+Table                               What it holds
+==================================  ===================================================================================
+Finance Configuration               The handful of settings below.
+LNL Spend Categories                LNL's own spending categories.
+Spend Category Suggestion Rules     Which Workday code or wording fills in which spend category.
+Fund Sources                        The funds -- Legacy, SGA Budget, SGA Funding Request, SGA Mandatory Transfer -- and
+                                    how each one behaves.
+Non-Event Revenue Sources           The kinds of income that aren't event billing, and the fund each goes into.
+Partition Codes                     The two accounts, 226-AG and 315-AG, and which side each starts on.
+CSV Column Aliases                  Other names for Workday's columns, for when Workday renames one.
+Service Colours                     The colour of each service on the dashboard's charts.
+==================================  ===================================================================================
+
+The admin also shows funding requests, Workday lines and entries, but those are better changed on the finance pages
+themselves. Workday lines can't be changed at all.
+
+
+Finance Configuration
+---------------------
+
+==================================================  ===================================================================
+Setting                                             What it does
+==================================================  ===================================================================
+Fiscal year starts in                               July. Change it only if WPI moves its fiscal year: every line ever
+                                                    recorded moves to a different year.
+Student organization fund                           The Workday fund number (810) that marks a client as a student
+                                                    organization rather than a department.
+Past years / Future years in the picker             How many fiscal years the filter bar offers.
+Billing digest: waiting on client after (days)      How long after a bill was last emailed the weekly billing digest
+                                                    lists it, if the client hasn't sent the worktag (14). See
+                                                    :doc:`billing`.
+Billing digest: waiting on approval after (days)    How long after an ISD was created the digest lists it, if the
+                                                    money hasn't arrived (21).
+==================================================  ===================================================================
+
+
+Spend Categories
+----------------
+
+To **add** a category, click `Add` and give it a name and a chart colour. To **rename** one, just change its name:
+everything in it follows.
+
+To **retire** a category, untick `Is active`. It disappears from the dropdowns, but everything already in it
+keeps it. A category with money in it can't be deleted, so nothing is ever lost.
+
+One tick box changes how the app treats a category: **Use for costs billed to an event** -- the category a cost is
+given when it is linked to one show without a category. `Event - Sub-Rental` has it.
+
+.. warning::
+    Leave the **slug** alone. It is the name links and bookmarks use, and the admin says so on the field.
+
+
+Suggestion Rules
+----------------
+
+When an import warns that **no spend category rule covers** a Workday category, add a rule and every line with that
+category -- in the queue now and in every future import -- fills itself in.
+
+#. Under `Spend Category Suggestion Rules`, click `Add`.
+#. **Match field:** usually *Workday's own spend category*.
+#. **Match how:** *Is exactly*.
+#. **Pattern:** the Workday category exactly as the warning wrote it.
+#. **Spend category:** the LNL category it means. Save.
+
+**Is exactly** and **Starts with** rules are treated as facts: they fill the box in. **Contains** rules are treated as
+guesses and only offer a chip, because a word in a memo is not proof of what something was. Rules matching a ledger
+account by its number (*Starts with* ``71100``) catch anything more specific rules don't.
+
+
+Funds, Revenue Sources and Accounts
+-----------------------------------
+
+These rarely change, and a mistake here affects every balance, so check with the webmaster first. Each fund says which
+account it is **held in**, what happens to it **at year end**, whether spending from it **must name a funding request
+line**, and which Workday **fund codes** or **Tracking values** mean it. Each revenue source can say which fund its
+money **goes into**; the queue then fills that fund in and refuses any other.
+
+A Workday code renamed or renumbered by WPI is fixed here, not in the code: change the code on the matching row.
+
+`Last Modified: October 27, 2026`

@@ -8,7 +8,7 @@ from pypdf import PdfReader
 from io import BytesIO
 
 from events.tests.generators import EventFactory, Event2019Factory, UserFactory, ServiceFactory
-from events.models import ExtraInstance, Extra, Category, MultiBilling, Organization, Lighting, ServiceInstance, \
+from events.models import ExtraInstance, Extra, Category, Organization, Lighting, ServiceInstance, \
     Pricelist, Discount, Fee, DiscountPrice, FeePrice, Rental, Quote
 from .. import views
 
@@ -32,11 +32,6 @@ class PdfViewTest(TestCase):
 
         self.organization = Organization.objects.create(name="Test org", phone="1234567890", user_in_charge=self.user)
         self.e4.org.add(self.organization)
-        self.multibilling = MultiBilling.objects.create(date_billed=timezone.datetime.today(), amount=20.00,
-                                                        org=self.organization)
-        self.multibilling.events.add(self.e2)
-        self.multibilling.events.add(self.e4)
-        self.multibilling.events.add(self.e5)
 
         self.pricelist = Pricelist.objects.create(name="Test Pricelist")
         self.e5.pricelist = self.pricelist
@@ -95,15 +90,6 @@ class PdfViewTest(TestCase):
         }
         response = views.get_category_data(self.e3)
         self.assertEqual(response, event_data)
-
-    def test_get_multibill_data(self):
-        response = views.get_multibill_data(self.multibilling)
-        self.assertEqual(response['billing_org'], self.organization)
-        self.assertEqual(list(response['events']), [self.e2, self.e4, self.e5])
-        self.assertEqual(response['multibilling'], self.multibilling)
-        self.assertEqual(list(response['orgs']), [self.organization])
-        #self.assertEqual(float(response['total_cost']), 10.00)
-        self.assertEqual(float(response['total_cost']), 420403.42)
 
     def test_get_extras(self):
         event_data = {
@@ -182,14 +168,6 @@ class PdfViewTest(TestCase):
 
         # test with the new template
         self.assertIsNotNone(views.generate_event_bill_pdf_standalone(event=self.e5))
-
-    def test_pdf_multibill(self):
-        response = self.client.get(reverse('events:multibillings:pdf', args=[self.multibilling.pk]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_multibill_pdf_standalone(self):
-        # Test that a file is successfully returned
-        self.assertIsNotNone(views.generate_multibill_pdf_standalone(multibilling=self.multibilling))
 
     def test_pdf_multi(self):
         response = self.client.get(reverse('events:pdf-multi', args=["%s,%s" % (self.e.pk, self.e2.pk)]))
