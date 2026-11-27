@@ -101,6 +101,51 @@ To encumber money on a request before the purchase reaches Workday, log it as a 
 Spending on the budget works the same way with the fund `SGA Budget`; see `Spending Against the Budget`_.
 
 
+.. _shipping-own-line:
+
+Shipping Goes on Its Own Line
+-----------------------------
+
+When you place an order in Workday, always add shipping as a line of its own, like any item. **Don't put it in the
+order's freight field.** This applies to every order, and most of all to one SGA is paying for.
+
+**Why.** Workday never charges freight as a line of its own. It spreads the freight across the order's items by price
+and adds a share to each one. Say an order has $3,000 of speakers, $1,000 of road cases and $400 of freight. Workday
+charges two lines, not three:
+
+==============  ==========  ================  ====================
+Workday line    Item price  Share of freight  What Workday charges
+==============  ==========  ================  ====================
+Speakers        $3,000      $300 (75%)        $3,300
+Road cases      $1,000      $100 (25%)        $1,100
+==============  ==========  ================  ====================
+
+Nothing on either line says it includes shipping. If SGA approved the speakers, the cases and the shipping as three
+lines, it's easy to settle $3,000 of the first line to `Speakers` and the other $300 to `Legacy`. That $300 is shipping
+SGA agreed to pay. SGA pays back only what is charged to the request, so the money is never claimed, and the request's
+`Shipping` line shows money left over after everything has arrived.
+
+With shipping as its own line on the order, Workday charges it on its own line, and it settles straight to the
+request's `Shipping` line.
+
+**On the shipping line of the order:**
+
+- **Spend category** -- the same one as the items it ships with. Don't use `Postage IDT`: the queue reads that as
+  sending a film back.
+- **Memo** -- the usual ``what it was, which line, (request number)``, with the request's *line* in the middle, for
+  example ``Speaker shipping, Shipping, (F.27.40)``. The queue then fills in the fund, the request, its `Shipping` line
+  and the category. With the request's name in the middle instead, you have to pick the line yourself.
+
+If you log the order as a purchase in advance (see :doc:`encumbrances`), give shipping its own encumbrance line too, so
+each Workday line matches one encumbrance line to the cent.
+
+**If shipping has already been spread across the lines** -- an order placed through the freight field -- take it back
+out of each line before you split it. A line's shipping is the line times the order's freight, divided by the order's
+total: $3,300 × $400 ÷ $4,400 = $300 above. Settle that part to the request's `Shipping` line (or SGA's share of it, if
+SGA paid for only part), and the rest as usual. Round to the cent. If the `Shipping` line would end up a cent over what
+SGA approved, take the cent off the last part.
+
+
 When SGA Pays LNL Back
 ----------------------
 

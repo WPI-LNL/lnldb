@@ -169,6 +169,11 @@ them, as they do on an entry's own page.
 
 The same page splits one rental invoice between two shows: one row per show, each with its own `Incurred for event`.
 
+.. note::
+    If an order's shipping went in Workday's freight field, there is no shipping line. Workday adds a share of the
+    shipping to each item's line instead. Take the shipping back out of each line before splitting it; see
+    :ref:`shipping-own-line`.
+
 
 Settle Many Lines at Once
 -------------------------
